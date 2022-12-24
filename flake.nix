@@ -28,6 +28,10 @@
           ];
         };
       };
+      nixosModules.lmod = import ./modules/lmod;
+      overlays.lmod = final: prev: {
+        lmod = final.callPackage ./packages/lmod {};
+      };
     } // flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
@@ -47,6 +51,7 @@
             ];
           };
         };
+        packages.lmod = pkgs.callPackage ./packages/lmod {};
       }
     );
 }

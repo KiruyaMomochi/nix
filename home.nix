@@ -6,6 +6,9 @@
   home.username = "kyaru";
   home.homeDirectory = "/home/kyaru";
 
+  # Allow unfree packages
+  nixpkgs.config.allowUnfree = true;
+
   # Packages that should be installed to the user profile.
   home.packages = with pkgs; [
     bat
