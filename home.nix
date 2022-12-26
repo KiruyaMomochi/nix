@@ -86,7 +86,7 @@
 
   programs.ssh = {
     enable = true;
-    includes = [ "~/.ssh/config.d" ];
+    includes = [ "~/.ssh/config.d/*" ];
     matchBlocks = {
       "github.com" = {
         hostname = "ssh.github.com";
