@@ -29,6 +29,7 @@
         };
       };
       nixosModules.lmod = import ./modules/lmod;
+      homeManagerModules.ssh-fhs-fix = import ./modules/home/ssh-fhs-fix.nix;
       overlays.lmod = final: prev: {
         lmod = final.callPackage ./packages/lmod {};
       };
