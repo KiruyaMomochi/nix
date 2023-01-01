@@ -31,7 +31,7 @@
       nixosModules.lmod = import ./modules/lmod;
       homeManagerModules.ssh-fhs-fix = import ./modules/home/ssh-fhs-fix.nix;
       overlays.lmod = final: prev: {
-        lmod = final.callPackage ./packages/lmod {};
+        lmod = final.callPackage ./packages/lmod { };
       };
     } // flake-utils.lib.eachDefaultSystem (system:
       let
@@ -54,7 +54,7 @@
         };
         formatter = pkgs.nixpkgs-fmt;
 
-        packages.lmod = pkgs.callPackage ./packages/lmod {};
+        packages.lmod = pkgs.callPackage ./packages/lmod { };
         packages.openxr-hpp = pkgs.callPackage ./packages/openxr-hpp { };
       }
     );

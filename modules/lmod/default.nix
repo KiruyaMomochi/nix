@@ -20,7 +20,7 @@ in
       default = true;
     };
   };
-  
+
   config = mkIf cfg.enable {
     programs.bash.initExtra = mkIf cfg.enableBashIntegration ''
       source ${cfg.package}/lmod/lmod/init/profile

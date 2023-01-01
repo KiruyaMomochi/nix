@@ -16,7 +16,7 @@
     helix
     gh
     glab
-    
+
     htop
     p7zip
     fd # find
@@ -26,7 +26,7 @@
     exa # ls
     delta # diff
     ripgrep # grep
-    
+
     file
     unzip
     ldns
@@ -50,14 +50,14 @@
   home.stateVersion = "22.11";
 
   programs.fish.enable = true;
-  
+
   programs.tmux = {
     enable = true;
     plugins = with pkgs; [
       tmuxPlugins.tmux-thumbs
     ];
     terminal = "tmux-256color";
-    
+
     extraConfig = ''
       set -g mouse on
     '';

@@ -18,7 +18,7 @@ with luaPackages; stdenv.mkDerivation rec {
   #   makeFlags="PREFIX=$out"
   # '';
   configureFlags = [ "--with-duplicatePaths=yes --with-caseIndependentSorting=yes --with-redirect=yes" ];
-  
+
   preBuild = ''
     patchShebangs proj_mgmt/
   '';
@@ -34,8 +34,8 @@ with luaPackages; stdenv.mkDerivation rec {
     	   -e 's:/usr/lib/lua/5.2/?.so;/usr/lib/lua/5.2/loadall.so;./?.so;::g' $out/lmod/lmod/libexec/{computeHashSum,lmod,addto,spider,ml_cmd,spiderCacheSupport,sh_to_modulefile,update_lmod_system_cache_files} $out/lmod/lmod/settarg/{settarg_cmd,targ}
   '';
 
-  LUA_PATH="${luaposix}/share/lua/5.2/?.lua;${luaposix}/share/lua/5.2/?/init.lua;;";
-  LUA_CPATH="${luafilesystem}/lib/lua/5.2/?.so;${luaposix}/lib/lua/5.2/?.so;;";
+  LUA_PATH = "${luaposix}/share/lua/5.2/?.lua;${luaposix}/share/lua/5.2/?/init.lua;;";
+  LUA_CPATH = "${luafilesystem}/lib/lua/5.2/?.so;${luaposix}/lib/lua/5.2/?.so;;";
   meta = {
     description = "Tool for configuring environments";
   };
