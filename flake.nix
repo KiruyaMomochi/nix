@@ -52,6 +52,8 @@
             ];
           };
         };
+        formatter = pkgs.nixpkgs-fmt;
+
         packages.lmod = pkgs.callPackage ./packages/lmod {};
         packages.openxr-hpp = pkgs.callPackage ./packages/openxr-hpp { };
       }
