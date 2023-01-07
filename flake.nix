@@ -28,6 +28,20 @@
           ];
         };
       };
+
+      homeConfigurations = {
+        kyaru = home-manager.lib.homeManagerConfiguration {
+          pkgs = import nixpkgs {
+            system = "x86_64-linux";
+            allowUnfree = true;
+          };
+          modules = [
+            vscode-server.nixosModules.home
+            ./home.nix
+          ];
+        };
+      };
+
       nixosModules.lmod = import ./modules/lmod;
       homeManagerModules.ssh-fhs-fix = import ./modules/home/ssh-fhs-fix.nix;
       overlays.lmod = final: prev: {
@@ -43,15 +57,6 @@
         };
       in
       {
-        homeConfigurations = {
-          kyaru = home-manager.lib.homeManagerConfiguration {
-            inherit pkgs;
-            modules = [
-              vscode-server.nixosModules.home
-              ./home.nix
-            ];
-          };
-        };
         formatter = pkgs.nixpkgs-fmt;
 
         packages.lmod = pkgs.callPackage ./packages/lmod { };
