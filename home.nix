@@ -119,7 +119,12 @@
 
   programs.helix.enable = true;
 
-  nix.package = pkgs.nix;
+  nix = {
+    package = pkgs.nix;
+    extraOptions = ''
+      experimental-features = nix-command flakes
+    '';
+  };
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
