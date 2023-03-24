@@ -1,4 +1,14 @@
-{ lib, stdenv, fetchFromGitHub, cmake, python3, vulkan-loader, vulkan-headers, python3Packages, openxr-loader }:
+{ lib
+, stdenv
+, fetchFromGitHub
+, cmake
+, python3
+, vulkan-loader
+, vulkan-headers
+, python3Packages
+, openxr-loader
+}:
+
 stdenv.mkDerivation rec {
   pname = "openxr-hpp";
   version = "1.0.26";

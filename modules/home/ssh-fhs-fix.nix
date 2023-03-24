@@ -1,3 +1,6 @@
+# Fix SSH config from symbolic points to copy files
+# https://github.com/nix-community/home-manager/issues/322
+
 { config, lib, pkgs, ... }:
 
 with lib;

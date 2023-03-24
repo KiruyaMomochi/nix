@@ -1,14 +1,22 @@
-{ stdenv, fetchurl, bc, perl, tcl, lua, luaPackages, rsync, procps }:
-
+{ stdenv
+, fetchurl
+, bc
+, perl
+, tcl
+, lua
+, luaPackages
+, rsync
+, procps
+}:
 
 # https://github.com/ComputeCanada/nixpkgs/blob/f6daa33900a71529aa7835cb5dbed5ddf854ec32/pkgs/tools/misc/lmod/default.nix#L4
 with luaPackages; stdenv.mkDerivation rec {
   name = "Lmod-${version}";
 
-  version = "8.7.15";
+  version = "8.7.20";
   src = fetchurl {
     url = "http://github.com/TACC/Lmod/archive/${version}.tar.gz";
-    sha256 = "sha256-kzM1A3l6bo5ckWAD+CgMkE0M0SAyzv+JDUX7SpTy93w=";
+    sha256 = "sha256-wE3v99LKNUYQo2JFmnqpocZCoJXkWksLskcbsyVOhfQ=";
   };
 
   buildInputs = [ lua tcl perl rsync procps bc ];

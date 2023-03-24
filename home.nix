@@ -8,6 +8,9 @@
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
+  nixpkgs.overlays = [
+    (import ./overlays/goldendict.nix)
+  ];
 
   # Packages that should be installed to the user profile.
   home.packages = with pkgs; [
@@ -26,6 +29,7 @@
     exa # ls
     delta # diff
     ripgrep # grep
+    erdtree # tree and du
 
     file
     unzip
@@ -33,21 +37,13 @@
 
     nil
     nixpkgs-fmt
+
+    nixpkgs-review
   ];
 
   home.sessionVariables = {
     EDITOR = "${pkgs.helix}/bin/hx";
   };
-
-  # This value determines the Home Manager release that your
-  # configuration is compatible with. This helps avoid breakage
-  # when a new Home Manager release introduces backwards
-  # incompatible changes.
-  #
-  # You can update Home Manager without changing this value. See
-  # the Home Manager release notes for a list of state version
-  # changes in each release.
-  home.stateVersion = "22.11";
 
   programs.fish.enable = true;
 
@@ -118,14 +114,35 @@
   };
 
   programs.helix.enable = true;
+  programs.helix.languages = [
+    {
+      name = "nix";
+      formatter = { command = "nixpkgs-fmt"; };
+    }
+  ];
 
-  nix = {
-    package = pkgs.nix;
-    extraOptions = ''
-      experimental-features = nix-command flakes
-    '';
+  nix.package = pkgs.nix;
+
+  xdg.dataFile."fcitx5/rime/default.custom.yaml".source = (pkgs.formats.yaml { }).generate "default.custom.yaml" {
+    patch = {
+      schema_list = [
+        {
+          "schema" = "double_pinyin_flypy";
+        }
+      ];
+    };
   };
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
+
+  # This value determines the Home Manager release that your
+  # configuration is compatible with. This helps avoid breakage
+  # when a new Home Manager release introduces backwards
+  # incompatible changes.
+  #
+  # You can update Home Manager without changing this value. See
+  # the Home Manager release notes for a list of state version
+  # changes in each release.
+  home.stateVersion = "22.11";
 }
