@@ -39,6 +39,8 @@
     nixpkgs-fmt
     nixpkgs-review
 
+    dconf # fix dconf error
+
     (typst.overrideAttrs (final: previous: {
       src = pkgs.fetchFromGitHub {
         owner = "typst";
