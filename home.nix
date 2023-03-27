@@ -11,25 +11,23 @@
   nixpkgs.overlays = [
     (import ./overlays/goldendict.nix)
   ];
+  nix.package = pkgs.nix;
 
   # Packages that should be installed to the user profile.
   home.packages = with pkgs; [
     bat
-    tmux
-    helix
     gh
     glab
 
-    htop
     p7zip
     fd # find
     procs # ps
     sd # sed
     bottom # top
-    exa # ls
     delta # diff
     ripgrep # grep
     erdtree # tree and du
+    choose # cut and sometimes awk
 
     file
     unzip
@@ -117,24 +115,33 @@
   programs.direnv.enable = true;
   programs.direnv.nix-direnv.enable = true;
 
+  # ls
   programs.exa = {
     enable = true;
     enableAliases = true;
   };
 
+  # top
+  programs.htop.enable = true;
   programs.bottom = {
     enable = true;
   };
 
-  programs.helix.enable = true;
-  programs.helix.languages = [
+  # editor
+  programs.helix =
     {
-      name = "nix";
-      formatter = { command = "nixpkgs-fmt"; };
-    }
-  ];
+      enable = true;
+      languages = [
+        {
+          name = "nix";
+          formatter = { command = "${pkgs.nixpkgs-fmt}/bin/nixpkgs-fmt"; };
+        }
+      ];
+    };
 
-  nix.package = pkgs.nix;
+  # tmux
+  programs.zellij.enable = true;
+
 
   xdg.dataFile."fcitx5/rime/default.custom.yaml".source = (pkgs.formats.yaml { }).generate "default.custom.yaml" {
     patch = {
