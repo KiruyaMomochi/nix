@@ -35,17 +35,7 @@
     nixpkgs-review
 
     dconf # fix dconf error
-
-    (typst.overrideAttrs (final: previous: {
-      src = pkgs.fetchFromGitHub {
-        owner = "typst";
-        repo = "typst";
-        rev = "e70ec5f3c06312b7ff2388630e05e3c2d745896f";
-        hash = "sha256-LHS3OUs6za5SOaUvGUcsv2viNX2qPOKcU3QdwzVheYE=";
-      };
-
-      TYPST_VERSION = "7sdream-add-font-patch";
-    }))
+    typst
   ];
 
   home.sessionVariables = {
