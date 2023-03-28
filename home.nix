@@ -127,8 +127,12 @@
     };
 
   # tmux
-  programs.zellij.enable = true;
-
+  programs.zellij = {
+    enable = true;
+    settings = {
+      default_shell = "${config.programs.fish.package}/bin/fish";
+    };
+  };
 
   xdg.dataFile."fcitx5/rime/default.custom.yaml".source = (pkgs.formats.yaml { }).generate "default.custom.yaml" {
     patch = {
