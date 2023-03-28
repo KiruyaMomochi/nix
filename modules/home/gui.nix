@@ -137,6 +137,9 @@ let
     };
 in
 {
+  nixpkgs.overlays = [
+    (import ../../overlays/goldendict.nix)
+  ];
   home.packages = with pkgs; [
     zotero
     (microsoft-edge.overrideAttrs (oldAttrs: msedge-override {
