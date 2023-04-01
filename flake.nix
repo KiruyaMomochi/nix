@@ -43,7 +43,10 @@
       };
 
       nixosModules.lmod = import ./modules/lmod;
-      homeManagerModules.ssh-fhs-fix = import ./modules/home/ssh-fhs-fix.nix;
+      homeManagerModules = {
+        ssh-fhs-fix = import ./modules/home/ssh-fhs-fix.nix;
+        onedrive = import ./modules/home/onedrive.nix;
+      };
       overlays.lmod = final: prev: {
         lmod = final.callPackage ./packages/lmod { };
       };
