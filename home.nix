@@ -4,7 +4,7 @@
   # Home Manager needs a bit of information about you and the
   # paths it should manage.
   home.username = "kyaru";
-  home.homeDirectory = "/home/kyaru";
+  home.homeDirectory = "/home/${config.home.username}";
 
   nixpkgs.config = import ./nixpkgs-config.nix;
   xdg.configFile."nixpkgs/config.nix".source = ./nixpkgs-config.nix;
