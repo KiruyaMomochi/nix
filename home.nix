@@ -42,7 +42,29 @@
     EDITOR = "${pkgs.helix}/bin/hx";
   };
 
-  programs.fish.enable = true;
+  programs.fish = {
+    enable = true;
+    plugins = [
+      rec {
+        name = "puffer-fish";
+        src = pkgs.fetchFromGitHub {
+          owner = "nickeb96";
+          repo = name;
+          rev = "5d3cb25e0d63356c3342fb3101810799bb651b64";
+          sha256 = "sha256-aPxEHSXfiJJXosIm7b3Pd+yFnyz43W3GXyUB5BFAF54=";
+        };
+      }
+      # rec {
+      #   name = "tide";
+      #   src = pkgs.fetchFromGitHub {
+      #     owner = "IlanCosman";
+      #     repo = name;
+      #     rev = "6a9d3e2749f0cc109604167ec9497ccda5c62d98";
+      #     sha256 = "sha256-8zPAqlM7f7dISsCsl6zdArufQ4VhCMSQccUslTpK9bM=";
+      #   };
+      # }
+    ];
+  };
 
   programs.tmux = {
     enable = true;
@@ -64,6 +86,12 @@
       key = "0xE3F508DE86FF810F";
       signByDefault = true;
     };
+    includes = [
+      {
+        path = "config.extra";
+      }
+    ];
+
     delta.enable = true;
     lfs.enable = true;
   };
