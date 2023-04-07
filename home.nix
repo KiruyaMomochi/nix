@@ -25,6 +25,7 @@
     ripgrep # grep
     erdtree # tree and du
     choose # cut and sometimes awk
+    tldr
 
     file
     unzip
@@ -33,9 +34,11 @@
     nil
     nixpkgs-fmt
     nixpkgs-review
+    cachix
 
     dconf # fix dconf error
     typst
+    btop
   ];
 
   home.sessionVariables = {
