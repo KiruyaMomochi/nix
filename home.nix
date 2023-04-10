@@ -97,6 +97,9 @@
 
     delta.enable = true;
     lfs.enable = true;
+    extraConfig = {
+      init.defaultBranch = "main";
+    };
   };
 
   programs.gpg = {
