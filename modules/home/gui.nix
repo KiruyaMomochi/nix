@@ -5,7 +5,7 @@
   ];
   home.packages = with pkgs; [
     zotero
-    micotosft-edge
+    microsoft-edge
     cascadia-code
     slack
     libreoffice-qt
@@ -17,7 +17,7 @@
     })
     goldendict
     ddcui
-    drawui
+    drawio
   ];
 
   programs.vscode =
