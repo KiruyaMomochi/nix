@@ -11,7 +11,7 @@
 
     # Fixes for vscode server under NixOS
     # This is a fork of msteen/nixos-vscode-server which makes server location configurable
-    vscode-server.url = "github:viperML/nixos-vscode-server/custom-path";
+    vscode-server.url = "github:nix-community/nixos-vscode-server";
 
     # Windows subsystem for Linux support
     nixos-wsl.url = "github:nix-community/NixOS-WSL?ref=22.05-5c211b47";
