@@ -152,7 +152,7 @@
   programs.helix =
     {
       enable = true;
-      languages = [
+      languages.language = [
         {
           name = "nix";
           formatter = { command = "${pkgs.nixpkgs-fmt}/bin/nixpkgs-fmt"; };

@@ -13,11 +13,15 @@
     filelight
     keepassxc
     (google-chrome.override {
-      commandLineArgs = "--enable-features=WebUIDarkMode --force-dark-mode";
+      commandLineArgs = "--enable-features=WebUIDarkMode --force-dark-mode --disable-features=UserAgentClientHint";
     })
     goldendict
     ddcui
     drawio
+    gitkraken
+    bottles
+    remmina
+    spotify
   ];
 
   programs.vscode =

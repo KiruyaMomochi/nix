@@ -38,6 +38,7 @@
           modules = [
             vscode-server.nixosModules.home
             ./home.nix
+            ./modules/home/gui.nix
           ];
         };
       };
