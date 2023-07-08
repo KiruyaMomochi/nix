@@ -9,6 +9,7 @@
     qalculate-qt # latte-dock
     krdc
     libsForQt5.dolphin
+    konsole
   ];
 
 

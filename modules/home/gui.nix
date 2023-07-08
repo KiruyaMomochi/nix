@@ -19,18 +19,14 @@
     ddcui
     drawio
     gitkraken
-    bottles
+    mattermost-desktop
     remmina
     spotify
+    vlc
   ];
 
   programs.vscode =
     let
-      # generated = import ./vscode-extensions.nix;
-      # extensions = pkgs.vscode-utils.extensionsFromVscodeMarketplace generated.extensions;
-      # package = pkgs.vscode-with-extensions.override {
-      #  vscodeExtensions = extensions;
-      # };
       package = pkgs.vscode.fhs;
     in
     {
