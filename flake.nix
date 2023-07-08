@@ -74,7 +74,7 @@
 
         overlays = {
           goldendict-ng = pkgs: prev: {
-            goldendict-ng = pkgs.callPackage ./packages/goldendict-ng { };
+            goldendict-ng = pkgs.libsForQt5.callPackage ./packages/goldendict-ng { };
           };
         };
       }

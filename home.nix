@@ -15,6 +15,7 @@
     bat
     gh
     glab
+    gitui
 
     p7zip
     fd # find
