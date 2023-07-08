@@ -68,6 +68,7 @@
           })
           vscode-server.nixosModules.home
           ./home.nix
+          ./modules/home/gui.nix
         ];
       };
 
@@ -76,9 +77,22 @@
         ssh-fhs-fix = import ./modules/home/ssh-fhs-fix.nix;
         onedrive = import ./modules/home/onedrive.nix;
       };
-      overlays.lmod = final: prev: {
-        lmod = final.callPackage ./packages/lmod { };
+      overlays = {
+        lmod = final: prev: {
+          lmod = final.callPackage ./packages/lmod { };
+        };
+        goldendict-ng = pkgs: prev: {
+          goldendict-ng = pkgs.libsForQt5.callPackage ./packages/goldendict-ng { };
+        };
       };
+
+      templates = {
+        pnpm = {
+          path = ./templates/pnpm;
+          description = "pnpm package manager";
+        };
+      };
+
     } // flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
@@ -101,12 +115,6 @@
           lmod = pkgs.callPackage ./packages/lmod { };
           openxr-hpp = pkgs.callPackage ./packages/openxr-hpp { };
           goldendict-ng = pkgs.libsForQt5.callPackage ./packages/goldendict-ng { };
-        };
-
-        overlays = {
-          goldendict-ng = pkgs: prev: {
-            goldendict-ng = pkgs.libsForQt5.callPackage ./packages/goldendict-ng { };
-          };
         };
       }
     );
