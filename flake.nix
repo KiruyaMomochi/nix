@@ -3,6 +3,12 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    lanzaboote = {
+      url = "github:nix-community/lanzaboote";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -20,14 +26,33 @@
     agenix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, home-manager, flake-utils, vscode-server, nixos-wsl, ... }:
+  outputs = { self, nixpkgs, home-manager, flake-utils, vscode-server, nixos-wsl, lanzaboote, agenix, ... }:
     {
       nixosConfigurations = {
-        # Desktop at lab
-        gourmet = nixpkgs.lib.nixosSystem {
+        # Desktop at lion
+        carmina = nixpkgs.lib.nixosSystem {
           system = flake-utils.lib.system.x86_64-linux;
           modules = [
-            ./hosts/gourmet
+            agenix.nixosModules.default
+            ./hosts/carmina/configuration.nix
+            lanzaboote.nixosModules.lanzaboote
+            ({ pkgs, lib, ... }: {
+              environment.systemPackages = [
+                pkgs.sbctl
+                pkgs.git
+              ];
+
+              # Lanzaboote currently replaces the systemd-boot module.
+              # This setting is usually set to true in configuration.nix
+              # generated at installation time. So we force it to false
+              # for now.
+              boot.loader.systemd-boot.enable = lib.mkForce false;
+
+              boot.lanzaboote = {
+                enable = true;
+                pkiBundle = "/etc/secureboot";
+              };
+            })
           ];
         };
       };
@@ -65,6 +90,12 @@
       in
       {
         formatter = pkgs.nixpkgs-fmt;
+
+        devShells.default = pkgs.mkShell {
+          packages = [
+            agenix.packages.${system}.default
+          ];
+        };
 
         packages = {
           lmod = pkgs.callPackage ./packages/lmod { };
