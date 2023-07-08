@@ -3,10 +3,11 @@
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
 { config, pkgs, lib, ... }:
-
+assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
 {
   imports =
-    [ # Include the results of the hardware scan.
+    [
+      # Include the results of the hardware scan.
       ./hardware-configuration.nix
       ./virtualization.nix
       # Don't know how to use agenix yet...
@@ -21,7 +22,7 @@
     "/nix".options = [ "compress=zstd" "noatime" ];
     "/swap".options = [ "noatime" ];
   };
-  swapDevices = [ { device = "/swap/swapfile"; }];
+  swapDevices = [{ device = "/swap/swapfile"; }];
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
@@ -43,7 +44,7 @@
   networking.firewall.enable = true;
   # Change allowedTCPPorts allowedUDPPorts in secrets
 
-  networking.networkmanager.enable = true;  # Easiest to use and most distros use this by default.
+  networking.networkmanager.enable = true; # Easiest to use and most distros use this by default.
   networking.networkmanager.dns = "systemd-resolved";
   services.resolved.enable = true;
   networking.hosts = {
@@ -81,7 +82,8 @@
     enabled = "fcitx5";
 
     fcitx5.addons = with pkgs; [
-      fcitx5-chewing fcitx5-rime
+      fcitx5-chewing
+      fcitx5-rime
     ];
   };
   console = {
@@ -98,7 +100,7 @@
   services.xserver.displayManager.sddm = {
     enable = true;
     autoNumlock = true;
-    settings = {};   
+    settings = { };
   };
   programs.partition-manager.enable = true;
   # Fix GTK themes are not applied in Wayland applications
@@ -167,7 +169,8 @@
   # $ nix search wget
   environment.systemPackages = with pkgs; [
     helix # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-    wget curl
+    wget
+    curl
     librime
     firefox
     ddcutil
@@ -212,7 +215,7 @@
   nixpkgs.config.allowUnfree = true;
 
   programs.firejail.enable = true;
-  programs.firejail.wrappedBinaries = {};
+  programs.firejail.wrappedBinaries = { };
 
   programs.wireshark.enable = true;
 
@@ -229,7 +232,7 @@
   boot.kernelParams = [
     "ibt=off"
   ];
-  
+
   # Nspawn
   systemd.services."container-getty@" = {
     environment = {
@@ -254,5 +257,3 @@
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "23.05"; # Did you read the comment?
 }
-
-
