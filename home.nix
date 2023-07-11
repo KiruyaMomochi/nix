@@ -47,6 +47,11 @@
     EDITOR = "${pkgs.helix}/bin/hx";
   };
 
+  home.shellAliases = {
+    "ip" = "ip -c";
+    "cp" = "cp -v";
+  };
+
   programs.fish = {
     enable = true;
     plugins = [
