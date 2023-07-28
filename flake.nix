@@ -91,7 +91,7 @@
         };
         modules = [
           ({ lib, ... }: {
-            nixpkgs.overlays = lib.attrsets.attrValues self.overlays.${flake-utils.lib.system.x86_64-linux};
+            nixpkgs.overlays = lib.attrsets.attrValues self.overlays;
           })
           vscode-server.nixosModules.home
           ./home.nix

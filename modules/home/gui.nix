@@ -20,6 +20,7 @@
     remmina
     spotify
     vlc
+    krita
   ];
 
   programs.vscode =
