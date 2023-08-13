@@ -141,6 +141,7 @@
     extraGroups = [ "wheel" "networkmanager" "libvirtd" "adbusers" ]; # Enable ‘sudo’ for the user.
     packages = with pkgs; [
       firefox
+      telegram-desktop
     ];
     shell = pkgs.fish;
     description = "百地 希留耶";
