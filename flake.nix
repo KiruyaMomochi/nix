@@ -27,41 +27,16 @@
   };
 
   outputs = { self, nixpkgs, home-manager, flake-utils, vscode-server, nixos-wsl, lanzaboote, agenix, ... }:
-    {
-      nixosConfigurations = {
-        # Desktop at lion
-        carmina = nixpkgs.lib.nixosSystem {
-          system = flake-utils.lib.system.x86_64-linux;
-          modules = [
-            agenix.nixosModules.default
-            ./hosts/carmina/configuration.nix
-            lanzaboote.nixosModules.lanzaboote
-            ({ pkgs, lib, ... }: {
-              environment.systemPackages = [
-                pkgs.sbctl
-                pkgs.git
-              ];
-
-              # Lanzaboote currently replaces the systemd-boot module.
-              # This setting is usually set to true in configuration.nix
-              # generated at installation time. So we force it to false
-              # for now.
-              boot.loader.systemd-boot.enable = lib.mkForce false;
-
-              boot.lanzaboote = {
-                enable = true;
-                pkiBundle = "/etc/secureboot";
-              };
-            })
-          ];
-        };
-
-        caon = nixpkgs.lib.nixosSystem {
-          system = "x86_64-linux";
-          modules =
-            [
+    let
+      hosts = [ "carmina" "caon" "elizabeth" ];
+      hostsConfigurations = hosts: builtins.listToAttrs (builtins.map
+        (host: {
+          name = host;
+          value = nixpkgs.lib.nixosSystem {
+            system = flake-utils.lib.system.x86_64-linux;
+            modules = [
               agenix.nixosModules.default
-              ./hosts/caon/configuration.nix
+              ./hosts/${host}/configuration.nix
               lanzaboote.nixosModules.lanzaboote
               ({ pkgs, lib, ... }: {
                 environment.systemPackages = [
@@ -81,8 +56,12 @@
                 };
               })
             ];
-        };
-      };
+          };
+        })
+        hosts);
+    in
+    {
+      nixosConfigurations = hostsConfigurations hosts;
 
       homeConfigurations.kyaru = home-manager.lib.homeManagerConfiguration {
         pkgs = import nixpkgs {
