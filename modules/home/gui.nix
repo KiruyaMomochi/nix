@@ -22,6 +22,7 @@
     vlc
     krita
     obsidian
+    anki
   ];
 
   programs.vscode =
