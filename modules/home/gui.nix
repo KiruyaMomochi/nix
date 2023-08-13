@@ -21,6 +21,7 @@
     spotify
     vlc
     krita
+    obsidian
   ];
 
   programs.vscode =

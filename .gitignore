@@ -1,2 +1,3 @@
 .direnv
 secret.nix
+/result

@@ -75,6 +75,7 @@
           vscode-server.nixosModules.home
           ./home.nix
           ./modules/home/gui.nix
+          ./modules/home/onedrive.nix
         ];
       };
 

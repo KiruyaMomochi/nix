@@ -12,35 +12,40 @@
 
   # Packages that should be installed to the user profile.
   home.packages = with pkgs; [
-    bat
-    gh
-    glab
-    gitui
-
-    p7zip
+    # utils
+    bat # cat
     fd # find
     procs # ps
     sd # sed
     bottom # top
+    btop # htop
     delta # diff
     ripgrep # grep
     erdtree # tree and du
     choose # cut and sometimes awk
     comma # quickly run command
 
+    # common commands
     file
     unzip
     ldns
     tldr
+    p7zip
+    gh
+    glab
+    gitui
 
+    # nix related
     nil
     nixpkgs-fmt
     nixpkgs-review
     cachix
 
+    # others
     dconf # fix dconf error
     typst
-    btop
+    typst-lsp
+    rclone
   ];
 
   home.sessionVariables = {
