@@ -61,6 +61,9 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
     "net.ipv6.conf.all.forwarding" = true;
   };
 
+  # Enable wacom
+  services.xserver.wacom.enable = true;
+
   # Enable RDP
   services.xserver.desktopManager.lxqt.enable = config.services.xrdp.enable;
   services.xserver.windowManager.openbox.enable = config.services.xserver.desktopManager.lxqt.enable;
