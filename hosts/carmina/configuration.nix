@@ -182,7 +182,7 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
     wireshark
   ];
 
-  fonts.fonts = with pkgs; [
+  fonts.packages = with pkgs; [
     noto-fonts
     noto-fonts-cjk-sans
     noto-fonts-cjk-serif
@@ -195,7 +195,7 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
     (nerdfonts.override { fonts = [ "CascadiaCode" ]; })
   ];
   fonts.fontDir.enable = true;
-  fonts.enableDefaultFonts = true;
+  fonts.enableDefaultPackages = true;
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
@@ -228,13 +228,6 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
     enableFakeroot = true;
     enable = true;
   };
-
-  # VMWare
-  virtualisation.vmware.host.enable = true;
-  # VMWare Fix
-  boot.kernelParams = [
-    "ibt=off"
-  ];
 
   # Nspawn
   systemd.services."container-getty@" = {

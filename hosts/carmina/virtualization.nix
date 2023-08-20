@@ -43,7 +43,7 @@
   #   extraOptions  = "--iptables=False";
   #   rootless = {
   #     enable = true;
-  #     setSocketVariable = true;
+  #     setSocketVariable = true;/
   #   };
   # };
   # virtualisation.docker.storageDriver = "btrfs";
@@ -76,6 +76,42 @@
       };
     };
   };
+
+  # VMWare
+  virtualisation.vmware.host = {
+    enable = true;
+    extraPackages = with pkgs; [ ntfs3g ];
+    extraConfig = ''
+      # Allow unsupported device's OpenGL and Vulkan acceleration for guest vGPU
+      mks.gl.allowUnsupportedDrivers = "TRUE"
+      mks.vk.allowUnsupportedDevices = "TRUE"
+    '';
+  };
+  # VMWare Fix
+  boot.kernelParams = [
+    "ibt=off"
+  ];
+  nixpkgs.overlays = lib.singleton (self: super: {
+    # https://nixos.wiki/wiki/Linux_kernel#Overriding_kernel_packages
+    linuxPackages_latest = super.linuxPackages_latest.extend (kself: ksuper: {
+      # vmware = ksuper.vmware.overrideAttrs(oldAttrs: let version = "17.0.2"; in {
+      #   version = "${version}-${kself.kernel.version}";
+      #   src = self.fetchFromGitHub {
+      #     owner = "mkubecek";
+      #     repo = "vmware-host-modules";
+      #     rev = "w${version}";
+      #     sha256 = "sha256-ziTGF+ZpcMIZ97UdOFuD4UxrlyOrZxMJ/ysSZu41A7o=";
+      #   };
+      # });
+      vmware = ksuper.vmware.overrideAttrs (oldAttrs: {
+        patches = (oldAttrs.patches or []) ++ [(self.fetchpatch {
+          name = "fix-gso-undefined.patch";
+          sha256 = "sha256-VhbRDJHyfyMrRCflRbf05GPi1/b2OdpjIPgTeOvMZrM=";
+          url = "https://github.com/mkubecek/vmware-host-modules/commit/b75cd616cca0a4c9ff22124c4c91d218e64e6205.patch";
+        })];
+      });
+    });
+  });
 
   # boot.binfmt.emulatedSystems = [
   #   "riscv64-linux"

@@ -166,7 +166,7 @@
     virt-manager
   ];
 
-  fonts.fonts = with pkgs; [
+  fonts.packages = with pkgs; [
     noto-fonts
     noto-fonts-cjk
     noto-fonts-emoji
@@ -178,7 +178,7 @@
     (nerdfonts.override { fonts = [ "CascadiaCode" ]; })
   ];
   fonts.fontDir.enable = true;
-  fonts.enableDefaultFonts = true;
+  fonts.enableDefaultPackages = true;
   # fonts.optimizeForVeryHighDPI = true;
 
   programs.kdeconnect.enable = true;
