@@ -239,6 +239,11 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
   # ADB
   programs.adb.enable = true;
 
+  # NetworkManager hangs
+  systemd.services.NetworkManager-wait-online = {
+    serviceConfig.ExecStart = [ "" "${pkgs.networkmanager}/bin/nm-online -q" ];
+  };
+
   # Copy the NixOS configuration file and link it from the resulting system
   # (/run/current-system/configuration.nix). This is useful in case you
   # accidentally delete configuration.nix.
