@@ -138,7 +138,7 @@
 
   programs.gh = {
     enable = true;
-    enableGitCredentialHelper = true;
+    gitCredentialHelper.enable = true;
     settings = {
       prompt = true;
       editor = config.home.sessionVariables.EDITOR;
