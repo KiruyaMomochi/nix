@@ -61,7 +61,14 @@
         hosts);
     in
     {
-      nixosConfigurations = hostsConfigurations hosts;
+      nixosConfigurations = (hostsConfigurations hosts) // {
+          twinkle-wish = nixpkgs.lib.nixosSystem {
+            system = flake-utils.lib.system.x86_64-linux;
+            modules = [
+              ./hosts/twinkle-wish/configuration.nix
+            ];
+          };
+        };
 
       homeConfigurations.kyaru = home-manager.lib.homeManagerConfiguration {
         pkgs = import nixpkgs {

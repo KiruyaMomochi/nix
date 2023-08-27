@@ -1,0 +1,124 @@
+# Edit this configuration file to define what should be installed on
+# your system.  Help is available in the configuration.nix(5) man page
+# and in the NixOS manual (accessible by running ‘nixos-help’).
+
+{ config, pkgs, ... }:
+
+{
+  imports =
+    [
+      # Include the results of the hardware scan.
+      ./hardware-configuration.nix
+      ./secret.nix
+    ];
+
+  # Use the GRUB 2 boot loader.
+  boot.loader.grub.enable = true;
+  # boot.loader.grub.efiSupport = false;
+  # boot.loader.grub.efiInstallAsRemovable = true;
+  # boot.loader.efi.efiSysMountPoint = "/boot/efi";
+  # Define on which hard drive you want to install Grub.
+  boot.loader.grub.device = "/dev/vda"; # or "nodev" for efi only
+
+  boot.kernel.sysctl = {
+    "net.core.default_qdisc" = "fq";
+    "net.ipv4.tcp_congestion_control" = "bbr";
+  };
+
+  networking.hostName = "twinkle-wish"; # Define your hostname.
+  networking.nameservers = [ "1.1.1.1" ];
+  # Pick only one of the below networking options.
+  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+  # networking.networkmanager.enable = true;  # Easiest to use and most distros use this by default.
+
+  # Set your time zone.
+  time.timeZone = "Asia/Taipei";
+
+  # Configure network proxy if necessary
+  # networking.proxy.default = "http://user:password@proxy:port/";
+  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
+
+  # Select internationalisation properties.
+  i18n.defaultLocale = "zh_TW.UTF-8";
+  # console = {
+  #   font = "Lat2-Terminus16";
+  #   keyMap = "us";
+  #   useXkbConfig = true; # use xkbOptions in tty.
+  # };
+
+  # Define a user account. Don't forget to set a password with ‘passwd’.
+  users.users.yui = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
+    packages = with pkgs; [ ];
+    openssh.authorizedKeys.keys = [
+      "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC/bxk6wXA396kICPAsNnnXqPt0zmUZgmDQZnem+0NDCmuMqCPn4+VBgMHaLWdrwLy3ct3D9j5DKrLZuhNWD73EkwnhdIqE8g2TAt+4KHVS6ppqH6hY6A51vevl8AZC3kIPFEvBMLdzh649cgv8qLoGEfa0Xu8YVmXOuQumaCO4sSj9+RWid1szJfM10uTeI6bGwDQCjwwA1wjBXX+S8pAg8seEL+naxDDYMp715im6mFG4c7Ti8cgZuEP5VqxjrumkBGkbia8yduhsvIK24BT6sW2vuXjYN4cvrVbHpw6hXLVvZLwNAkw9mTSiKEChnQj1JXCn80JxUKMSNKDmN0JZ"
+      "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDW/IJAwHjPjTdy1Iv21ZV0Am9ElaNL4DfsFgrMhLQtRT3NL4sEF/FzZJfxN0my2dZqIx5kN6uUQb7+0emJg700XdljY3W70iMTLCXni4PtU+nME+5SNSbDi7mev9AbiCbTa+vDfa0be4WYPlPENl2NISvUzWUUbREDuLztnazkqRJ+JKo+Hcjru7f1dI1X10GCeA5lgpPZ4l1SjAXrRTku6mVLAj4YgaHwXfHUuwBPIYTw4zFArwonC4/8XGVItUR1bfs6cYI2ilbtFRQ1TqBYO+3XeSOMv53Eu6qpkxRcFo1oIaH9hY9r3wpe1l1h2OMsKKJwxPSU7XBDvFLxPJRvBwg9xcP7xCnuBMpuSwN+F+LbAqufobEAkdFh/FSMoOsxHxy/um8apfdGCYoMk6WWQViFaMpZOv/7WFpjOhGh4ftqHWLH9b/9rWnvu8PFCDelIUwgjNwQNvQI2DB1mOpiYzNYrTTPSYS2ShItsJke5j9KP5h9mR7u0MCdT8evpL0= kyaru@gourmet"
+    ];
+    shell = pkgs.fish;
+  };
+  users.users.caddy.extraGroups = [ "acme" ];
+
+  users.users.root.initialHashedPassword = "$6$jV9CJI325pLutA.w$UNgCINCoyBF8wasUJdcCIrWMwoukzMejaaP4bPHXOO9Berif7lnSE4MzgCvpbsdxvurujCr.t.83pl7STs9Wj1";
+
+  # List packages installed in system profile. To search, run:
+  # $ nix search wget
+  environment.systemPackages = with pkgs; [
+    bat
+    fish
+    git
+    tmux
+    wget
+    helix
+    fail2ban
+    caddy
+  ];
+
+  # Some programs need SUID wrappers, can be configured further or are
+  # started in user sessions.
+  # programs.mtr.enable = true;
+  # programs.gnupg.agent = {
+  #   enable = true;
+  #   enableSSHSupport = true;
+  # };
+
+  # List services that you want to enable:
+
+  # Enable the OpenSSH daemon.
+  services.openssh.enable = true;
+  services.fail2ban.enable = true;
+
+  programs.fish.enable = true;
+  nixpkgs.config.allowUnfree = true;
+
+  # Open ports in the firewall.
+  networking.firewall.allowedTCPPorts = [ 22 80 443 ];
+  # networking.firewall.allowedUDPPorts = [ ... ];
+  # Or disable the firewall altogether.
+  # networking.firewall.enable = false;
+
+  # Enable flakes
+  nix.settings.experimental-features = [ "nix-command" "flakes" "repl-flake" ];
+  nix.settings.trusted-users = [ "yui" ];
+
+  # ACME
+  security.acme = {
+    acceptTerms = true;
+    defaults = {
+      webroot = "/var/lib/acme/.challenges";
+    };
+  };
+
+  # Copy the NixOS configuration file and link it from the resulting system
+  # (/run/current-system/configuration.nix). This is useful in case you
+  # accidentally delete configuration.nix.
+  # system.copySystemConfiguration = true;
+
+  # This value determines the NixOS release from which the default
+  # settings for stateful data, like file locations and database versions
+  # on your system were taken. It‘s perfectly fine and recommended to leave
+  # this value at the release version of the first install of this system.
+  # Before changing this value read the documentation for this option
+  # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
+  system.stateVersion = "22.11"; # Did you read the comment?
+}
