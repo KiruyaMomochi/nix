@@ -6,7 +6,6 @@
 , qtwebchannel
 , qtmultimedia
 , qtspeech
-, ...
 }:
 (goldendict.override { qtwebkit = null; }).overrideAttrs
   (oldAttrs: rec {

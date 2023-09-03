@@ -4,6 +4,19 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    git-agecrypt = {
+      url = "github:vlaci/git-agecrypt";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    agenix = {
+      url = "github:ryantm/agenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     lanzaboote = {
       url = "github:nix-community/lanzaboote";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -13,73 +26,45 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
     flake-utils.url = "github:numtide/flake-utils";
 
     # Fixes for vscode server under NixOS
-    # This is a fork of msteen/nixos-vscode-server which makes server location configurable
     vscode-server.url = "github:nix-community/nixos-vscode-server";
-
     # Windows subsystem for Linux support
     nixos-wsl.url = "github:nix-community/NixOS-WSL?ref=22.05-5c211b47";
-
-    agenix.url = "github:ryantm/agenix";
-    agenix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, home-manager, flake-utils, vscode-server, nixos-wsl, lanzaboote, agenix, ... }:
+  outputs = inputs@{ self, nixpkgs, flake-utils, ... }:
     let
-      hosts = [ "carmina" "caon" "elizabeth" ];
-      hostsConfigurations = hosts: builtins.listToAttrs (builtins.map
-        (host: {
-          name = host;
-          value = nixpkgs.lib.nixosSystem {
-            system = flake-utils.lib.system.x86_64-linux;
-            modules = [
-              agenix.nixosModules.default
-              ./hosts/${host}/configuration.nix
-              lanzaboote.nixosModules.lanzaboote
-              ({ pkgs, lib, ... }: {
-                environment.systemPackages = [
-                  pkgs.sbctl
-                  pkgs.git
-                ];
+      inherit (lib.kyaru.nixos) mapHosts;
+      inherit (lib.kyaru.packages) mapPackages;
+      inherit (lib.attrsets) attrValues;
 
-                # Lanzaboote currently replaces the systemd-boot module.
-                # This setting is usually set to true in configuration.nix
-                # generated at installation time. So we force it to false
-                # for now.
-                boot.loader.systemd-boot.enable = lib.mkForce false;
+      mkPkgs = pkgs: system: import pkgs {
+        inherit system;
+        config = {
+          allowUnfree = true;
+        };
+      };
 
-                boot.lanzaboote = {
-                  enable = true;
-                  pkiBundle = "/etc/secureboot";
-                };
-              })
-            ];
-          };
-        })
-        hosts);
+      lib = nixpkgs.lib.extend (self: super: {
+        kyaru = import ./lib { inherit inputs; lib = self; };
+      });
     in
     {
-      nixosConfigurations = (hostsConfigurations hosts) // {
-          twinkle-wish = nixpkgs.lib.nixosSystem {
-            system = flake-utils.lib.system.x86_64-linux;
-            modules = [
-              ./hosts/twinkle-wish/configuration.nix
-            ];
-          };
-        };
+      nixosConfigurations = mapHosts ./hosts { };
 
-      homeConfigurations.kyaru = home-manager.lib.homeManagerConfiguration {
+      homeConfigurations.kyaru = inputs.home-manager.lib.homeManagerConfiguration {
         pkgs = import nixpkgs {
           system = flake-utils.lib.system.x86_64-linux;
           allowUnfree = true;
         };
         modules = [
-          ({ lib, ... }: {
-            nixpkgs.overlays = lib.attrsets.attrValues self.overlays;
-          })
-          vscode-server.nixosModules.home
+          {
+            nixpkgs.overlays = attrValues self.overlays;
+          }
+          inputs.vscode-server.nixosModules.home
           ./home.nix
           ./modules/home/gui.nix
           ./modules/home/onedrive.nix
@@ -90,6 +75,10 @@
       homeManagerModules = {
         ssh-fhs-fix = import ./modules/home/ssh-fhs-fix.nix;
         onedrive = import ./modules/home/onedrive.nix;
+      };
+
+      overlay = final: prev: {
+        kyaru = mapPackages final;
       };
       overlays = {
         lmod = final: prev: {
@@ -106,30 +95,26 @@
           description = "pnpm package manager";
         };
       };
-
     } // flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs {
-          inherit system;
-          config = {
-            allowUnfree = true;
-          };
-        };
+        pkgs = mkPkgs nixpkgs system;
       in
       {
         formatter = pkgs.nixpkgs-fmt;
-
         devShells.default = pkgs.mkShell {
-          packages = [
-            agenix.packages.${system}.default
+          packages = with pkgs; [
+            inputs.agenix.packages.${system}.default
+            inputs.git-agecrypt.packages.${system}.default
+            sops
+            age
+            ssh-to-age
+            ssh-to-pgp
+            jq
+            yq
+            vscode-langservers-extracted
           ];
         };
-
-        packages = {
-          lmod = pkgs.callPackage ./packages/lmod { };
-          openxr-hpp = pkgs.callPackage ./packages/openxr-hpp { };
-          goldendict-ng = pkgs.libsForQt5.callPackage ./packages/goldendict-ng { };
-        };
+        packages = mapPackages pkgs;
       }
     );
 }
