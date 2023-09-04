@@ -10,9 +10,10 @@ buildGoModule {
   inherit (caddy) ldflags nativeBuildInputs postInstall meta;
   src = caddy.src + "/cmd/caddy";
 
-  vendorHash = "sha256-AvpA9xUqYRgvU6/9DOnJx90gKwzTyqZBxR1j5KudAAg=";
+  vendorHash = "sha256-tOnQQVCFTGbiAXchnbub3nMGJLBYnJTy665ImMjxjJg=";
 
   prePatch = ''
+    sed -i -e '\!// plug in Caddy modules here!a _ "github.com/caddyserver/forwardproxy"' ./main.go
     cp ${./go.mod} go.mod
     cp ${./go.sum} go.sum
   '';

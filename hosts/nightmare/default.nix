@@ -60,7 +60,7 @@
   systemd.network.networks."99-ethernet-default-dhcp".linkConfig.RequiredFamilyForOnline = "ipv4";
   networking.useNetworkd = true;
   networking.firewall.allowedTCPPorts = [ 22 80 443 ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
+  networking.firewall.allowedUDPPorts = [ 443 ];
 
   # Secrets
   sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
