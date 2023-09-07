@@ -39,7 +39,7 @@
     let
       inherit (lib.kyaru.nixos) mapHosts;
       inherit (lib.kyaru.packages) mapPackages;
-      inherit (lib.attrsets) attrValues;
+      inherit (lib.kyaru.modules) mapModules;
 
       mkPkgs = pkgs: system: import pkgs {
         inherit system;
@@ -48,53 +48,32 @@
         };
       };
 
+      # https://github.com/NixOS/nixpkgs/pull/157056
+      lib-kyaru = import ./lib { inherit inputs lib; };
       lib = nixpkgs.lib.extend (self: super: {
-        kyaru = import ./lib { inherit inputs; lib = self; };
+        kyaru = lib-kyaru;
       });
     in
     {
+      lib = lib-kyaru;
+
       nixosConfigurations = mapHosts ./hosts { };
 
+      # https://github.com/nix-community/home-manager/pull/3969
       homeConfigurations.kyaru = inputs.home-manager.lib.homeManagerConfiguration {
-        pkgs = import nixpkgs {
-          system = flake-utils.lib.system.x86_64-linux;
-          allowUnfree = true;
-        };
-        modules = [
-          {
-            nixpkgs.overlays = attrValues self.overlays;
-          }
-          inputs.vscode-server.nixosModules.home
-          ./home.nix
-          ./modules/home/gui.nix
-          ./modules/home/onedrive.nix
-        ];
+        pkgs = mkPkgs nixpkgs "x86_64-linux";
+        extraSpecialArgs = { inherit inputs lib-kyaru; };
+        modules = [ ./home.nix ];
       };
 
-      nixosModules.lmod = import ./modules/lmod;
-      homeManagerModules = {
-        ssh-fhs-fix = import ./modules/home/ssh-fhs-fix.nix;
-        onedrive = import ./modules/home/onedrive.nix;
-      };
+      nixosModules = mapModules ./modules import;
+      homeModules = mapModules ./modules/home import;
 
       overlay = final: prev: {
         kyaru = mapPackages final;
       };
-      overlays = {
-        lmod = final: prev: {
-          lmod = final.callPackage ./packages/lmod { };
-        };
-        goldendict-ng = pkgs: prev: {
-          goldendict-ng = pkgs.libsForQt5.callPackage ./packages/goldendict-ng { };
-        };
-      };
 
-      templates = {
-        pnpm = {
-          path = ./templates/pnpm;
-          description = "pnpm package manager";
-        };
-      };
+      templates = import ./templates;
     } // flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = mkPkgs nixpkgs system;

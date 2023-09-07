@@ -1,7 +1,11 @@
 # Fix SSH config from symbolic points to copy files
 # https://github.com/nix-community/home-manager/issues/322
 
-{ config, lib, pkgs, ... }:
+{ config
+, lib
+, pkgs
+, ...
+}:
 
 with lib;
 
@@ -55,7 +59,11 @@ let
 in
 
 {
-  config = mkIf true {
+  options.programs.kyaru.ssh = {
+    copy = mkEnableOption "Copy SSH config instead of symlinking it";
+  };
+
+  config = mkIf config.programs.kyaru.ssh.copy {
     assertions = [
       {
         assertion =

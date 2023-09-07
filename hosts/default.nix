@@ -5,6 +5,7 @@ let
 in
 {
   imports = [
+    inputs.self.nixosModules.all
     inputs.sops-nix.nixosModules.sops
     # https://github.com/nix-community/lanzaboote/blob/master/docs/QUICK_START.md
     inputs.lanzaboote.nixosModules.lanzaboote

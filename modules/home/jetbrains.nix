@@ -1,5 +1,7 @@
-{ pkgs, jetbrains-pkgs, lib, stdenv, ... }:
+{ config, pkgs, jetbrains-pkgs, lib, stdenv, ... }:
 let
+  cfg = config.programs.kyaru.jetbrains;
+
   # Copilot
   plugins = jetbrains-pkgs.jetbrains.plugins;
   copilotInfo = rec {
@@ -57,7 +59,13 @@ let
   clion = plugins.addPlugins pkgs.jetbrains.clion [ copilot-plugin ];
 in
 {
-  home.packages = [
-    clion
-  ];
+  options.programs.kyaru.jetbrains = {
+    enable = lib.mkEnableOption "Kiruya's jetbrains packages";
+  };
+
+  config = lib.mkIf cfg.enable {
+    home.packages = [
+      clion
+    ];
+  };
 }

@@ -1,3 +1,3 @@
 .direnv
-secret.nix
+!hosts/**/secret.nix
 result

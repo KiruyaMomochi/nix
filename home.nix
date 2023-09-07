@@ -1,10 +1,24 @@
-{ config, pkgs, ... }:
+{ inputs, config, pkgs, ... }:
 
 {
+  imports = [
+    {
+      nixpkgs.overlays = [ inputs.self.overlay ];
+    }
+    inputs.vscode-server.nixosModules.home
+    inputs.self.homeModules.all
+  ];
+
   # Home Manager needs a bit of information about you and the
   # paths it should manage.
   home.username = "kyaru";
   home.homeDirectory = "/home/${config.home.username}";
+
+  programs.kyaru = {
+    desktop.enable = true;
+    kde.enable = true;
+  };
+  services.onedrive-rclone.enable = true;
 
   nixpkgs.config = import ./nixpkgs-config.nix;
   xdg.configFile."nixpkgs/config.nix".source = ./nixpkgs-config.nix;
@@ -46,6 +60,8 @@
     typst
     typst-lsp
     rclone
+
+    awscli2
   ];
 
   home.sessionVariables = {

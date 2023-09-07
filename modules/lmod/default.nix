@@ -6,7 +6,7 @@ in
 {
   options.programs.lmod = {
     enable = mkEnableOption "Lmod: An Environment Module System based on Lua, Reads TCL Modules, Supports a Software Hierarchy";
-    package = mkPackageOption pkgs "lmod" { };
+    package = mkPackageOption pkgs [ "kyaru" "lmod" ] { };
 
     enableBashIntegration = mkEnableOption "Bash integration" // {
       default = true;
