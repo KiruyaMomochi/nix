@@ -1,0 +1,22 @@
+keys: &all
+  - &kyaru_elizabeth age1zke99l06jf9xc9jjcclncr7fcl4fekrrtza3urt3z3wkawnhr42srgfn6l
+  - &nightmare age1wrwljs4xl8j2wunsqhevamdxg42xxyyz25wr0yf49qcnschlkccqy46jtq
+  - &caon age14n5fh458xxdcxm8nldhdfagqln8gddvkwvve4h7yv5f4rjf833hqtzu4z2
+  - &elizabeth age107rl7v3mggzr0nalfv9mu0uwwt9cmfevgy0prek52dfe7txklchqm4uvss
+  - &carmina age184acq6z5t4tg6n5k90catgrrfq24r7vh3em8sgm4uufe6l99narsr6v4tq
+creation_rules:
+  - path_regex: hosts/secrets/[^/]+\.(y(a)ml|json|env|ini|raw|bin)$
+    key_groups:
+      - age: *all
+  - path_regex: hosts/secrets/v/[^/]+\.(y(a)ml|json|env|ini|raw|bin)$
+    key_groups:
+      - age: *all
+  - path_regex: hosts/nightmare/secrets/[^/]+\.(y(a)ml|json|env|ini|raw|bin)$
+    key_groups:
+      - age:
+          - *kyaru_elizabeth
+          - *nightmare
+  - path_regex: hosts/([^/]+/)?secret.nix
+    key_groups:
+      - age:
+          - *kyaru_elizabeth

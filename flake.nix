@@ -83,8 +83,9 @@
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             inputs.agenix.packages.${system}.default
+            # https://github.com/vlaci/git-agecrypt
             inputs.git-agecrypt.packages.${system}.default
-            sops
+            self.packages.${system}.sops
             age
             ssh-to-age
             ssh-to-pgp

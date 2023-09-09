@@ -9,6 +9,7 @@ in
     inputs.sops-nix.nixosModules.sops
     # https://github.com/nix-community/lanzaboote/blob/master/docs/QUICK_START.md
     inputs.lanzaboote.nixosModules.lanzaboote
+    ./secret.nix
   ];
 
   boot.lanzaboote.pkiBundle = "/etc/secureboot";
@@ -77,7 +78,10 @@ in
     # defaults.webroot = mkDefault "/var/lib/acme/acme-challenge";
   };
 
+  # Secrets
+  sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
   sops.defaultSopsFile = ./secrets/secrets.yaml;
+
   i18n.defaultLocale = mkDefault "en_US.UTF-8";
 
   # Copy the NixOS configuration file and link it from the resulting system

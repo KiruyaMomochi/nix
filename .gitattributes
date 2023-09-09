@@ -1,1 +1,1 @@
-hosts/**/secret.nix filter=git-agecrypt diff=git-agecrypt
+hosts/**/secret.nix filter=git-sops diff=git-sops
