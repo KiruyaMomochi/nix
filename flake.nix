@@ -8,10 +8,6 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    git-agecrypt = {
-      url = "github:vlaci/git-agecrypt";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     agenix = {
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -21,9 +17,12 @@
       url = "github:nix-community/lanzaboote";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
     home-manager = {
       url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    oluceps = {
+      url = "github:oluceps/nur-pkgs";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -71,6 +70,7 @@
 
       overlay = final: prev: {
         kyaru = mapPackages final;
+        oluceps = inputs.oluceps.packages.${final.hostPlatform.system};
       };
 
       templates = import ./templates;
@@ -83,8 +83,6 @@
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             inputs.agenix.packages.${system}.default
-            # https://github.com/vlaci/git-agecrypt
-            inputs.git-agecrypt.packages.${system}.default
             self.packages.${system}.sops
             age
             ssh-to-age

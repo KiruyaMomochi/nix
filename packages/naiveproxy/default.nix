@@ -118,7 +118,7 @@ let
     # rec for buildTargets
     (base: rec {
       inherit version;
-      name = "naïveproxy";
+      name = "naiveproxy";
       packageName = "naiveproxy";
       buildTargets = [ "naive" ];
       src = naiveSrc + "/src";
@@ -145,7 +145,7 @@ let
       };
 
       depsBuildBuild = lib.lists.take 4 base.depsBuildBuild;
-      buildInputs = [ ];
+      buildInputs = [ openssl ];
 
       # From common.nix of nixpkgs
       patches = (lib.lists.take 2 base.patches) ++ (lib.lists.drop 4 base.patches);
@@ -184,7 +184,7 @@ let
         runHook preInstall
 
         mkdir -p "$out/bin"
-        install -Dm755 "out/Release/naive" "$out/bin/naiveproxy"
+        install -Dm755 "out/Release/naive" "$out/bin/naive"
         install -Dm644 "config.json" "$out/share/naiveproxy/config.json"
         install -Dm644 "${naiveSrc}/USAGE.txt" "$out/share/doc/naiveproxy/USAGE.txt"
         install -Dm644 "${naiveSrc}/LICENSE" "$out/share/licenses/naiveproxy/LICENSE"
@@ -199,6 +199,12 @@ let
         python3 "${naiveSrc}/tests/basic.py" --naive="$naive" --target_cpu="$target_cpu" --server_protocol=https
         python3 "${naiveSrc}/tests/basic.py" --naive="$naive" --target_cpu="$target_cpu" --server_protocol=http
       '';
+
+      meta = with lib; {
+        homepage = "https://github.com/klzgrad/naiveproxy";
+        description = "naiveproxy";
+        platforms = platforms.linux;
+      };
     });
 in
 self

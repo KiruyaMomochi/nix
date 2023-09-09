@@ -99,18 +99,29 @@ in
         restartIfChanged = true;
         description = "NaïveProxy service";
         wantedBy = [ "multi-user.target" ];
+        after = [ "network-online.target" ];
         preStart = ''
           umask u=rw,g=,o=
           ${utils.genJqSecretsReplacementSnippet cfg.settings configPath}
         '';
         serviceConfig = {
           DynamicUser = true;
-          ExecStart = "${cfg.package}/bin/naiveproxy ${configPath}";
+          ExecStart = "${cfg.package}/bin/naive ${configPath}";
           PrivateTmp = true;
           MemoryDenyWriteExecute = true;
           NoNewPrivileges = true;
           StateDirectory = "naiveproxy";
           Restart = "on-failure";
+          CapabilityBoundingSet = [
+            "CAP_NET_RAW"
+            "CAP_NET_ADMIN"
+            "CAP_NET_BIND_SERVICE"
+          ];
+          AmbientCapabilities = [
+            "CAP_NET_RAW"
+            "CAP_NET_ADMIN"
+            "CAP_NET_BIND_SERVICE"
+          ];
         };
       };
   };
