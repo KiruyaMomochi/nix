@@ -65,7 +65,7 @@ in
           };
 
           log = mkOption {
-            type = types.nullOr types.path;
+            type = types.nullOr types.str;
             example = "/var/log/naiveproxy.log";
             default = null;
             description = ''
