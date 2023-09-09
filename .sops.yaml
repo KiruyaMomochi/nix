@@ -1,5 +1,6 @@
 keys: &all
   - &kyaru_elizabeth age1zke99l06jf9xc9jjcclncr7fcl4fekrrtza3urt3z3wkawnhr42srgfn6l
+  - &kyaru_carmina age13xy60eaa0nvgjhrlzlq3uggqkydw0ffyjmg9teezwy8a0n2g39usm0rkfz
   - &nightmare age1wrwljs4xl8j2wunsqhevamdxg42xxyyz25wr0yf49qcnschlkccqy46jtq
   - &caon age14n5fh458xxdcxm8nldhdfagqln8gddvkwvve4h7yv5f4rjf833hqtzu4z2
   - &elizabeth age107rl7v3mggzr0nalfv9mu0uwwt9cmfevgy0prek52dfe7txklchqm4uvss
@@ -20,3 +21,4 @@ creation_rules:
     key_groups:
       - age:
           - *kyaru_elizabeth
+          - *kyaru-carmina
