@@ -21,4 +21,4 @@ creation_rules:
     key_groups:
       - age:
           - *kyaru_elizabeth
-          - *kyaru-carmina
+          - *kyaru_carmina
