@@ -62,9 +62,15 @@
   networking.firewall.allowedTCPPorts = [ 22 80 443 ];
   networking.firewall.allowedUDPPorts = [ 443 ];
 
+  # Grafana
   services.grafana = {
     enable = true;
-    settings = {};
+    settings = {
+      server = {
+        http_addr = "127.0.0.1";
+        http_port = 3000;
+      };
+    };
   };
 
   # This value determines the NixOS release from which the default

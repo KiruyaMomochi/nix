@@ -18,6 +18,15 @@ in
   options.services.naiveproxy = {
     enable = mkEnableOption "NaiveProxy";
     package = mkPackageOption pkgs [ "kyaru" "naiveproxy" ] { };
+    proxyFile = mkOption {
+      type = with types; nullOr str;
+      example = "/etc/naiveproxy/proxy";
+      default = null;
+      description = ''
+        Path to a file containing a proxy URL. The file is read on service
+        restart.
+      '';
+    };
 
     settings = mkOption {
       type = types.submodule {
@@ -56,8 +65,9 @@ in
           };
 
           proxy = mkOption {
-            type = with types; oneOf [ nonEmptyStr (submodule secretOptions) ];
+            type = with types; nullOr (oneOf [ nonEmptyStr (submodule secretOptions) ]);
             example = "https://user:pass@domain.example";
+            default = null;
             description = ''
               Routes traffic via the proxy server. Connects directly by default.
               Available proto: https, quic. Infers port by default.
@@ -84,45 +94,73 @@ in
     };
   };
 
-  config = mkIf cfg.enable {
-    environment.etc."naiveproxy/config.json" = {
-      mode = "0400";
-      source = settingsFormat.generate "naiveproxy-config.json" cfg.settings;
-    };
-
-    systemd.services.naiveproxy =
-      let
-        configPath = "/var/lib/naiveproxy/config.json";
-      in
+  config =
+    mkIf cfg.enable (mkMerge [
       {
-        restartTriggers = [ configPath ];
-        restartIfChanged = true;
-        description = "NaïveProxy service";
-        wantedBy = [ "multi-user.target" ];
-        after = [ "network-online.target" ];
-        preStart = ''
-          umask u=rw,g=,o=
-          ${utils.genJqSecretsReplacementSnippet cfg.settings configPath}
-        '';
-        serviceConfig = {
-          DynamicUser = true;
-          ExecStart = "${cfg.package}/bin/naive ${configPath}";
-          PrivateTmp = true;
-          MemoryDenyWriteExecute = true;
-          NoNewPrivileges = true;
-          StateDirectory = "naiveproxy";
-          Restart = "on-failure";
-          CapabilityBoundingSet = [
-            "CAP_NET_RAW"
-            "CAP_NET_ADMIN"
-            "CAP_NET_BIND_SERVICE"
-          ];
-          AmbientCapabilities = [
-            "CAP_NET_RAW"
-            "CAP_NET_ADMIN"
-            "CAP_NET_BIND_SERVICE"
-          ];
+        assertions = [
+          {
+            assertion = cfg.proxyFile != null && cfg.settings.proxy != null;
+            message = "Exactly one of proxyFile and settings.proxy should be set.";
+          }
+        ];
+
+        environment.etc."naiveproxy/config.json" = {
+          mode = "0400";
+          source = settingsFormat.generate "naiveproxy-config.json" cfg.settings;
         };
-      };
-  };
+
+        systemd.services.naiveproxy =
+          let
+            configPath = "/var/lib/naiveproxy/config.json";
+          in
+          {
+            restartTriggers = [ configPath ];
+            restartIfChanged = true;
+            description = "NaïveProxy service";
+            wantedBy = [ "multi-user.target" ];
+            after = [ "network-online.target" ];
+            preStart = ''
+              umask u=rw,g=,o=
+              ${utils.genJqSecretsReplacementSnippet cfg.settings configPath}
+            '';
+            serviceConfig = {
+              DynamicUser = true;
+              ExecStart = "${cfg.package}/bin/naive ${configPath}";
+              PrivateTmp = true;
+              MemoryDenyWriteExecute = true;
+              NoNewPrivileges = true;
+              StateDirectory = "naiveproxy";
+              Restart = "on-failure";
+              CapabilityBoundingSet = [
+                "CAP_NET_RAW"
+                "CAP_NET_ADMIN"
+                "CAP_NET_BIND_SERVICE"
+              ];
+              AmbientCapabilities = [
+                "CAP_NET_RAW"
+                "CAP_NET_ADMIN"
+                "CAP_NET_BIND_SERVICE"
+              ];
+            };
+          };
+      }
+
+      (
+        let
+          credentialPath = "/var/lib/naiveproxy/naiveproxy_address";
+        in
+        mkIf (cfg.proxyFile != null)
+          {
+            services.naiveproxy.settings.proxy._secret = credentialPath;
+            systemd.services.naiveproxy.serviceConfig = {
+              LoadCredential = mkIf (cfg.proxyFile != null) [
+                "naiveproxy_address:${cfg.proxyFile}"
+              ];
+              BindReadOnlyPaths = mkIf (cfg.proxyFile != null) [
+                "%d/naiveproxy_address:${credentialPath}"
+              ];
+            };
+          }
+      )
+    ]);
 }
