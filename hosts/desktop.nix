@@ -1,6 +1,6 @@
 { config, pkgs, lib, ... }:
 let
-  inherit (lib.modules) mkIf;
+  inherit (lib.modules) mkIf mkDefault;
   inherit (lib.lists) optional;
 in
 {
@@ -77,7 +77,7 @@ in
   services.xserver.libinput.enable = true;
   services.openssh.settings.X11Forwarding = true;
   services.xrdp = {
-    defaultWindowManager = "startplasma-x11";
+    defaultWindowManager = mkDefault "startplasma-x11";
     openFirewall = true;
   };
 

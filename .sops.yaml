@@ -19,7 +19,7 @@ creation_rules:
           - *kyaru_elizabeth
           - *kyaru_carmina
           - *nightmare
-  - path_regex: hosts/twinkle_wish/secrets/[^/]+\.(y(a)ml|json|env|ini|raw|bin)$
+  - path_regex: hosts/twinkle-wish/secrets/[^/]+\.(y(a)ml|json|env|ini|raw|bin)$
     key_groups:
       - age:
           - *kyaru_elizabeth

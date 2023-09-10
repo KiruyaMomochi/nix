@@ -26,7 +26,15 @@
     "net.core.default_qdisc" = "fq";
     "net.ipv4.tcp_congestion_control" = "bbr";
   };
-  networking.nameservers = [ "1.1.1.1" ];
+  networking.nameservers = [
+    "1.1.1.1#cloudflare-dns.com"
+    "2606:4700:4700::1111#cloudflare-dns.com"
+    "2606:4700:4700::1001#cloudflare-dns.com"
+  ];
+  networking.tempAddresses = "disabled";
+  networking.useNetworkd = true;
+  systemd.network.wait-online.anyInterface = true;
+  systemd.network.networks."99-ethernet-default-dhcp".linkConfig.RequiredFamilyForOnline = "ipv4";
 
   # Set your time zone.
   time.timeZone = "Asia/Taipei";
@@ -52,13 +60,11 @@
 
   # Open ports in the firewall.
   networking.firewall.allowedTCPPorts = [ 22 80 443 ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
+  networking.firewall.allowedUDPPorts = [ 443 ];
 
   services.grafana = {
     enable = true;
-    server = {
-      http_addr = "127.0.0.1";
-    };
+    settings = {};
   };
 
   # This value determines the NixOS release from which the default

@@ -29,7 +29,9 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  boot.kernelPackages = pkgs.linuxPackages_latest;
+  # https://github.com/mkubecek/vmware-host-modules/issues/202
+  # boot.kernelPackages = pkgs.linuxPackages_latest;
+
   boot.kernelModules = [
     "nft_tproxy"
     "nft_socket"
@@ -38,7 +40,7 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
 
   hardware.bluetooth.enable = true;
   networking = {
-    networking.hosts = {
+    hosts = {
       "10.15.89.181" = [ "rancher.geekpie.tech" ];
       "100.64.0.38" = [ "google.com" "www.google.com" "translate.google.com" ];
       # "151.101.66.217" = ["cache.nixos.org" "channels.nixos.org"];

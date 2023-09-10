@@ -13,6 +13,7 @@
   git config filter.git-sops.clean 'scripts/git-sops-clean.sh %f'
   ```
 - [ ] Better method to handle secrets in naiveproxy.
+- [ ] Recursively `mapModule`.
 
 ## References
 
