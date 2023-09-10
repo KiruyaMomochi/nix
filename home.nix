@@ -165,7 +165,7 @@
   programs.direnv.nix-direnv.enable = true;
 
   # ls
-  programs.exa = {
+  programs.eza = {
     enable = true;
     enableAliases = true;
   };
