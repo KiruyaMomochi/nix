@@ -1,6 +1,6 @@
 {
   pnpm = {
-    path = ./templates/pnpm;
+    path = ./pnpm;
     description = "pnpm package manager";
   };
 }
