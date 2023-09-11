@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs-master.url = "github:NixOS/nixpkgs/master";
 
     sops-nix = {
       url = "github:Mic92/sops-nix";
@@ -68,9 +69,13 @@
       nixosModules = mapModules ./modules import;
       homeModules = mapModules ./modules/home import;
 
-      overlay = final: prev: {
+      overlay = final: prev: rec {
         kyaru = mapPackages final;
         oluceps = inputs.oluceps.packages.${final.hostPlatform.system};
+        master = mkPkgs inputs.nixpkgs-master final.hostPlatform.system;
+        influxdb2-cli = master.influxdb2-cli;
+        influxdb2-server = master.influxdb2-server;
+        influxdb2-token-manipulator = master.influxdb2-token-manipulator;
       };
 
       templates = import ./templates;

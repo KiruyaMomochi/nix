@@ -67,6 +67,14 @@
     enable = true;
   };
 
+  # Telegraf
+  sops.secrets."influxdb" = { };
+  services.telegraf = {
+    enable = true;
+    extraConfig = builtins.fromTOML (builtins.readFile ../telegraf.conf);
+    environmentFiles = [ config.sops.secrets."influxdb".path ];
+  };
+
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
   # on your system were taken. It's perfectly fine and recommended to leave

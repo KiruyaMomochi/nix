@@ -271,11 +271,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1694134858,
-        "narHash": "sha256-fG/ESauOGmiojKlpJG8gB62dJa5Wd+ZIuiDMKK/HD3g=",
+        "lastModified": 1694375657,
+        "narHash": "sha256-32X8dcty4vPXx+D4yJPQZBo5hJ1NQikALhevGv6elO4=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "19c6a4081b14443420358262f8416149bd79561a",
+        "rev": "f7848d3e5f15ed02e3f286029697e41ee31662d7",
         "type": "github"
       },
       "original": {
@@ -344,6 +344,22 @@
         "id": "nixpkgs",
         "ref": "nixos-22.05",
         "type": "indirect"
+      }
+    },
+    "nixpkgs-master": {
+      "locked": {
+        "lastModified": 1694450060,
+        "narHash": "sha256-r8KYMwRTplnfnck83UBs/irI5QGFgsZzsdI7lHHvP94=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "ade414b6c7b9b5fe5cf69d4a1508973f7f4787f0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "master",
+        "repo": "nixpkgs",
+        "type": "github"
       }
     },
     "nixpkgs-stable": {
@@ -468,6 +484,7 @@
         "lanzaboote": "lanzaboote",
         "nixos-wsl": "nixos-wsl",
         "nixpkgs": "nixpkgs_2",
+        "nixpkgs-master": "nixpkgs-master",
         "oluceps": "oluceps",
         "sops-nix": "sops-nix",
         "vscode-server": "vscode-server"

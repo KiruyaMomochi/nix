@@ -56,7 +56,10 @@
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
-  environment.systemPackages = with pkgs; [ ];
+  environment.systemPackages = with pkgs; [
+    influxdb2-cli
+    influxdb2-token-manipulator
+  ];
 
   # Open ports in the firewall.
   networking.firewall.allowedTCPPorts = [ 22 80 443 ];
@@ -73,11 +76,19 @@
     };
   };
 
-  # # InfluxDB
-  # # https://github.com/NixOS/nixpkgs/issues/253877
-  # services.influxdb2 = {
-  #   enable = true;
-  # };
+  # InfluxDB
+  # https://github.com/NixOS/nixpkgs/issues/253877
+  services.influxdb2 = {
+    enable = true;
+  };
+
+  # Telegraf
+  sops.secrets."influxdb" = { };
+  services.telegraf = {
+    enable = true;
+    extraConfig = builtins.fromTOML (builtins.readFile ../telegraf.conf);
+    environmentFiles = [ config.sops.secrets."influxdb".path ];
+  };
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
