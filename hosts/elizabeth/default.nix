@@ -98,6 +98,11 @@
   # Wireshark
   programs.wireshark.enable = true;
 
+  # Telegraf
+  services.telegraf.enable = true;
+  services.telegraf.extraConfig.agent.interval = "30s";
+  services.telegraf.extraConfig.agent.flush_interval = "30s";
+
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
   # on your system were taken. It’s perfectly fine and recommended to leave

@@ -1,7 +1,8 @@
 { inputs, config, pkgs, lib, ... }:
 let
-  inherit (lib.modules) mkDefault;
-  inherit (lib.lists) optional;
+  inherit (lib.modules) mkDefault mkMerge;
+  inherit (lib.lists) optional singleton;
+  nixos-version-file = pkgs.writeText "nixos-version.json" (builtins.toJSON config.system.nixos);
 in
 {
   imports = [
@@ -78,9 +79,41 @@ in
     # defaults.webroot = mkDefault "/var/lib/acme/acme-challenge";
   };
 
+  # Telegraf
+  services.telegraf = {
+    extraConfig = mkMerge [
+      (builtins.fromTOML (builtins.readFile ./telegraf.conf))
+      {
+        agent.interval = mkDefault "10s";
+        agent.flush_interval = mkDefault "10s";
+      }
+      {
+        inputs.exec = [
+          {
+            commands = singleton "${pkgs.coreutils}/bin/cat ${nixos-version-file}";
+            data_format = "json_v2";
+            timeout = "5s";
+            flush_interval = "60s";
+            json_v2 = singleton {
+              measurement_name = "nixos";
+              object = singleton {
+                # https://github.com/tidwall/gjson/blob/master/SYNTAX.md#modifiers
+                path = "@this";
+                disable_prepend_keys = true;
+                included_keys = [ "codeName" "release" "revision" "tags" "variant_id" "version" "versionSuffix" ];
+              };
+            };
+          }
+        ];
+      }
+    ];
+    environmentFiles = [ config.sops.secrets."influxdb".path ];
+  };
+
   # Secrets
   sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
   sops.defaultSopsFile = ./secrets/secrets.yaml;
+  sops.secrets."influxdb" = { };
 
   i18n.defaultLocale = mkDefault "en_US.UTF-8";
 
