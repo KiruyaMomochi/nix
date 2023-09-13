@@ -101,6 +101,9 @@ in
                 path = "@this";
                 disable_prepend_keys = true;
                 included_keys = [ "codeName" "release" "revision" "tags" "variant_id" "version" "versionSuffix" ];
+                fields = {
+                  release = "string";
+                };
               };
             };
           }
