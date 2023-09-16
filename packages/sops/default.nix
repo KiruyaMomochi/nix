@@ -8,7 +8,7 @@ let
       repo = "sops";
       sha256 = "sha256-i3XlQeZpRm8EoUgrnCKiiPn7Rvs+wIdFtpeAi68YMQ0=";
     };
-    vendorSha256 = "sha256-FsmM1zIsB6BXMwMivvjGU/ISayrYyV1M9lU6LUE9dWE=";
+    vendorHash = "sha256-FsmM1zIsB6BXMwMivvjGU/ISayrYyV1M9lU6LUE9dWE=";
   };
 in
 sops.override {
