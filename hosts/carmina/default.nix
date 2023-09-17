@@ -90,6 +90,9 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
   # $ nix search wget
   environment.systemPackages = with pkgs; [ ];
 
+  # School is polluting DNS and the changed DNS server's DNSSEC is broken so
+  services.resolved.dnssec = "false";
+
   services.openssh.ports = [ 22 5022 ];
   system.autoUpgrade.enable = true;
   programs.wireshark.enable = true;
