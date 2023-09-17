@@ -9,6 +9,8 @@
 - [ ] Better method to handle secrets in naiveproxy.
 - [ ] Recursively `mapModule`.
 - [ ] Monitor S3 usage.
+- [ ] Move Telegraf to a custom module.
+- [ ] Add Log monitoring.
 
 ## References
 

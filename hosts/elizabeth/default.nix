@@ -105,7 +105,6 @@ in
   services.telegraf.extraConfig = {
     agent.interval = "30s";
     agent.flush_interval = "30s";
-    inputs.net = [ ];
   };
 
   # This value determines the NixOS release from which the default
