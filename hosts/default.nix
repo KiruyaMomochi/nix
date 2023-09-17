@@ -88,6 +88,11 @@ in
         agent.flush_interval = mkDefault "10s";
       }
       {
+        inputs.net = mkDefault (singleton {
+          interfaces = ["eth*" "enp0s[0-1]" "lo"];
+        });
+      }
+      {
         inputs.exec = [
           {
             commands = singleton "${pkgs.coreutils}/bin/cat ${nixos-version-file}";

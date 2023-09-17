@@ -2,8 +2,10 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, ... }:
-
+{ config, pkgs, lib, ... }:
+let
+  inherit (lib.modules) mkForce;
+in
 {
   imports =
     [
@@ -100,8 +102,11 @@
 
   # Telegraf
   services.telegraf.enable = true;
-  services.telegraf.extraConfig.agent.interval = "30s";
-  services.telegraf.extraConfig.agent.flush_interval = "30s";
+  services.telegraf.extraConfig = {
+    agent.interval = "30s";
+    agent.flush_interval = "30s";
+    inputs.net = [ ];
+  };
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
