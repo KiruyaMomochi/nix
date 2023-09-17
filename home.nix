@@ -24,7 +24,7 @@
   xdg.configFile."nixpkgs/config.nix".source = ./nixpkgs-config.nix;
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" "repl-flake" ];
-    trusted-public-keys = [ "usc1-nix-cache-1:0eeX8bNNyT/i++0MP6ZA6VeuXmsm0tw5Lkb4R4x5Fkg=" ];
+    extra-trusted-public-keys = [ "usc1-nix-cache-1:0eeX8bNNyT/i++0MP6ZA6VeuXmsm0tw5Lkb4R4x5Fkg=" ];
   };
   nix.package = pkgs.nix;
 
@@ -58,6 +58,8 @@
     nixpkgs-fmt
     nixpkgs-review
     cachix
+    nix-output-monitor
+    expect
 
     # others
     dconf # fix dconf error
