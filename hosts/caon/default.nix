@@ -9,9 +9,7 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
     [
       # Include the results of the hardware scan.
       ./hardware-configuration.nix
-      # Don't know how to use agenix yet...
-      # https://github.com/divnix/digga/discussions/319
-      # Instead, https://stackoverflow.com/questions/4348590/how-can-i-make-git-ignore-future-revisions-to-a-file
+      ./virtualisation.nix
       ./secret.nix
       ../desktop.nix
     ];
@@ -22,8 +20,12 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
     "/nix".options = [ "noatime" ];
   };
 
-  # Use the systemd-boot EFI boot loader.
-  boot.loader.systemd-boot.enable = true;
+  # Lanzaboote currently replaces the systemd-boot module.
+  # This setting is usually set to true in configuration.nix
+  # generated at installation time. So we force it to false
+  # for now.
+  boot.lanzaboote.enable = true;
+  boot.loader.systemd-boot.enable = false;
   boot.loader.efi.canTouchEfiVariables = true;
 
   system.autoUpgrade.enable = true;
@@ -77,12 +79,6 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
   boot.kernel.sysctl = {
     "net.ipv4.conf.all.forwarding" = true;
     "net.ipv6.conf.all.forwarding" = true;
-  };
-
-  # Virtualisation
-  virtualisation = {
-    # vmware.host.enable = true;
-    libvirtd.enable = true;
   };
 
   services.telegraf.enable = true;
