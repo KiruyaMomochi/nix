@@ -51,7 +51,7 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
     };
     nat = {
       enable = true;
-      internalInterfaces = [ "tailscale0" ];
+      internalInterfaces = [ "tailscale0" "ve+" ];
     };
   };
   boot.kernel.sysctl = {

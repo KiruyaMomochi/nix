@@ -11,6 +11,7 @@ in
     [
       # Include the results of the hardware scan.
       ./hardware-configuration.nix
+      ./virtualisation.nix
       # Don't know how to use agenix yet...
       # https://github.com/divnix/digga/discussions/319
       # Instead, https://stackoverflow.com/questions/4348590/how-can-i-make-git-ignore-future-revisions-to-a-file
@@ -93,9 +94,6 @@ in
     "net.ipv4.conf.all.forwarding" = true;
     "net.ipv6.conf.all.forwarding" = true;
   };
-
-  # KVM
-  virtualisation.libvirtd.enable = true;
 
   # Wireshark
   programs.wireshark.enable = true;
