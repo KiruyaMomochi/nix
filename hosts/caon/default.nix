@@ -38,7 +38,7 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.kyaru = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "libvirtd" "adbusers" ]; # Enable ‘sudo’ for the user.
+    extraGroups = [ "wheel" "networkmanager" "libvirtd" "adbusers" "wireshark" "podman" "i2c" ]; # Enable ‘sudo’ for the user.
     packages = with pkgs; [
       firefox
       tdesktop
@@ -65,9 +65,29 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
   networking = {
     firewall = {
       enable = true;
-      allowedTCPPorts = [ (config.services.zerotierone.port) 443 3389 8964 3090 ];
-      allowedUDPPorts = [ (config.services.zerotierone.port) 3389 3478 8964 3090 41641 ];
-      trustedInterfaces = [ "virbr0" ];
+      allowedTCPPorts = [
+        (config.services.zerotierone.port)
+        443
+        # rdp
+        3389
+        # testing
+        8964
+        3090
+      ];
+      allowedUDPPorts = [
+        (config.services.zerotierone.port)
+        # UPnP
+        1900
+        # rdp?
+        3389
+        # tailscale
+        41641
+        # stun
+        3478
+        # testing
+        8964
+        3090
+      ];
     };
     # hosts = {
     #   "151.101.66.217" = ["cache.nixos.org" "channels.nixos.org"];
@@ -82,7 +102,15 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
     "net.ipv6.conf.all.forwarding" = true;
   };
 
+  programs.wireshark.enable = true;
   services.telegraf.enable = true;
+
+  # DDC
+  hardware.i2c.enable = true;
+  boot.extraModulePackages = [ config.boot.kernelPackages.ddcci-driver ];
+  boot.kernelModules = [ "ddcci_backlight" ];
+
+  services.xserver.desktopManager.plasma5.useQtScaling = true;
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
