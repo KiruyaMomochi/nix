@@ -37,6 +37,7 @@
     ];
   };
   nix.settings.trusted-users = [ "kyaru" ];
+  nix.settings.auto-optimise-store = true;
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
