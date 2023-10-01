@@ -27,7 +27,8 @@ in
   # Use nftables backend
   networking.nftables.enable = true;
   networking.firewall.enable = true;
-  networking.networkmanager.firewallBackend = "nftables";
+  # NixOS is now using iptables-nftables-compat even when using iptables, therefore Networkmanager now uses the nftables backend unconditionally.
+  # networking.networkmanager.firewallBackend = "nftables";
 
   environment.systemPackages = with pkgs; [
     helix # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.

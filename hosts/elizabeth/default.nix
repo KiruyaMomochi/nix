@@ -71,9 +71,7 @@ in
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
-  environment.systemPackages = with pkgs; [
-    virt-manager
-  ];
+  environment.systemPackages = with pkgs; [ ];
 
   # Programs
   programs.kdeconnect.enable = true;
@@ -84,7 +82,6 @@ in
   # Networking
   hardware.bluetooth.enable = true;
   networking = {
-    firewall.trustedInterfaces = [ "virbr0" ];
     nat = {
       enable = true;
       internalInterfaces = [ "tailscale0" ];
