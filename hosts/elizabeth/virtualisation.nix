@@ -7,6 +7,7 @@
 
   # https://github.com/NixOS/nixpkgs/issues/226365
   networking.firewall.interfaces.podman0.allowedUDPPorts = [ 53 5353 ];
+  networking.firewall.trustedInterfaces = [ "virbr+" ];
 
   containers =
     let
@@ -36,4 +37,7 @@
 
   # KVM
   virtualisation.libvirtd.enable = true;
+  environment.systemPackages = with pkgs; [
+    virt-manager
+  ];
 }
