@@ -11,6 +11,7 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
       ./hardware-configuration.nix
       ./virtualisation.nix
       ./secret.nix
+      ./printing.nix
       ../desktop.nix
     ];
 
