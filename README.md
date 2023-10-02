@@ -11,6 +11,7 @@
 - [ ] Monitor S3 usage.
 - [ ] Move Telegraf to a custom module.
 - [ ] Add Log monitoring.
+- [ ] Add `mapPackage` function that do not use `default.nix` as package name, but `package.nix` instead, following [Name-based package directories](https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/README.md#name-based-package-directories).
 
 ## References
 
