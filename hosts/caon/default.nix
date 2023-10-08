@@ -38,7 +38,7 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.kyaru = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "libvirtd" "adbusers" "wireshark" "podman" "i2c" ]; # Enable ‘sudo’ for the user.
+    extraGroups = [ "wheel" "networkmanager" "libvirtd" "adbusers" "wireshark" "podman" "i2c" "scanner" "lp" ]; # Enable ‘sudo’ for the user.
     packages = with pkgs; [
       firefox
       tdesktop

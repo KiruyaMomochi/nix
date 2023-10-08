@@ -52,7 +52,7 @@
   services.ipp-usb.enable = true;
 
   # Samba and wsdd
-  services.samba-wsdd.enanble = true;
+  services.samba-wsdd.enable = true;
   services.samba-wsdd.openFirewall = true;
 
   # https://nixos.wiki/wiki/Samba#Printer_sharing
