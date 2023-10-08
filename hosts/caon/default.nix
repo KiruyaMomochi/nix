@@ -110,6 +110,12 @@ assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
   boot.extraModulePackages = [ config.boot.kernelPackages.ddcci-driver ];
   boot.kernelModules = [ "ddcci_backlight" ];
 
+  # extraRules
+  services.udev.extraRules = ''
+    # Brother P-Touch PT-P910BT
+    SUBSYSTEM=="usb", ATTRS{idVendor}=="04f9", ATTRS{idProduct}=="20c7", TAG+="uaccess", MODE="0660"
+  '';
+
   services.xserver.desktopManager.plasma5.useQtScaling = true;
 
   # This value determines the NixOS release from which the default
