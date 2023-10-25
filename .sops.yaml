@@ -25,6 +25,11 @@ creation_rules:
           - *kyaru_elizabeth
           - *kyaru_carmina
           - *twinkle_wish
+  - path_regex: hosts/diabolos/secrets/[^/]+\.(y(a)ml|json|env|ini|raw|bin)$
+    key_groups:
+      - age:
+          - *kyaru_elizabeth
+          - *kyaru_carmina
   - path_regex: hosts/([^/]+/)?secret.nix
     key_groups:
       - age:
