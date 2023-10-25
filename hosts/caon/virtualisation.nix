@@ -41,6 +41,8 @@
     options kvm ignore_msrs=1
   '';
   networking.firewall.checkReversePath = "loose";
+  # USB passthrough
+  virtualisation.spiceUSBRedirection.enable = true;
 
   # https://gist.github.com/techhazard/1be07805081a4d7a51c527e452b87b26
   # CHANGE: intel_iommu enables iommu for intel CPUs with VT-d

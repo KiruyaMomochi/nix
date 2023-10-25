@@ -19,6 +19,7 @@
     gutenprint
     gutenprintBin
     hplipWithPlugin
+    kyaru.ptouch-driver-ppds
   ];
   services.avahi.enable = true;
 
@@ -44,4 +45,43 @@
   services.printing.listenAddresses = [ "*:631" ]; # Not 100% sure this is needed and you might want to restrict to the local network
   services.printing.allowFrom = [ "all" ]; # this gives access to anyone on the interface you might want to limit it see the official documentation
   # services.printing.defaultShared = true; # If you want
+
+  # Scan
+  hardware.sane.enable = true;
+  hardware.sane.extraBackends = [ pkgs.sane-airscan pkgs.hplipWithPlugin ];
+  services.ipp-usb.enable = true;
+
+  # Samba and wsdd
+  services.samba-wsdd.enable = true;
+  services.samba-wsdd.openFirewall = true;
+
+  # https://nixos.wiki/wiki/Samba#Printer_sharing
+  services.samba = {
+    enable = true;
+    package = pkgs.sambaFull;
+    openFirewall = true;
+    securityType = "user";
+
+    extraConfig = ''
+      load printers = yes
+      printing = cups
+      printcap name = cups
+    '';
+    shares = {
+      printers = {
+        comment = "All Printers";
+        path = "/var/spool/samba";
+        public = "yes";
+        browseable = "yes";
+        # to allow user 'guest account' to print.
+        "guest ok" = "yes";
+        writable = "no";
+        printable = "yes";
+        "create mode" = 0700;
+      };
+    };
+  };
+  systemd.tmpfiles.rules = [
+    "d /var/spool/samba 1777 root root -"
+  ];
 }
