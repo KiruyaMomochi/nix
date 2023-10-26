@@ -7,6 +7,7 @@
 - [ ] Try to import secrets, but ignore them if not decrypted.
   See <https://github.com/vlaci/nixos-config/blob/main/modules/nixos/secrets.nix>.
 - [ ] Better method to handle secrets in naiveproxy.
+- [ ] Split secrets into a new repository.
 - [ ] Recursively `mapModule`.
 - [ ] Monitor S3 usage.
 - [ ] Move Telegraf to a custom module.
