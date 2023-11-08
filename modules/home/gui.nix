@@ -12,13 +12,16 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    fonts.fontconfig.enable = true;
     home.packages = with pkgs; [
+      font-awesome
       zotero
       microsoft-edge
       cascadia-code
       slack
       libreoffice-qt
       hunspell
+      hunspellDicts.en-us-large
       filelight
       keepassxc
       (google-chrome.override {
