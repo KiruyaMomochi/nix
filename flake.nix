@@ -60,11 +60,24 @@
       nixosConfigurations = mapHosts ./hosts { };
 
       # https://github.com/nix-community/home-manager/pull/3969
-      homeConfigurations.kyaru = inputs.home-manager.lib.homeManagerConfiguration {
-        pkgs = mkPkgs nixpkgs "x86_64-linux";
-        extraSpecialArgs = { inherit inputs lib-kyaru; };
-        modules = [ ./home.nix ];
-      };
+      homeConfigurations.kyaru =
+        let
+          # TODO: is it possible to make it contains self?
+          # inherit (lib.fixedPoints) extends;
+          # makeOverridableHomeManagerConfig
+          homeManagerConfiguration = inputs.home-manager.lib.homeManagerConfiguration;
+          makeOverridableHomeManagerConfig = config:
+            (homeManagerConfiguration config) // {
+              override = f: makeOverridableHomeManagerConfig (config // f config);
+            };
+        in
+        makeOverridableHomeManagerConfig {
+          pkgs = mkPkgs nixpkgs "x86_64-linux";
+          extraSpecialArgs = {
+            inherit inputs lib-kyaru;
+          };
+          modules = [ ./home.nix ];
+        };
 
       nixosModules = mapModules ./modules import;
       homeModules = mapModules ./modules/home import;

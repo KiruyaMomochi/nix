@@ -5,18 +5,20 @@
 , pkgsBuildHost
 , python
 , openssl
+, libpng
 }:
 let
-  version = "116.0.5845.92-2";
+  version = "119.0.6045.66-1";
   naiveSrc = fetchFromGitHub {
     repo = "naiveproxy";
     owner = "klzgrad";
     rev = "v${version}";
-    sha256 = "sha256-9WcggjS07svbp+EB3WsbX6zLSHO+9hzWje2sdXXfpYs=";
+    sha256 = "sha256-tRXGbt/9c9idprFTpMVWwQIw0z0mNf+nSDZrfcNwGZk=";
   };
+  packageName = self.packageName;
 
-  # Copied from chromium.nix
-  libExecPath = "$out/libexec/${self.packageName}";
+  # Copied from https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/networking/browsers/chromium/common.nix
+
   # https://source.chromium.org/chromium/chromium/src/+/master:build/linux/unbundle/replace_gn_files.py
   gnSystemLibraries = [
     # TODO:
@@ -29,6 +31,7 @@ let
     "libxslt"
     # "opus"
   ];
+  libExecPath = "$out/libexec/${packageName}";
   chromiumRosettaStone = {
     cpu = platform:
       let name = platform.parsed.cpu.name;
@@ -46,11 +49,12 @@ let
       then "linux"
       else throw "no chromium Rosetta Stone entry for os: ${platform.config}";
   };
+
   postPatch = ''
     # Disable build flags that require LLVM 15:
     substituteInPlace build/config/compiler/BUILD.gn \
       --replace '"-Xclang",' ""
-    #   --replace '"-no-opaque-pointers",' ""
+      # --replace '"-no-opaque-pointers",' ""
 
     # remove unused third-party
     for lib in ${toString gnSystemLibraries}; do
@@ -64,23 +68,42 @@ let
       fi
     done
 
-    # Required for patchShebangs (unsupported interpreter directive, basename: invalid option -- '*', etc.):
+    if [[ -e native_client/SConstruct ]]; then
+      # Required for patchShebangs (unsupported interpreter directive, basename: invalid option -- '*', etc.):
+      substituteInPlace native_client/SConstruct --replace "#! -*- python -*-" ""
+    fi
     if [ -e third_party/harfbuzz-ng/src/src/update-unicode-tables.make ]; then
       substituteInPlace third_party/harfbuzz-ng/src/src/update-unicode-tables.make \
         --replace "/usr/bin/env -S make -f" "/usr/bin/make -f"
     fi
+    if [ -e third_party/webgpu-cts/src/tools/run_deno ]; then
+      chmod -x third_party/webgpu-cts/src/tools/run_deno
+    fi
+    if [ -e third_party/dawn/third_party/webgpu-cts/tools/run_deno ]; then
+      chmod -x third_party/dawn/third_party/webgpu-cts/tools/run_deno
+    fi
+  '' + ''
+    # Add final newlines to scripts that do not end with one.
+    # This is a temporary workaround until https://github.com/NixOS/nixpkgs/pull/255463 (or similar) has been merged,
+    # as patchShebangs hard-crashes when it encounters files that contain only a shebang and do not end with a final
+    # newline.
+    find . -type f -perm -0100 -exec sed -i -e '$a\' {} +
 
     patchShebangs .
+
     # Link to our own Node.js (required during the build):
     mkdir -p third_party/node/linux/node-linux-x64/bin
     ln -s "${pkgsBuildHost.nodejs}/bin/node" third_party/node/linux/node-linux-x64/bin/node
 
+    # third_party/jdk/current/bin and generate_shim_headers will fail
   '' + lib.optionalString (stdenv.hostPlatform == stdenv.buildPlatform && stdenv.hostPlatform.isAarch64) ''
     substituteInPlace build/toolchain/linux/BUILD.gn \
       --replace 'toolprefix = "aarch64-linux-gnu-"' 'toolprefix = ""'
   '';
 
   # Patch gn flags in common.nix
+  # We first restore the key-value pair,
+  # then filter out the flags that does not exist in naiveproxy.
   filterGnFlags = flags_str: filter:
     let
       splitted = lib.strings.splitString " " flags_str;
@@ -114,8 +137,10 @@ let
   ];
   patchedGnFlags = filterGnFlags self.gnFlags (k: ! (builtins.elem k skipGnFlags));
 
+  # mkChromiumDerivation defined in https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/networking/browsers/chromium/default.nix
   self = chromium.mkDerivation
     # rec for buildTargets
+    # `buildFun base` is extraAttrs in common.nix
     (base: rec {
       inherit version;
       name = "naiveproxy";
@@ -123,6 +148,7 @@ let
       buildTargets = [ "naive" ];
       src = naiveSrc + "/src";
 
+      # https://github.com/klzgrad/naiveproxy/blob/master/src/build.sh#L46
       gnFlags = {
         fatal_linker_warnings = false;
 
@@ -144,13 +170,24 @@ let
         use_nss_certs = false;
       };
 
-      depsBuildBuild = lib.lists.take 4 base.depsBuildBuild;
+      depsBuildBuild = lib.lists.remove libpng (base.depsBuildBuild or [ ]);
       buildInputs = [ openssl ];
 
       # From common.nix of nixpkgs
-      patches = (lib.lists.take 2 base.patches) ++ (lib.lists.drop 4 base.patches);
+      # patches = (lib.lists.take 2 base.patches) ++ (lib.lists.drop 4 base.patches);
+      patches = builtins.filter
+        (p:
+          if builtins.typeOf p == "path" && (builtins.elem (builtins.baseNameOf p) [
+            "widevine-79.patch"
+            "angle-wayland-include-protocol.patch"
+          ]) then false
+
+          else true
+        )
+        base.patches;
       inherit postPatch;
 
+      # See common.nix of nixpkgs
       buildPhase =
         let
           buildCommand = target: ''
@@ -165,7 +202,6 @@ let
           runHook postBuild
         '';
 
-      # patches = lib.lists.drop 4 base.patches;
       configurePhase = ''
         runHook preConfigure
 

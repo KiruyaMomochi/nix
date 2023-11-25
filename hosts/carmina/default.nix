@@ -3,17 +3,12 @@
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
 { config, pkgs, lib, ... }:
-assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
 {
   imports =
     [
       # Include the results of the hardware scan.
       ./hardware-configuration.nix
       ./virtualization.nix
-      # Don't know how to use agenix yet...
-      # https://github.com/divnix/digga/discussions/319
-      # Instead, https://stackoverflow.com/questions/4348590/how-can-i-make-git-ignore-future-revisions-to-a-file
-      ./secret.nix
       ../desktop.nix
     ];
 

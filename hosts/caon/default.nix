@@ -3,14 +3,12 @@
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
 { config, pkgs, lib, ... }:
-assert (lib.strings.removeSuffix "\n" (builtins.readFile ./secret.nix)) != "";
 {
   imports =
     [
       # Include the results of the hardware scan.
       ./hardware-configuration.nix
       ./virtualisation.nix
-      ./secret.nix
       ./printing.nix
       ../desktop.nix
     ];

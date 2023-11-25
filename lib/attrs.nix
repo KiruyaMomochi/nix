@@ -4,7 +4,7 @@
     Like `mapAttrs'`, but any null results are removed.
 
     filterMapAttrs ::
-      (String -> Any -> { name :: String; value :: String; }) -> AttrSet -> AttrSet
+      (String -> Any -> { name :: String; value :: Any; }) -> AttrSet -> AttrSet
   */
   filterMapAttrs' =
     # A function, given an attribute's name and value, returns a new `nameValuePair`.
