@@ -7,11 +7,13 @@ keys: &all
   - &carmina age184acq6z5t4tg6n5k90catgrrfq24r7vh3em8sgm4uufe6l99narsr6v4tq
   - &diabolos age1lpkttympmv36x9hm75nt6qa3f6sql8ews3h83s4l3aemw4d4lp9smklutt
   - &twinkle_wish age1t0gc2xe4az2rkcax45jlt0jlvxjul7ru74p6hkt7aeehjlz63ahsfnttqq
+  - &little_lyrical age1fxg5vkk8qtf4a9adsg8y8csfeh90gp6vptkvf242c23665788yjs0rmdzh
+  - &forester age16xeheucfldekwe7yjyjxmzer0czdf4pf8hw9gg76yefygwcxnveqkvyud3
 creation_rules:
   - path_regex: hosts/secrets/[^/]+\.(y(a)ml|json|env|ini|raw|bin)$
     key_groups:
       - age: *all
-  - path_regex: hosts/secrets/v/[^/]+\.(y(a)ml|json|env|ini|raw|bin)$
+  - path_regex: secrets/v/[^/]+\.(y(a)ml|json|env|ini|raw|bin)$
     key_groups:
       - age: *all
   - path_regex: hosts/nightmare/secrets/[^/]+\.(y(a)ml|json|env|ini|raw|bin)$

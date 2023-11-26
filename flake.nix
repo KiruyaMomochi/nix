@@ -9,10 +9,6 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    agenix = {
-      url = "github:ryantm/agenix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
 
     lanzaboote = {
       url = "github:nix-community/lanzaboote";
@@ -100,8 +96,7 @@
         formatter = pkgs.nixpkgs-fmt;
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
-            inputs.agenix.packages.${system}.default
-            self.packages.${system}.sops
+            sops
             age
             ssh-to-age
             ssh-to-pgp

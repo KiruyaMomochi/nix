@@ -1,14 +1,12 @@
 # KiruyaMomochi's Nix config
 
+For all my hosts see [hosts](hosts/README.md).
+
 ## TODO
 
-- [ ] Make sops use the same iv when encrypting an existing file.
-- [ ] Find a way to [customize sops diff](https://git-scm.com/docs/gitattributes#_customizing_word_diff)
-- [ ] Try to import secrets, but ignore them if not decrypted.
-  See <https://github.com/vlaci/nixos-config/blob/main/modules/nixos/secrets.nix>.
-- [ ] Better method to handle secrets in naiveproxy.
-- [ ] Split secrets into a new repository.
-- [ ] Recursively `mapModule`.
+- [x] Better method to handle secrets in naiveproxy.
+- [x] Split secrets into a new repository.
+- [x] Recursively `mapModule`.
 - [ ] Monitor S3 usage.
 - [ ] Move Telegraf to a custom module.
 - [ ] Add Log monitoring.
@@ -18,3 +16,22 @@
 ## References
 
 - [hlissner/dotfiles](https://github.com/hlissner/dotfiles)
+
+## Old way to handle sops secrets in place
+
+Using a .gitattributes file with the following cotent
+
+```
+hosts/**/secret.nix filter=git-sops diff=git-sops
+```
+
+And Git config
+
+```toml
+[filter "git-sops"]
+    required = true
+    smudge = sops --decrypt --path %f /dev/stdin
+    clean = scripts/git-sops-clean.sh %f
+```
+
+And a custom sops (`self.packages.${system}.sops`).
