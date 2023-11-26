@@ -9,6 +9,7 @@ keys: &all
   - &twinkle_wish age1t0gc2xe4az2rkcax45jlt0jlvxjul7ru74p6hkt7aeehjlz63ahsfnttqq
   - &little_lyrical age1fxg5vkk8qtf4a9adsg8y8csfeh90gp6vptkvf242c23665788yjs0rmdzh
   - &forester age16xeheucfldekwe7yjyjxmzer0czdf4pf8hw9gg76yefygwcxnveqkvyud3
+  - &white_wings age1zkx5askqzr7jh9httfrehk5l08de0cgw0gkgvttrq8z04mvu0yaq5puefd
 creation_rules:
   - path_regex: hosts/secrets/[^/]+\.(y(a)ml|json|env|ini|raw|bin)$
     key_groups:

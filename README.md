@@ -17,7 +17,7 @@ For all my hosts see [hosts](hosts/README.md).
 
 - [hlissner/dotfiles](https://github.com/hlissner/dotfiles)
 
-## Old way to handle sops secrets in place
+## Old way to handle sops secrets in-place
 
 Using a .gitattributes file with the following cotent
 
