@@ -32,7 +32,7 @@ with lib;
           description = "IPv6 gateway to use";
           example = "2001:db8::1";
         };
-        extraRouteToGateway = mkOption {
+        gatewayOnLink = mkOption {
           type = types.bool;
           default = false;
           description = "Add an extra route to the IPv6 gateway, which is required for some providers. See https://serverfault.com/a/978385.";
@@ -66,24 +66,24 @@ with lib;
         else if static6 then "ipv4"
         else "yes";
     in
-    mkIf cfg.enable (mkMerge [
-      {
-        systemd.network.networks."40-${cfg.interface}" = {
+    mkIf cfg.enable {
+      systemd.network.networks."40-${cfg.interface}" = (mkMerge [
+        {
           matchConfig.Name = "${cfg.interface}";
           networkConfig.IPv6PrivacyExtensions = "kernel";
           DHCP = dhcp;
           address = cfg.ipv4.addresses ++ cfg.ipv6.addresses;
-          gateway = (optional static4 cfg.ipv4.gateway) ++ (optional static6 cfg.ipv6.gateway);
+          gateway = optional static4 cfg.ipv4.gateway;
           networkConfig.IPv6AcceptRA = cfg.ipv6.acceptRA;
-        };
-      }
-      (mkIf cfg.ipv6.extraRouteToGateway {
-        systemd.network.networks."40-${cfg.interface}".routes = [{
-          routeConfig = {
-            Destination = cfg.ipv6.gateway;
-            Scope = "link";
-          };
-        }];
-      })
-    ]);
+        }
+        (mkIf static6 {
+          routes = [{
+            routeConfig = {
+              Gateway = cfg.ipv6.gateway;
+              GatewayOnLink = mkIf cfg.ipv6.gatewayOnLink cfg.ipv6.gatewayOnLink;
+            };
+          }];
+        })
+      ]);
+    };
 }

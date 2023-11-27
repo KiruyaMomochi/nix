@@ -5,11 +5,11 @@ keys: &all
   - &caon age14n5fh458xxdcxm8nldhdfagqln8gddvkwvve4h7yv5f4rjf833hqtzu4z2
   - &elizabeth age107rl7v3mggzr0nalfv9mu0uwwt9cmfevgy0prek52dfe7txklchqm4uvss
   - &carmina age184acq6z5t4tg6n5k90catgrrfq24r7vh3em8sgm4uufe6l99narsr6v4tq
-  - &diabolos age1lpkttympmv36x9hm75nt6qa3f6sql8ews3h83s4l3aemw4d4lp9smklutt
   - &twinkle_wish age1t0gc2xe4az2rkcax45jlt0jlvxjul7ru74p6hkt7aeehjlz63ahsfnttqq
   - &little_lyrical age1fxg5vkk8qtf4a9adsg8y8csfeh90gp6vptkvf242c23665788yjs0rmdzh
   - &forester age16xeheucfldekwe7yjyjxmzer0czdf4pf8hw9gg76yefygwcxnveqkvyud3
   - &white_wings age1zkx5askqzr7jh9httfrehk5l08de0cgw0gkgvttrq8z04mvu0yaq5puefd
+  - &dragons-nest age1r4n6w8dg4qkl37gg3ypehl55mf5r6vy8h73cwuzk8889fch4xq5qwcv2p0
 creation_rules:
   - path_regex: hosts/secrets/[^/]+\.(y(a)ml|json|env|ini|raw|bin)$
     key_groups:
@@ -29,12 +29,6 @@ creation_rules:
           - *kyaru_elizabeth
           - *kyaru_carmina
           - *twinkle_wish
-  - path_regex: hosts/diabolos/secrets/[^/]+\.(y(a)ml|json|env|ini|raw|bin)$
-    key_groups:
-      - age:
-          - *kyaru_elizabeth
-          - *kyaru_carmina
-          - *diabolos
   - path_regex: hosts/([^/]+/)?secret.nix
     key_groups:
       - age:
