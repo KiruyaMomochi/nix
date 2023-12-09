@@ -33,6 +33,8 @@ in
   boot.loader.systemd-boot.enable = false;
   boot.loader.efi.canTouchEfiVariables = true;
 
+  services.fwupd.enable = true;
+
   # For AMD
   hardware.opengl.extraPackages = with pkgs; [
     rocm-opencl-icd
