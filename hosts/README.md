@@ -41,15 +41,12 @@ I use [guild names](https://princess-connect.fandom.com/wiki/Guilds) from the ga
   - 1C 952M 18G, AMD EPYC 7742 @ 2.249GHz
   - 9.89 USD / year => 0.82 USD / month
 
-### Considering to cancel
+### Canceled
 
 - **[王宮騎士團](./nightmare/default.nix)** - Linode
   - 1C 1G 25G, AMD EPYC 7601 @ 2.199GHz
   - Fremont, California, United Status
   - 5.00 USD / month
-
-### Canceled
-
 - **[惡魔偽國王軍](./diabolos/default.nix)** - V.PS
   - Osaka, Japan
   - 2C 1G 20G, Intel Xeon E5-2678 v3 @ 2.499GHz

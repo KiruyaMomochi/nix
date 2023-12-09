@@ -4,6 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-master.url = "github:NixOS/nixpkgs/master";
+    deploy-rs.url = "github:serokell/deploy-rs";
 
     sops-nix = {
       url = "github:Mic92/sops-nix";
@@ -18,10 +19,6 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    oluceps = {
-      url = "github:oluceps/nur-pkgs";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
 
     flake-utils.url = "github:numtide/flake-utils";
 
@@ -31,7 +28,7 @@
     nixos-wsl.url = "github:nix-community/NixOS-WSL?ref=22.05-5c211b47";
   };
 
-  outputs = inputs@{ self, nixpkgs, flake-utils, ... }:
+  outputs = inputs@{ self, nixpkgs, flake-utils, deploy-rs, ... }:
     let
       inherit (lib.kyaru.nixos) mapHosts;
       inherit (lib.kyaru.packages) mapPackages;
@@ -80,7 +77,6 @@
 
       overlay = final: prev: rec {
         kyaru = mapPackages final;
-        oluceps = inputs.oluceps.packages.${final.hostPlatform.system};
         master = mkPkgs inputs.nixpkgs-master final.hostPlatform.system;
         influxdb2-cli = master.influxdb2-cli;
         influxdb2-server = master.influxdb2-server;
