@@ -41,7 +41,6 @@ in
 
       # for clipboard
       wl-clipboard
-      wl-clipboard-x11
       xclip
       xsel
     ];
