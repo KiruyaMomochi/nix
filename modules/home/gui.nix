@@ -38,6 +38,12 @@ in
       krita
       obsidian
       anki
+
+      # for clipboard
+      wl-clipboard
+      wl-clipboard-x11
+      xclip
+      xsel
     ];
 
     programs.vscode =
