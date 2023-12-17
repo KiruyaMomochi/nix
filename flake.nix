@@ -81,6 +81,17 @@
         influxdb2-cli = master.influxdb2-cli;
         influxdb2-server = master.influxdb2-server;
         influxdb2-token-manipulator = master.influxdb2-token-manipulator;
+        rclone = prev.rclone.override {
+          buildGoModule = args: prev.buildGoModule (args // {
+            arc = prev.fetchFromGitHub {
+              owner = "rclone";
+              repo = "rclone";
+              rev = "c69eb84573c85206ab028eda2987180e049ef2e4";
+              hash = "sha256-WVU/3lCfUBoIGoqxTI2nMS383XTdHFaToh7MQG9emgA=";
+            };
+            vendorHash = "sha256-eYIGVCTvUfGbsIMFthEfD0r6aeA7Ly9xJ8PJ6hR2SjA=";
+          });
+        };
       };
 
       templates = import ./templates;

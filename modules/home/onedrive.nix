@@ -9,11 +9,11 @@ in
 {
   options.services.onedrive-rclone = with lib; {
     enable = mkEnableOption "Enable OneDrive Rclone mount service";
-    pkgs = mkPackageOption "rclone" { };
+    package = mkPackageOption pkgs "rclone" { };
   };
 
   config = lib.mkIf cfg.enable {
-    home.packages = [ pkgs.rclone ];
+    home.packages = [ cfg.package ];
     systemd.user.services."rclone-onedrive" = {
       Unit = {
         Description = "OneDrive mount service";
@@ -25,7 +25,7 @@ in
       };
       Service = {
         Type = "notify";
-        ExecStart = "${pkgs.rclone}/bin/rclone mount onedrive: ${config.home.homeDirectory}/OneDrive --vfs-cache-mode full";
+        ExecStart = "${cfg.package}/bin/rclone mount onedrive: ${config.home.homeDirectory}/OneDrive --vfs-cache-mode full";
         Restart = "on-failure";
         RestartSec = 30;
       };

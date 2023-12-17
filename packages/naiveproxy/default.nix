@@ -8,12 +8,12 @@
 , libpng
 }:
 let
-  version = "119.0.6045.66-1";
+  version = "120.0.6099.43-1";
   naiveSrc = fetchFromGitHub {
     repo = "naiveproxy";
     owner = "klzgrad";
     rev = "v${version}";
-    sha256 = "sha256-tRXGbt/9c9idprFTpMVWwQIw0z0mNf+nSDZrfcNwGZk=";
+    sha256 = "sha256-+t4HRrg8dPqPs4Ay5dTgwVi9y4EIn3KI6otX0WaJUA4=";
   };
   packageName = self.packageName;
 
@@ -173,15 +173,15 @@ let
       depsBuildBuild = lib.lists.remove libpng (base.depsBuildBuild or [ ]);
       buildInputs = [ openssl ];
 
+      ignoredPatches = [
+        "widevine-79.patch"
+        "angle-wayland-include-protocol.patch"
+      ];
       # From common.nix of nixpkgs
       # patches = (lib.lists.take 2 base.patches) ++ (lib.lists.drop 4 base.patches);
       patches = builtins.filter
         (p:
-          if builtins.typeOf p == "path" && (builtins.elem (builtins.baseNameOf p) [
-            "widevine-79.patch"
-            "angle-wayland-include-protocol.patch"
-          ]) then false
-
+          if builtins.typeOf p == "path" && (builtins.elem (builtins.baseNameOf p) ignoredPatches) then false
           else true
         )
         base.patches;

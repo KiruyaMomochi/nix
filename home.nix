@@ -64,7 +64,7 @@
     # others
     dconf # fix dconf error
     typst
-    typst-lsp
+    # typst-lsp # not working
     rclone
 
     awscli2
