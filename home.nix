@@ -164,6 +164,8 @@
     settings = {
       prompt = true;
       editor = config.home.sessionVariables.EDITOR;
+      # https://github.com/nix-community/home-manager/pull/4749
+      version = "1";
     };
   };
 
