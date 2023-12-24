@@ -4,9 +4,6 @@ For all my hosts see [hosts](hosts/README.md).
 
 ## TODO
 
-- [x] Better method to handle secrets in naiveproxy.
-- [x] Split secrets into a new repository.
-- [x] Recursively `mapModule`.
 - [ ] Monitor S3 usage.
 - [ ] Move Telegraf to a custom module.
 - [ ] Add Log monitoring.

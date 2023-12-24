@@ -73,6 +73,14 @@
         };
 
       nixosModules = mapModules ./modules import;
+      deploy.nodes = builtins.mapAttrs
+        (name: value: {
+          profiles.system = {
+            path = deploy-rs.lib.${value.pkgs.system}.activate.nixos value;
+          };
+        })
+        self.nixosConfigurations;
+
       homeModules = mapModules ./modules/home import;
 
       overlay = final: prev: rec {
@@ -86,10 +94,10 @@
             arc = prev.fetchFromGitHub {
               owner = "rclone";
               repo = "rclone";
-              rev = "c69eb84573c85206ab028eda2987180e049ef2e4";
-              hash = "sha256-WVU/3lCfUBoIGoqxTI2nMS383XTdHFaToh7MQG9emgA=";
+              rev = "8503282a5adffc992e1834eed2cd8aeca57c01dd";
+              hash = "sha256-0wh2KI5Qn/Y3W52aS/rGh5Sh85yn11wSVvnOS9kTgwc=";
             };
-            vendorHash = "sha256-eYIGVCTvUfGbsIMFthEfD0r6aeA7Ly9xJ8PJ6hR2SjA=";
+            vendorHash = "sha256-qKRIT2HqNDpEtZBNHZMXp4Yhh5fCkQSTPU5MQ7FmCHI=";
           });
         };
       };

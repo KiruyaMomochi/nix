@@ -6,7 +6,8 @@
   };
 
   # https://github.com/NixOS/nixpkgs/issues/226365
-  networking.firewall.interfaces.podman0.allowedUDPPorts = [ 53 5353 ];
+  networking.firewall.interfaces."podman*".allowedUDPPorts = [ 53 5353 ];
+  networking.firewall.interfaces."docker*".allowedUDPPorts = [ 53 5353 ];
   networking.firewall.trustedInterfaces = [ "virbr+" ];
 
   containers =
@@ -23,6 +24,18 @@
       dns_enabled = true;
     };
   };
+
+  # # https://github.com/NixOS/nixpkgs/issues/231191
+  # environment.etc."resolv.conf".mode = "direct-symlink";
+
+  virtualisation.docker = {
+    # enable = true;
+    storageDriver = "btrfs";
+    rootless = {
+      enable = true;
+    };
+  };
+  users.users.kyaru.extraGroups = [ "docker" ];
 
   virtualisation.containers = {
     enable = true;
