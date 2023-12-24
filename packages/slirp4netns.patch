@@ -1,0 +1,44 @@
+diff --git a/sandbox.c b/sandbox.c
+index f0ab48e..2bb45ae 100644
+--- a/sandbox.c
++++ b/sandbox.c
+@@ -98,6 +98,13 @@ finish:
+     return ret;
+ }
+ 
++/* check /etc/resolv.conf existance */
++static void check_resolv_conf() {
++    if (access("/etc/resolv.conf", F_OK) != 0) {
++        fprintf(stderr, "cannot read /etc/resolv.conf, this may indicate a bind failure.\n");
++    }
++}
++
+ /* lock down the process doing the following:
+  - create a new mount namespace
+  - bind mount /etc and /run from the host
+@@ -146,6 +153,17 @@ int create_sandbox()
+         return ret;
+     }
+ 
++    ret = mkdir("/tmp/nix", 0755);
++    if (ret < 0) {
++        fprintf(stderr, "cannot mkdir /nix\n");
++        return ret;
++    }
++
++    ret = add_mount("/nix", "/tmp/nix");
++    if (ret < 0) {
++        return ret;
++    }
++
+     ret = add_mount("/etc", "/tmp/etc");
+     if (ret < 0) {
+         return ret;
+@@ -230,5 +248,7 @@ int create_sandbox()
+         return ret;
+     }
+ 
++    check_resolv_conf();
++
+     return 0;
+ }

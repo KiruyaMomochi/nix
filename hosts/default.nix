@@ -125,6 +125,10 @@ in
 
   i18n.defaultLocale = mkDefault "en_US.UTF-8";
 
+  virtualisation.docker.package = pkgs.docker.override { slirp4netns = pkgs.slirp4netns-nix; };
+  virtualisation.docker.rootless.package = pkgs.docker.override { slirp4netns = pkgs.slirp4netns-nix; };
+  virtualisation.podman.package = pkgs.podman.override { slirp4netns = pkgs.slirp4netns-nix; };
+
   # Copy the NixOS configuration file and link it from the resulting system
   # (/run/current-system/configuration.nix). This is useful in case you
   # accidentally delete configuration.nix.
