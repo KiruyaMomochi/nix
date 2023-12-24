@@ -91,13 +91,13 @@
         influxdb2-token-manipulator = master.influxdb2-token-manipulator;
         rclone = prev.rclone.override {
           buildGoModule = args: prev.buildGoModule (args // {
-            arc = prev.fetchFromGitHub {
+            src = prev.fetchFromGitHub {
               owner = "rclone";
               repo = "rclone";
               rev = "8503282a5adffc992e1834eed2cd8aeca57c01dd";
               hash = "sha256-0wh2KI5Qn/Y3W52aS/rGh5Sh85yn11wSVvnOS9kTgwc=";
             };
-            vendorHash = "sha256-qKRIT2HqNDpEtZBNHZMXp4Yhh5fCkQSTPU5MQ7FmCHI=";
+            vendorHash = "sha256-sRWioOQoy0xRFvOD9iBhcw042C/BK50QMVjW47YZtIU=";
           });
         };
         slirp4netns-nix = prev.slirp4netns.overrideAttrs (oldAttrs: {
