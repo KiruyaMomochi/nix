@@ -30,7 +30,7 @@
     add-service-cookie=yes
   '';
 
-  services.avahi.nssmdns = true;
+  services.avahi.nssmdns4 = true;
 
   # for a WiFi printer
   services.avahi.openFirewall = true;
