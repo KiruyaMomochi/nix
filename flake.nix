@@ -100,7 +100,7 @@
             vendorHash = "sha256-sRWioOQoy0xRFvOD9iBhcw042C/BK50QMVjW47YZtIU=";
           });
         };
-        slirp4netns-nix = prev.slirp4netns.overrideAttrs (oldAttrs: {
+        slirp4netns = prev.slirp4netns.overrideAttrs (oldAttrs: {
           patches = (oldAttrs.patches or [ ]) ++ [
             ./packages/slirp4netns.patch
           ];
