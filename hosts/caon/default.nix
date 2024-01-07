@@ -10,7 +10,7 @@
       ./hardware-configuration.nix
       ./virtualisation.nix
       ./printing.nix
-      ../desktop.nix
+      ../modules/desktop.nix
     ];
 
   fileSystems = {

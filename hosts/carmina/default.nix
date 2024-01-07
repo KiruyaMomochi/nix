@@ -9,7 +9,7 @@
       # Include the results of the hardware scan.
       ./hardware-configuration.nix
       ./virtualization.nix
-      ../desktop.nix
+      ../modules/desktop.nix
     ];
 
   fileSystems = {

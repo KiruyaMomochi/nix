@@ -2,7 +2,7 @@
 {
   imports = [
     ./hardware-configuration.nix
-    ../vps.nix
+    ../modules/vps.nix
   ];
 
   boot.loader.grub.device = "/dev/vda"; # or "nodev" for efi only

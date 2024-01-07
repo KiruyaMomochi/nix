@@ -9,7 +9,7 @@
     [
       # Include the results of the hardware scan.
       ./hardware-configuration.nix
-      ../vps.nix
+      ../modules/vps.nix
     ];
   
   # Define on which hard drive you want to install Grub.

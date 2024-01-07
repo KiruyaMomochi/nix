@@ -12,7 +12,7 @@ in
       # Include the results of the hardware scan.
       ./hardware-configuration.nix
       ./virtualisation.nix
-      ../desktop.nix
+      ../modules/desktop.nix
     ];
 
   # Filesystem
