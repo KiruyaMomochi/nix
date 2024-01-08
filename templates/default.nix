@@ -6,5 +6,5 @@
   ansible = {
     path = ./ansible;
     description = "ansible packages";
-  }
+  };
 }
