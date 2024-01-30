@@ -115,7 +115,6 @@ in
         ];
       }
     ];
-    environmentFiles = [ config.sops.secrets."influxdb".path ];
   };
 
   # from https://nixos-and-flakes.thiscute.world/best-practices/nix-path-and-flake-registry
@@ -127,11 +126,6 @@ in
   environment.etc."nix/inputs/nixpkgs".source = "${inputs.nixpkgs}";
   # https://github.com/NixOS/nix/issues/9574
   nix.settings.nix-path = lib.mkForce "nixpkgs=/etc/nix/inputs/nixpkgs";
-
-  # Secrets
-  sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
-  sops.defaultSopsFile = ./secrets/secrets.yaml;
-  sops.secrets."influxdb" = { };
 
   i18n.defaultLocale = mkDefault "en_US.UTF-8";
 

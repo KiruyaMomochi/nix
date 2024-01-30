@@ -2,6 +2,8 @@
 #!nix-shell -i bash -p go -p nix-prefetch
 # shellcheck shell=bash
 
+set -xeuo pipefail
+
 tempdir=$(mktemp -d --suffix caddy-naive)
 src=$(nix build nixpkgs#caddy.src --no-link --print-out-paths)
 
@@ -18,4 +20,5 @@ cp -r "$tempdir/go.mod" "$tempdir/go.sum" .
 
 oldHash=$(nix eval --impure --raw --expr '((import <nixpkgs> {}).callPackage ./default.nix {}).vendorHash')
 newHash=$(nix-prefetch '{ sha256 }: (callPackage (import ./default.nix) { }).goModules.overrideAttrs (_: { outputHash = sha256; })')
-sed -i "s|${oldHash}|${newHash}|" ./default.nix
+echo "${oldHash} -> ${newHash}"
+sed -i "s|vendorHash = \"${oldHash}\"|vendorHash = \"${newHash}\"|" ./default.nix

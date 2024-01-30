@@ -10,12 +10,12 @@
 (goldendict.override { qtwebkit = null; }).overrideAttrs
   (oldAttrs: rec {
     pname = "goldendict-ng";
-    version = "23.07.23";
+    version = "24.01.22-LoongYear.3dddb3be";
     src = fetchFromGitHub {
       owner = "xiaoyifang";
       repo = pname;
       rev = "v${version}";
-      sha256 = "sha256-ZKbrO5L4KFmr2NsGDihRWBeW0OXHoPRwZGj6kt1Anc8=";
+      sha256 = "sha256-+OiZEkhNV06fZXPXv9zDzgJS5M3isHlcOXee3p/ejpw=";
     };
     patches = [ ];
     postPatch = "";

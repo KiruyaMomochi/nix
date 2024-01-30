@@ -42,6 +42,7 @@
     erdtree # tree and du
     choose # cut and sometimes awk
     comma # quickly run command
+    aria
 
     # common commands
     file
@@ -191,6 +192,9 @@
   programs.helix =
     {
       enable = true;
+      settings = {
+        editor.soft-wrap.enable = true;
+      };
       languages.language = [
         {
           name = "nix";

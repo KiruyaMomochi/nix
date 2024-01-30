@@ -6,29 +6,31 @@
 , python
 , openssl
 , libpng
+, python3
 }:
 let
-  version = "120.0.6099.43-1";
+  version = "121.0.6167.71-1";
   naiveSrc = fetchFromGitHub {
     repo = "naiveproxy";
     owner = "klzgrad";
     rev = "v${version}";
-    sha256 = "sha256-+t4HRrg8dPqPs4Ay5dTgwVi9y4EIn3KI6otX0WaJUA4=";
+    sha256 = "sha256-DxkpqL3Yt7my3hDJqyJf3XQNWT8sn3PZ7QsxYSrqyl0=";
   };
   packageName = self.packageName;
 
   # Copied from https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/networking/browsers/chromium/common.nix
 
-  # https://source.chromium.org/chromium/chromium/src/+/master:build/linux/unbundle/replace_gn_files.py
+  # actually, we don't use any of these libraries
+  # https://source.chromium.org/chromium/chromium/src/+/master:build/linux/unbundle/replace_gn_files.
   gnSystemLibraries = [
     # TODO:
     # "ffmpeg"
     # "snappy"
-    "flac"
-    "libjpeg"
-    "libpng"
-    "libwebp"
-    "libxslt"
+    # "flac"
+    # "libjpeg"
+    # "libpng"
+    # "libwebp"
+    # "libxslt"
     # "opus"
   ];
   libExecPath = "$out/libexec/${packageName}";
@@ -51,6 +53,9 @@ let
   };
 
   postPatch = ''
+    # Workaround/fix for https://bugs.chromium.org/p/chromium/issues/detail?id=1313361:
+    substituteInPlace BUILD.gn \
+      --replace '"//infra/orchestrator:orchestrator_all",' ""
     # Disable build flags that require LLVM 15:
     substituteInPlace build/config/compiler/BUILD.gn \
       --replace '"-Xclang",' ""
@@ -82,7 +87,12 @@ let
     if [ -e third_party/dawn/third_party/webgpu-cts/tools/run_deno ]; then
       chmod -x third_party/dawn/third_party/webgpu-cts/tools/run_deno
     fi
+
+    # skip setuid_sandbox_host patch
   '' + ''
+    # chrome_paths does not exist
+    # clang-format directory does not exist
+
     # Add final newlines to scripts that do not end with one.
     # This is a temporary workaround until https://github.com/NixOS/nixpkgs/pull/255463 (or similar) has been merged,
     # as patchShebangs hard-crashes when it encounters files that contain only a shebang and do not end with a final
@@ -176,12 +186,14 @@ let
       ignoredPatches = [
         "widevine-79.patch"
         "angle-wayland-include-protocol.patch"
+        # qr code generator
+        "https://github.com/chromium/chromium/commit/bcf739b95713071687ff25010683248de0092f6a.patch"
       ];
       # From common.nix of nixpkgs
-      # patches = (lib.lists.take 2 base.patches) ++ (lib.lists.drop 4 base.patches);
       patches = builtins.filter
         (p:
           if builtins.typeOf p == "path" && (builtins.elem (builtins.baseNameOf p) ignoredPatches) then false
+          else if builtins.typeOf p == "set" && p ? url && (builtins.elem p.url ignoredPatches) then false
           else true
         )
         base.patches;
@@ -207,7 +219,7 @@ let
 
         # This is to ensure expansion of $out.
         libExecPath="${libExecPath}"
-
+        ${python3.pythonOnBuildForHost}/bin/python3 build/linux/unbundle/replace_gn_files.py --system-libraries ${toString gnSystemLibraries}
         ${self.passthru.chromiumDeps.gn}/bin/gn gen --args=${lib.escapeShellArg patchedGnFlags} out/Release | tee gn-gen-outputs.txt
 
         # Fail if `gn gen` contains a WARNING.

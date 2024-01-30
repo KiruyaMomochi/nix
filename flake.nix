@@ -3,7 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs-master.url = "github:NixOS/nixpkgs/master";
     deploy-rs.url = "github:serokell/deploy-rs";
 
     sops-nix = {
@@ -48,6 +47,8 @@
       });
     in
     {
+      inherit inputs;
+
       lib = lib-kyaru;
 
       nixosConfigurations = mapHosts ./hosts { };
@@ -73,12 +74,18 @@
         };
 
       nixosModules = mapModules ./modules import;
+
       deploy.nodes = builtins.mapAttrs
-        (name: value: {
-          profiles.system = {
-            path = deploy-rs.lib.${value.pkgs.system}.activate.nixos value;
-          };
-        })
+        (name: value:
+          let system = value.pkgs.system; in
+          {
+            hostname = value.config.networking.hostName;
+            profiles.system = {
+              user = "root";
+              sshOpts = [ "-A" "-t" ];
+              path = self.deployPkgs.${system}.deploy-rs.lib.activate.nixos value;
+            };
+          })
         self.nixosConfigurations;
 
       homeModules = mapModules ./modules/home import;
@@ -89,20 +96,6 @@
         default = (final: prev: rec {
           kyaru = mapPackages final;
           master = mkPkgs inputs.nixpkgs-master final.hostPlatform.system;
-          influxdb2-cli = master.influxdb2-cli;
-          influxdb2-server = master.influxdb2-server;
-          influxdb2-token-manipulator = master.influxdb2-token-manipulator;
-          rclone = prev.rclone.override {
-            buildGoModule = args: prev.buildGoModule (args // {
-              src = prev.fetchFromGitHub {
-                owner = "rclone";
-                repo = "rclone";
-                rev = "8503282a5adffc992e1834eed2cd8aeca57c01dd";
-                hash = "sha256-0wh2KI5Qn/Y3W52aS/rGh5Sh85yn11wSVvnOS9kTgwc=";
-              };
-              vendorHash = "sha256-sRWioOQoy0xRFvOD9iBhcw042C/BK50QMVjW47YZtIU=";
-            });
-          };
           slirp4netns = prev.slirp4netns.overrideAttrs (oldAttrs: {
             patches = (oldAttrs.patches or [ ]) ++ [
               ./packages/slirp4netns.patch
@@ -115,14 +108,13 @@
                   bindep = python-final.callPackage ./packages/python3/bindep { };
                   ansible-builder = python-final.callPackage ./packages/python3/ansible-builder { };
                 }
-              # infinite recursion
-              # (mapModules ./packages/python3 (p: python-final.callPackage (lib.debug.traceVal p) { }))
             )
           ];
         });
       };
 
       templates = import ./templates;
+      checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
     } // flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = mkPkgs nixpkgs system;
@@ -138,9 +130,17 @@
             jq
             yq
             vscode-langservers-extracted
+            self.deployPkgs.${system}.deploy-rs.deploy-rs
           ];
         };
         packages = mapPackages pkgs;
+        deployPkgs = import nixpkgs {
+          inherit system;
+          overlays = [
+            deploy-rs.overlay
+            (self: super: { deploy-rs = { inherit (pkgs) deploy-rs; lib = super.deploy-rs.lib; }; })
+          ];
+        };
       }
     );
 }

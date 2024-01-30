@@ -31,7 +31,6 @@ in
       ddcui
       drawio
       gitkraken
-      mattermost-desktop
       remmina
       spotify
       vlc
@@ -39,6 +38,9 @@ in
       obsidian
       anki
 
+      mattermost-desktop
+      element-desktop-wayland
+    
       # for clipboard
       wl-clipboard
       xclip
