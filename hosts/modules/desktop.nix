@@ -100,9 +100,13 @@ in
     liberation_ttf
     fira-code
     fira-code-symbols
+    monaspace
     sarasa-gothic
     roboto
-    (nerdfonts.override { fonts = [ "CascadiaCode" ]; })
+    (nerdfonts.override { fonts = [
+      "CascadiaCode"
+      "Monaspace"
+    ]; })
   ];
 
   virtualisation.libvirtd = {

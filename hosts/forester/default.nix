@@ -2,7 +2,6 @@
 {
   imports = [
     ./hardware-configuration.nix
-    ./matrix.nix
     ../modules/vps.nix
   ];
 
