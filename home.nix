@@ -14,10 +14,6 @@
   home.username = "kyaru";
   home.homeDirectory = "/home/${config.home.username}";
 
-  programs.kyaru = {
-    desktop.enable = true;
-    kde.enable = true;
-  };
   services.onedrive-rclone.enable = true;
 
   nixpkgs.config = import ./nixpkgs-config.nix;
