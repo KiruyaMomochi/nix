@@ -98,8 +98,6 @@ in
     noto-fonts-cjk
     noto-fonts-emoji
     liberation_ttf
-    fira-code
-    fira-code-symbols
     monaspace
     sarasa-gothic
     roboto

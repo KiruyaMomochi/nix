@@ -6,11 +6,11 @@
 }:
 stdenv.mkDerivation rec {
   pname = "naiveproxy";
-  version = "116.0.5845.92-2";
+  version = "121.0.6167.71-1";
 
   src = fetchurl {
     url = "https://github.com/klzgrad/naiveproxy/releases/download/v${version}/naiveproxy-v${version}-linux-x64.tar.xz";
-    sha256 = "sha256-QarVB43fxALbY7tmR+B4em+N9Sf2iCvnHwTJyYOSHcE=";
+    sha256 = "sha256-qRoc5XFD1tquaFG47+18FAoku+dpmqVP1jtJSqtRQTo=";
   };
 
   nativeBuildInputs = [

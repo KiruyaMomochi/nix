@@ -13,6 +13,9 @@ in
 
   config = lib.mkIf cfg.enable {
     fonts.fontconfig.enable = true;
+    home.sessionVariables = {
+      NIXOS_OZONE_WL = 1;
+    };
     home.packages = with pkgs; [
       font-awesome
       zotero
@@ -39,7 +42,10 @@ in
       anki
 
       mattermost-desktop
-      element-desktop-wayland
+      # https://github.com/NixOS/nixpkgs/pull/157520 make element-desktop-wayland a shell wrapper
+      # which means it does not create desktop items, so we don't use that.
+      # And that what does is simply adding the environment variable
+      element-desktop
     
       # for clipboard
       wl-clipboard

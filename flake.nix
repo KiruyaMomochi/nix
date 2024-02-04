@@ -24,7 +24,10 @@
     # Fixes for vscode server under NixOS
     vscode-server.url = "github:nix-community/nixos-vscode-server";
     # Windows subsystem for Linux support
-    nixos-wsl.url = "github:nix-community/NixOS-WSL?ref=22.05-5c211b47";
+    nixos-wsl = {
+      url = "github:nix-community/NixOS-WSL?ref=22.05-5c211b47";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs@{ self, nixpkgs, flake-utils, deploy-rs, ... }:
@@ -143,4 +146,15 @@
         };
       }
     );
+
+  nixConfig = {
+    extra-substituters = [
+      "https://nix-community.cachix.org"
+      "https://usc1.contabostorage.com/43f37228fc484988a5809f4bc0e3ca6e:nix-cache"
+    ];
+    extra-trusted-public-keys = [
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      "kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM="
+    ];
+  };
 }
