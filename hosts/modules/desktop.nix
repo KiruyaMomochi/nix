@@ -15,6 +15,7 @@ in
   i18n.supportedLocales = [ "all" ];
   i18n.inputMethod = {
     enabled = "fcitx5";
+    fcitx5.waylandFrontend = true;
 
     fcitx5.addons = with pkgs; [
       fcitx5-chewing
