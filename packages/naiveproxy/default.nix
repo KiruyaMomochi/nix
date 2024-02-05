@@ -165,7 +165,7 @@ let
     # `buildFun base` is extraAttrs in common.nix
     (base: rec {
       inherit version;
-      name = "naiveproxy";
+      pname = "naiveproxy";
       packageName = "naiveproxy";
       buildTargets = [ "naive" ];
       src = naiveSrc + "/src";
