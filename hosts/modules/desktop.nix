@@ -45,6 +45,9 @@ in
   programs.dconf.enable = true;
 
   # programs.sway.enable = true;
+  programs.hyprland.enable = true;
+
+  # screenshot
   xdg.portal.wlr.enable = true;
 
   # Configure keymap in X11
