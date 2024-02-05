@@ -1,4 +1,5 @@
 { fetchFromGitHub
+  # This is in https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/networking/browsers/chromium/default.nix
 , chromium
 , lib
 , stdenv
@@ -17,6 +18,10 @@ let
     sha256 = "sha256-DxkpqL3Yt7my3hDJqyJf3XQNWT8sn3PZ7QsxYSrqyl0=";
   };
   packageName = self.packageName;
+  # Make chromium library functions use the correct version
+  mkChromiumDerivation = (chromium.override (previous: {
+    upstream-info = chromium.upstream-info // { inherit version; };
+  })).mkDerivation;
 
   # Copied from https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/networking/browsers/chromium/common.nix
 
@@ -144,11 +149,18 @@ let
     "use_qt"
     "use_system_libffi"
     "v8_snapshot_toolchain"
+
+    # Rust toolchain is enabled since https://github.com/NixOS/nixpkgs/commit/1724fc3271f3447b8c741216af9b8c66151032a8
+    # But because it's not required by naiveproxy, and naive has removed related source files, while keeping build gn files, the build will fail.
+    # We just drop rust support here.
+    "rust_sysroot_absolute"
+    "enable_rust"
   ];
   patchedGnFlags = filterGnFlags self.gnFlags (k: ! (builtins.elem k skipGnFlags));
 
-  # mkChromiumDerivation defined in https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/networking/browsers/chromium/default.nix
-  self = chromium.mkDerivation
+  # mkChromiumDerivation Modified at the beginning of this file.
+  # The original function is defined in https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/networking/browsers/chromium/default.nix
+  self = mkChromiumDerivation
     # rec for buildTargets
     # `buildFun base` is extraAttrs in common.nix
     (base: rec {
