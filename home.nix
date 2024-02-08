@@ -37,6 +37,7 @@
     erdtree # tree and du
     choose # cut and sometimes awk
     comma # quickly run command
+    lurk # strace
     aria
     lnav
 
