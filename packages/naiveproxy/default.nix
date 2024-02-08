@@ -264,6 +264,7 @@ let
         homepage = "https://github.com/klzgrad/naiveproxy";
         description = "naiveproxy";
         platforms = platforms.linux;
+        mainProgram = "naive";
       };
     });
 in
