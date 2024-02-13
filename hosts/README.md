@@ -10,12 +10,13 @@ I use [guild names](https://princess-connect.fandom.com/wiki/Guilds) from the ga
   - Lenovo XiaoXin 13 Air 2020 (82DM)
 - **[慈樂之音](./carmina/default.nix)** - School (offline)
   - OptiPlex 5000
+- **[美食殿堂](./gourmet/default.nix)** - Home
+  - Surface Book 2
 
 ### Removed
 
-
 - **[美食殿堂](./gourmet/default.nix)** - School
-  - I don't know
+  - The old one. I don't know.
 
 ## VPS
 

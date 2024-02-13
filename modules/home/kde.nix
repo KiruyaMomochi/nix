@@ -8,7 +8,7 @@ let
 in
 {
   options.programs.kyaru.kde = with lib; {
-    enable = mkEnableOption "Kiruya's spack packages";
+    enable = mkEnableOption "Kiruya's kde packages";
     konsoleRandomBreeze = mkEnableOption "Randomize the Breeze color scheme";
   };
 
@@ -19,6 +19,9 @@ in
       krita
       kate
       qalculate-qt # latte-dock
+      libreoffice-qt
+      hunspell
+      hunspellDicts.en-us-large
       krdc
       libsForQt5.dolphin
       libsForQt5.yakuake

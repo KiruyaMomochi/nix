@@ -12,8 +12,9 @@ in
       # Include the results of the hardware scan.
       ./hardware-configuration.nix
       ./virtualisation.nix
-      ../modules/desktop.nix
     ];
+
+  kyaru.desktop.enable = true;
 
   # Filesystem
   fileSystems = {
@@ -33,6 +34,15 @@ in
   boot.loader.systemd-boot.enable = false;
   boot.loader.efi.canTouchEfiVariables = true;
 
+  boot.kernelModules = [
+    "nft_tproxy"
+    "nft_socket"
+    "amdgpu"
+  ];
+
+  # Use latest kernel
+  boot.kernelPackages = pkgs.linuxPackages_latest;
+
   services.fwupd.enable = true;
 
   # For AMD
@@ -43,14 +53,6 @@ in
   ];
   hardware.cpu.amd.updateMicrocode = true;
   services.xserver.videoDrivers = [ "amdgpu" ];
-  boot.kernelModules = [
-    "nft_tproxy"
-    "nft_socket"
-    "amdgpu"
-  ];
-
-  # Use latest kernel
-  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   # Set your time zone.
   time.timeZone = "Asia/Taipei";
@@ -69,6 +71,7 @@ in
     shell = pkgs.fish;
     description = "百地 希留耶";
   };
+  nix.settings.trusted-users = [ "kyaru" ];
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
@@ -97,7 +100,6 @@ in
   programs.wireshark.enable = true;
 
   # Telegraf
-  services.telegraf.enable = true;
   services.telegraf.extraConfig = {
     agent.interval = "60s";
     agent.flush_interval = "60s";

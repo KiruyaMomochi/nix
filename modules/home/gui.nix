@@ -12,19 +12,14 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    fonts.fontconfig.enable = true;
     home.sessionVariables = {
-      NIXOS_OZONE_WL = 1;
+      # NIXOS_OZONE_WL = 1;
     };
+    fonts.fontconfig.enable = true;
     home.packages = with pkgs; [
       font-awesome
       zotero
       microsoft-edge
-      cascadia-code
-      slack
-      libreoffice-qt
-      hunspell
-      hunspellDicts.en-us-large
       filelight
       keepassxc
       (google-chrome.override {
@@ -33,11 +28,9 @@ in
       kyaru.goldendict-ng
       ddcui
       drawio
-      gitkraken
       remmina
       spotify
       vlc
-      krita
       obsidian
       anki
 
@@ -46,7 +39,7 @@ in
       # which means it does not create desktop items, so we don't use that.
       # And that what does is simply adding the environment variable
       element-desktop
-    
+
       # for clipboard
       wl-clipboard
       xclip

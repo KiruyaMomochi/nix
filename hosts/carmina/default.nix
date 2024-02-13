@@ -9,8 +9,9 @@
       # Include the results of the hardware scan.
       ./hardware-configuration.nix
       ./virtualization.nix
-      ../modules/desktop.nix
     ];
+
+  kyaru.desktop.enable = true;
 
   fileSystems = {
     "/".options = [ "compress=zstd" ];
@@ -31,11 +32,7 @@
   # https://github.com/mkubecek/vmware-host-modules/issues/202
   # boot.kernelPackages = pkgs.linuxPackages_latest;
 
-  boot.kernelModules = [
-    "nft_tproxy"
-    "nft_socket"
-    "i2c_dev"
-  ];
+  boot.kernelModules = [ "i2c_dev" ];
 
   hardware.bluetooth.enable = true;
   networking = {
@@ -80,6 +77,7 @@
     shell = pkgs.fish;
     description = "百地 希留耶";
   };
+  nix.settings.trusted-users = [ "kyaru" ];
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget

@@ -28,6 +28,8 @@
       url = "github:nix-community/NixOS-WSL?ref=22.05-5c211b47";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
   };
 
   outputs = inputs@{ self, nixpkgs, flake-utils, deploy-rs, ... }:
@@ -69,7 +71,7 @@
             };
         in
         rec {
-          kyaru = kyaru-desktop;
+          kyaru = kyaru-headless;
           kyaru-headless = makeOverridableHomeManagerConfig {
             pkgs = mkPkgs nixpkgs "x86_64-linux";
             extraSpecialArgs = { inherit inputs lib-kyaru; };

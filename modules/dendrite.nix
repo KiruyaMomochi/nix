@@ -3,18 +3,18 @@ with lib;
 {
   options = {
     kyaru.services.dendrite = {
-      createDatabase = lib.mkOption {
-        type = lib.types.bool;
+      createDatabase = mkOption {
+        type = types.bool;
         default = true;
-        description = lib.mdDoc ''
+        description = mdDoc ''
           Whether to enable and configure `services.postgres` to ensure that the database user `dendrite`
           and the database `dendrite` exist.
         '';
       };
-      jetstream = lib.mkOption {
-        type = lib.types.bool;
+      jetstream = mkOption {
+        type = types.bool;
         default = true;
-        description = lib.mdDoc ''
+        description = mdDoc ''
           Whether to enable the standalone NATS server.
         '';
       };
