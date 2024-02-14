@@ -14,8 +14,6 @@
   home.username = "kyaru";
   home.homeDirectory = "/home/${config.home.username}";
 
-  services.onedrive-rclone.enable = true;
-
   nixpkgs.config = import ./nixpkgs-config.nix;
   xdg.configFile."nixpkgs/config.nix".source = ./nixpkgs-config.nix;
   nix.settings = {

@@ -46,6 +46,7 @@ in
   services.fwupd.enable = true;
 
   # For AMD
+  hardware.opengl.enable = true;
   hardware.opengl.extraPackages = with pkgs; [
     rocm-opencl-icd
     rocm-opencl-runtime
