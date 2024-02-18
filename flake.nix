@@ -50,6 +50,23 @@
       lib = nixpkgs.lib.extend (self: super: {
         kyaru = lib-kyaru;
       });
+
+      patchednixpkgs =
+        let
+          patches = [
+            {
+              name = "plasma-6.patch";
+              url = "https://patch-diff.githubusercontent.com/raw/NixOS/nixpkgs/pull/286522.patch";
+              hash = "";
+            }
+          ];
+          originPkgs = nixpkgs.legacyPackages."x86_64-linux";
+        in
+        originPkgs.applyPatches {
+          name = "nixpkgs-patched";
+          src = inputs.nixpkgs;
+          patches = map originPkgs.fetchpatch patches;
+        };
     in
     {
       inherit inputs;

@@ -15,6 +15,10 @@
   kyaru.desktop.enable = true;
   kyaru.desktop.environment = "kde";
 
+  virtualisation.docker.enable = true;
+  virtualisation.podman.enable = true;
+  # virtualisation.docker.rootless.enable = true;
+
   # Filesystem
   fileSystems = {
     "/".options = [ "compress=zstd" ];

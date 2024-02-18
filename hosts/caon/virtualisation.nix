@@ -49,34 +49,6 @@
   # use amd_iommu if you have an AMD CPU with AMD-Vi
   boot.kernelParams = [ "intel_iommu=on" ];
 
-  services.cockpit = {
-    enable = true;
-    openFirewall = true;
-  };
-
-  # Podman
-  virtualisation.podman = {
-    enable = true;
-    extraPackages = [ pkgs.btrfs-progs ];
-    # Required for containers under podman-compose to be able to talk to each other.
-    defaultNetwork.settings = {
-      dns_enabled = true;
-    };
-  };
-  # https://github.com/NixOS/nixpkgs/issues/226365
-  # networking.firewall.interfaces.podman0.allowedUDPPorts = [ 53 5353 ];
-
-  virtualisation.containers = {
-    enable = true;
-    storage.settings = {
-      storage = {
-        driver = "overlay";
-        graphroot = "/var/lib/containers/storage";
-        runroot = "/run/containers/storage";
-      };
-    };
-  };
-
   # VMWare
   virtualisation.vmware.host = {
     enable = true;
