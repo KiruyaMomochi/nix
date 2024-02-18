@@ -15,6 +15,9 @@ in
     ];
 
   kyaru.desktop.enable = true;
+  virtualisation.docker.enable = true;
+  virtualisation.podman.enable = true;
+  # virtualisation.docker.rootless.enable = true;
 
   # Filesystem
   fileSystems = {
