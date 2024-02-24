@@ -20,7 +20,7 @@ in
     substituters = [ "https://usc1.contabostorage.com/43f37228fc484988a5809f4bc0e3ca6e:nix-cache" ];
     trusted-public-keys = [ "kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM=" ];
   };
-  nixpkgs.config.allowUnfree = true;
+  nixpkgs.config = import ../nixpkgs-config.nix;
 
   boot.kernelModules = [
     "nft_tproxy"
