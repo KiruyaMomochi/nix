@@ -32,7 +32,7 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
   };
 
-  outputs = inputs@{ self, nixpkgs, flake-utils, deploy-rs, ... }:
+  outputs = inputs@{ self, flake-utils, deploy-rs, ... }:
     let
       inherit (lib.kyaru.nixos) mapHosts;
       inherit (lib.kyaru.packages) mapPackages;
@@ -47,31 +47,57 @@
 
       # https://github.com/NixOS/nixpkgs/pull/157056
       lib-kyaru = import ./lib { inherit inputs lib; };
-      lib = nixpkgs.lib.extend (self: super: {
-        kyaru = lib-kyaru;
-      });
+      system = "x86_64-linux";
 
-      patchednixpkgs =
+      # Patching nixpkgs
+      # See https://github.com/NixOS/nix/issues/3920
+      patches = [
+        {
+          name = "plasma-6.patch";
+          url = "https://patch-diff.githubusercontent.com/raw/NixOS/nixpkgs/pull/286522.patch";
+          hash = "sha256-DyfZjpbYcmSn535MYRZ0qXes/6rJk0562bEvRf6SkMk=";
+        }
+      ];
+
+      originNixpkgs = inputs.nixpkgs;
+      patchedNixpkgs =
         let
-          patches = [
-            {
-              name = "plasma-6.patch";
-              url = "https://patch-diff.githubusercontent.com/raw/NixOS/nixpkgs/pull/286522.patch";
-              hash = "";
-            }
-          ];
-          originPkgs = nixpkgs.legacyPackages."x86_64-linux";
+          originPkgs = originNixpkgs.legacyPackages.${system};
         in
         originPkgs.applyPatches {
           name = "nixpkgs-patched";
           src = inputs.nixpkgs;
           patches = map originPkgs.fetchpatch patches;
         };
+
+      originLib = originNixpkgs.lib;
+      # Copied from <nixpkgs>/flake.nix
+      patchedLib = originLib.lists.foldl (a: b: a.extend b)
+        (import (patchedNixpkgs + "/lib"))
+        [
+          (import (patchedNixpkgs + "/lib/flake-version-info.nix") self)
+          (final: prev: {
+            nixos = import (patchedNixpkgs + "/nixos/lib") { lib = final; };
+            nixosSystem = args:
+              import (patchedNixpkgs + "/nixos/lib/eval-config.nix") (
+                {
+                  lib = final;
+                  # Allow system to be set modularly in nixpkgs.system.
+                  # We set it to null, to remove the "legacy" entrypoint's
+                  # non-hermetic default.
+                  system = null;
+                } // args
+              );
+          })
+        ];
+
+      nixpkgs = patchedNixpkgs;
+      lib = patchedLib.extend (self: super: {
+        kyaru = lib-kyaru;
+      });
     in
     {
-      inherit inputs;
-
-      lib = lib-kyaru;
+      inherit inputs lib;
 
       nixosConfigurations = mapHosts ./hosts { };
 
@@ -90,7 +116,7 @@
         rec {
           kyaru = kyaru-headless;
           kyaru-headless = makeOverridableHomeManagerConfig {
-            pkgs = mkPkgs nixpkgs "x86_64-linux";
+            pkgs = mkPkgs nixpkgs system;
             extraSpecialArgs = { inherit inputs lib-kyaru; };
             modules = [ ./home.nix ];
           };
