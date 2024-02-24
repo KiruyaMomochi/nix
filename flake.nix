@@ -55,7 +55,7 @@
         {
           name = "plasma-6.patch";
           url = "https://patch-diff.githubusercontent.com/raw/NixOS/nixpkgs/pull/286522.patch";
-          hash = "sha256-6Fgi/OiCCh7HkQo1T0votSSPzIwWy+Qb7LmtURfcl7g=";
+          hash = "sha256-/qmPT28SD8m6sQbCutQIk57KGLQKAhjERU4ssdoIFX8=";
         }
       ];
 
