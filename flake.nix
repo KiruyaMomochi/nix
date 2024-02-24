@@ -152,7 +152,6 @@
       overlays = {
         default = (final: prev: rec {
           kyaru = mapPackages final;
-          master = mkPkgs inputs.nixpkgs-master final.hostPlatform.system;
           slirp4netns = prev.slirp4netns.overrideAttrs (oldAttrs: {
             patches = (oldAttrs.patches or [ ]) ++ [
               ./packages/slirp4netns.patch
