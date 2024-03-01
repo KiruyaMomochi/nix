@@ -51,13 +51,7 @@
 
       # Patching nixpkgs
       # See https://github.com/NixOS/nix/issues/3920
-      patches = [
-        {
-          name = "plasma-6.patch";
-          url = "https://patch-diff.githubusercontent.com/raw/NixOS/nixpkgs/pull/286522.patch";
-          hash = "sha256-E9oKjgCUVKggGBP3rb0asrbrvOPhmdj6xET4JsRUf2E=";
-        }
-      ];
+      patches = [ ];
 
       originNixpkgs = inputs.nixpkgs;
       patchedNixpkgs =
@@ -91,8 +85,8 @@
           })
         ];
 
-      nixpkgs = patchedNixpkgs;
-      lib = patchedLib.extend (self: super: {
+      nixpkgs = originNixpkgs;
+      lib = originLib.extend (self: super: {
         kyaru = lib-kyaru;
       });
     in
