@@ -28,7 +28,6 @@
     fd # find
     procs # ps
     sd # sed
-    bottom # top
     btop # htop
     delta # diff
     ripgrep # grep
@@ -45,9 +44,8 @@
     ldns
     tldr
     p7zip
-    gh
-    glab
-    gitui
+    jq
+    yq
 
     # nix related
     nil
@@ -56,6 +54,13 @@
     cachix
     nix-output-monitor
     expect
+
+    # for developing
+    gh
+    glab
+    gitui
+    shellcheck
+    shfmt
 
     # others
     dconf # fix dconf error
@@ -160,9 +165,6 @@
 
   # top
   programs.htop.enable = true;
-  programs.bottom = {
-    enable = true;
-  };
 
   # editor
   programs.helix =
