@@ -5,8 +5,6 @@
     {
       nixpkgs.overlays = [ inputs.self.overlay ];
     }
-    inputs.vscode-server.nixosModules.home
-    inputs.self.homeModules.all
   ];
 
   # Home Manager needs a bit of information about you and the
