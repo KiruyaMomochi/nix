@@ -112,7 +112,12 @@
           kyaru-headless = makeOverridableHomeManagerConfig {
             pkgs = mkPkgs nixpkgs system;
             extraSpecialArgs = { inherit inputs lib-kyaru; };
-            modules = [ ./home.nix ];
+            modules = [
+              self.homeModules.all
+              inputs.vscode-server.nixosModules.home
+
+              ./home.nix
+            ];
           };
           kyaru-desktop = kyaru-headless.override (oldConfig: {
             modules = oldConfig.modules ++ [{
