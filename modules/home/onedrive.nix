@@ -19,7 +19,7 @@ in
         Description = "OneDrive mount service";
         After = [ "network-online.target" ];
         Wants = [ "network-online.target" ];
-        ConditionPathExists = "${config.xdg.configHome}/rclone/rclone.conf";
+        ConditionPathExists = [ "${config.xdg.configHome}/rclone/rclone.conf" "${config.home.homeDirectory}/OneDrive"];
       };
       Install = {
         WantedBy = [ "default.target" ];
