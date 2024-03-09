@@ -10,8 +10,8 @@
       ./hardware-configuration.nix
       ./virtualisation.nix
       ./printing.nix
-      ../modules/desktop.nix
     ];
+  kyaru.desktop.enable = true;
 
   fileSystems = {
     # "/".options = [ ];
