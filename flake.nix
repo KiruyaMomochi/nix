@@ -202,7 +202,7 @@
   nixConfig = {
     extra-substituters = [
       "https://nix-community.cachix.org"
-      "https://usc1.contabostorage.com/43f37228fc484988a5809f4bc0e3ca6e:nix-cache"
+      "https://objects.kyaru.bond/nix-cache"
     ];
     extra-trusted-public-keys = [
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
