@@ -1,4 +1,4 @@
-{ inputs, config, pkgs, ... }:
+{ inputs, config, pkgs, lib, ... }:
 
 {
   imports = [
@@ -127,7 +127,7 @@
   };
 
   programs.ssh = {
-    enable = false;
+    enable = lib.mkDefault false;
     includes = [ "~/.ssh/config.d/*" ];
     matchBlocks = {
       "github.com" = {
