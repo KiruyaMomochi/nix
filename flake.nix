@@ -37,6 +37,7 @@
       inherit (lib.kyaru.nixos) mapHosts;
       inherit (lib.kyaru.packages) mapPackages;
       inherit (lib.kyaru.modules) mapModules;
+      inherit (lib.attrsets) optionalAttrs;
 
       mkPkgs = pkgs: system: import pkgs {
         inherit system;
@@ -131,18 +132,21 @@
 
       nixosModules = mapModules ./modules import;
 
-      deploy.nodes = builtins.mapAttrs
-        (name: value:
-          let system = value.pkgs.system; in
-          {
-            hostname = value.config.networking.hostName;
-            profiles.system = {
-              user = "root";
-              sshOpts = [ "-A" "-t" ];
-              path = self.deployPkgs.${system}.deploy-rs.lib.activate.nixos value;
+      deploy.nodes =
+        let
+          mkDeployConfig = nixos:
+            let system = nixos.pkgs.system; in
+            {
+              hostname = nixos.config.networking.hostName;
+              profiles.system = {
+                user = "root";
+                sshOpts = [ "-A" "-t" ];
+                path = self.deployPkgs.${system}.deploy-rs.lib.activate.nixos nixos;
+              } // (optionalAttrs (nixos.config.kyaru.vps.user ? name) { profiles.system.sshUser = nixos.config.kyaru.vps.user.name; });
             };
-          })
-        self.nixosConfigurations;
+        in
+        builtins.mapAttrs (_: mkDeployConfig)
+          self.nixosConfigurations;
 
       homeModules = mapModules ./modules/home import;
 
