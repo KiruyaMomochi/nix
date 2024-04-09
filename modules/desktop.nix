@@ -80,7 +80,7 @@ in
           ddcutil
         ] ++ (optional config.virtualisation.libvirtd.enable virt-manager);
 
-        networking.networkmanager.enable = true; # Easiest to use and most distros use this by default.
+        networking.networkmanager.enable = mkDefault true; # Easiest to use and most distros use this by default.
         networking.networkmanager.dns = "systemd-resolved";
         services.resolved.enable = true;
 
@@ -155,7 +155,7 @@ in
       })
       (mkIf (cfg.environment == "kde") {
         # KDE
-        services.xserver.desktopManager.plasma6.enable = lib.mkDefault true;
+        services.desktopManager.plasma6.enable = lib.mkDefault true;
         services.xserver.displayManager.sddm.enable =
           true;
         programs.partition-manager.enable = true;

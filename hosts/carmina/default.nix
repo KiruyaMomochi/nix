@@ -43,7 +43,7 @@
     };
     nat = {
       enable = true;
-      internalInterfaces = [ "tailscale0" "ve+" ];
+      internalInterfaces = [ "tailscale0" "ve*" ];
     };
   };
   boot.kernel.sysctl = {

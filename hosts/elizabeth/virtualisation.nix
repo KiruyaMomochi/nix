@@ -2,13 +2,15 @@
 {
   networking.nat = {
     enable = true;
-    internalInterfaces = [ "ve+" ];
+    internalInterfaces = [
+      "ve*" # ve+
+    ];
   };
 
   # https://github.com/NixOS/nixpkgs/issues/226365
   networking.firewall.interfaces."podman*".allowedUDPPorts = [ 53 5353 ];
   networking.firewall.interfaces."docker*".allowedUDPPorts = [ 53 5353 ];
-  networking.firewall.trustedInterfaces = [ "virbr+" ];
+  networking.firewall.trustedInterfaces = [ "virbr*" ];
 
   containers =
     let
@@ -32,5 +34,6 @@
   virtualisation.libvirtd.enable = true;
   environment.systemPackages = with pkgs; [
     virt-manager
+    virtiofsd
   ];
 }

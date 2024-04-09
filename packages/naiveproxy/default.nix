@@ -10,12 +10,12 @@
 , python3
 }:
 let
-  version = "121.0.6167.71-1";
+  version = "123.0.6312.40-1";
   naiveSrc = fetchFromGitHub {
     repo = "naiveproxy";
     owner = "klzgrad";
     rev = "v${version}";
-    sha256 = "sha256-DxkpqL3Yt7my3hDJqyJf3XQNWT8sn3PZ7QsxYSrqyl0=";
+    sha256 = "sha256-ySACPxbXMYg0tEsl0PxE1JgQdEc9y+PKnddNMm2AbnQ=";
   };
   packageName = self.packageName;
   # Make chromium library functions use the correct version
@@ -190,7 +190,11 @@ let
         enable_reporting = false;
         include_transport_security_state_preload_list = false;
         use_nss_certs = false;
-      };
+
+      } // (lib.optionalAttrs stdenv.hostPlatform.isx86 {
+        # https://github.com/klzgrad/naiveproxy/commit/f5034cd7da67f063724dc27fdf0a42384db84379
+        use_cfi_icall = false;
+      });
 
       depsBuildBuild = lib.lists.remove libpng (base.depsBuildBuild or [ ]);
       buildInputs = [ openssl ];
@@ -198,6 +202,7 @@ let
       ignoredPatches = [
         "widevine-79.patch"
         "angle-wayland-include-protocol.patch"
+        "chromium-initial-prefs.patch"
         # qr code generator
         "https://github.com/chromium/chromium/commit/bcf739b95713071687ff25010683248de0092f6a.patch"
       ];

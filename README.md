@@ -4,6 +4,7 @@ For all my hosts see [hosts](hosts/README.md).
 
 ## TODO
 
+- [ ] https://tailscale.com/kb/1320/performance-best-practices#ethtool-configuration
 - [ ] Monitor S3 usage.
 - [ ] Move Telegraf to a custom module.
 - [ ] Add Log monitoring.

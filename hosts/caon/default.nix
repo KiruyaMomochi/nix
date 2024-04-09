@@ -12,6 +12,19 @@
       ./printing.nix
     ];
   kyaru.desktop.enable = true;
+  networking.networkmanager.enable = false;
+  networking.useNetworkd = true;
+  networking.interfaces.eno1.useDHCP = true;
+  # networking.interfaces.eno2.useDHCP = true;
+  networking.interfaces.enp0s20f0u4u2c2.useDHCP = true;
+
+  # Enable desktop, but do not start automatically
+  # Also use systemd-networkd instead of networkmanagger
+  services.xserver.autorun = false;
+  boot.kernelParams = [
+    "console=ttyS1,115200n8"
+  ];
+
 
   fileSystems = {
     # "/".options = [ ];
@@ -113,8 +126,6 @@
     # Brother P-Touch PT-P910BT
     SUBSYSTEM=="usb", ATTRS{idVendor}=="04f9", ATTRS{idProduct}=="20c7", TAG+="uaccess", MODE="0660"
   '';
-
-  services.xserver.desktopManager.plasma5.useQtScaling = true;
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions

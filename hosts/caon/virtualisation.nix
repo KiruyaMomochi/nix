@@ -1,4 +1,12 @@
 { config, pkgs, lib, ... }:
+let
+  gpuIDs = [
+    "8086:a780"
+  ];
+  macvtaps = [
+    "macvtap0"
+  ];
+in
 {
   environment.systemPackages = with pkgs; [
     virt-manager
@@ -8,7 +16,6 @@
     swtpm
   ];
 
-  networking.firewall.trustedInterfaces = [ "virbr+" "vnet+" ];
   networking.firewall.allowedUDPPorts = [
     # DNS
     53
@@ -25,6 +32,21 @@
     # libvirt
     16509
   ];
+
+  # https://github.com/NixOS/nixpkgs/issues/226365
+  networking.firewall.interfaces."podman*".allowedUDPPorts = [ 53 5353 ];
+  networking.firewall.interfaces."docker*".allowedUDPPorts = [ 53 5353 ];
+
+  containers = { };
+
+  # Podman
+  virtualisation.podman = {
+    enable = true;
+    extraPackages = [ ];
+    defaultNetwork.settings = {
+      dns_enabled = true;
+    };
+  };
 
   # KVM
   virtualisation.libvirtd = {
@@ -47,10 +69,59 @@
   # https://gist.github.com/techhazard/1be07805081a4d7a51c527e452b87b26
   # CHANGE: intel_iommu enables iommu for intel CPUs with VT-d
   # use amd_iommu if you have an AMD CPU with AMD-Vi
-  boot.kernelParams = [ "intel_iommu=on" ];
+  boot.kernelParams = [
+    # https://forums.unraid.net/topic/76529-notes-about-supermicro-x11sca-f/page/2/
+    "i915.disable_display=1"
+    "intel_iommu=on"
+    # prevent Linux from touching devices which cannot be passed through
+    "iommu=pt"
+    # https://astrid.tech/2022/09/22/0/nixos-gpu-vfio/
+    ("vfio-pci.ids=" + lib.concatStringsSep "," gpuIDs)
+  ];
+
+  # boot.blacklistedKernelModules = [ "i915" ];
+  # boot.initrd.availableKernelModules = [
+  #   "i915"
+  #   "vfio-pci"
+  # ];
+
+  # Why 40?
+  # See https://github.com/NixOS/nixpkgs/blob/nixos-unstable/nixos/modules/tasks/network-interfaces-systemd.nix
+  systemd.network.networks."40-eno1" = {
+    macvtap = macvtaps;
+  };
+
+  systemd.network.netdevs = builtins.listToAttrs (builtins.map
+    (name: {
+      name = "40-${name}";
+      value = {
+        netdevConfig = {
+          Name = name;
+          Kind = "macvtap";
+        };
+        extraConfig = ''
+          [MACVTAP]
+          Mode=bridge
+        '';
+      };
+    })
+    macvtaps);
 
   # VMWare
   virtualisation.vmware.host = {
     enable = true;
+  };
+  boot.kernelModules = [
+    "kvm_intel"
+    "vfio_pci"
+    "vfio"
+    "vfio_iommu_type1"
+    "vfio_virqfd"
+  ];
+
+  services.cockpit = {
+    enable = true;
+    openFirewall = true;
+    port = 9090;
   };
 }
