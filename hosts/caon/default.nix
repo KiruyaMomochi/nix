@@ -24,7 +24,7 @@
   boot.kernelParams = [
     "console=ttyS1,115200n8"
   ];
-
+  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   fileSystems = {
     # "/".options = [ ];
@@ -118,7 +118,7 @@
 
   # DDC
   hardware.i2c.enable = true;
-  boot.extraModulePackages = [ config.boot.kernelPackages.ddcci-driver ];
+  # boot.extraModulePackages = [ config.boot.kernelPackages.ddcci-driver ];
   boot.kernelModules = [ "ddcci_backlight" ];
 
   # extraRules

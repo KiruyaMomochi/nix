@@ -156,7 +156,7 @@ in
       (mkIf (cfg.environment == "kde") {
         # KDE
         services.desktopManager.plasma6.enable = lib.mkDefault true;
-        services.xserver.displayManager.sddm.enable =
+        services.displayManager.sddm.enable =
           true;
         programs.partition-manager.enable = true;
 

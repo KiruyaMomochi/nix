@@ -1,7 +1,10 @@
 { config, pkgs, lib, ... }:
 let
-  gpuIDs = [
+  vfioIds = [
+    # intel graphics
     "8086:a780"
+    # # audio
+    # "8086:7ad0"
   ];
   macvtaps = [
     "macvtap0"
@@ -76,7 +79,7 @@ in
     # prevent Linux from touching devices which cannot be passed through
     "iommu=pt"
     # https://astrid.tech/2022/09/22/0/nixos-gpu-vfio/
-    ("vfio-pci.ids=" + lib.concatStringsSep "," gpuIDs)
+    ("vfio-pci.ids=" + lib.concatStringsSep "," vfioIds)
   ];
 
   # boot.blacklistedKernelModules = [ "i915" ];
@@ -108,9 +111,9 @@ in
     macvtaps);
 
   # VMWare
-  virtualisation.vmware.host = {
-    enable = true;
-  };
+  # virtualisation.vmware.host = {
+  #   enable = true;
+  # };
   boot.kernelModules = [
     "kvm_intel"
     "vfio_pci"
