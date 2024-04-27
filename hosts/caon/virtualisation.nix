@@ -3,7 +3,7 @@ let
   vfioIds = [
     # intel graphics
     "8086:a780"
-    # # audio
+    # audio device is in the same IOMMU group as PCH SMBus controller, hence commented out
     # "8086:7ad0"
   ];
   macvtaps = [
@@ -75,6 +75,10 @@ in
   boot.kernelParams = [
     # https://forums.unraid.net/topic/76529-notes-about-supermicro-x11sca-f/page/2/
     "i915.disable_display=1"
+    # required for gvt-g, not sure for gvt-d
+    "i915.enable_gvt=1"
+    # https://gist.github.com/mikroskeem/fdbbbd35d7273aa77ba9ebc11e7b8e5d
+    "kvm.ignore_msrs=1"
     "intel_iommu=on"
     # prevent Linux from touching devices which cannot be passed through
     "iommu=pt"
