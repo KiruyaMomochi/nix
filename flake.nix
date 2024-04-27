@@ -154,7 +154,7 @@
 
       overlays = {
         default = (final: prev: rec {
-          kyaru = mapPackages final;
+          kyaru = mapPackages final { };
           slirp4netns = prev.slirp4netns.overrideAttrs (oldAttrs: {
             patches = (oldAttrs.patches or [ ]) ++ [
               ./packages/slirp4netns.patch
@@ -192,7 +192,7 @@
             self.deployPkgs.${system}.deploy-rs.deploy-rs
           ];
         };
-        packages = mapPackages pkgs;
+        packages = (mapPackages pkgs { });
         deployPkgs = import nixpkgs {
           inherit system;
           overlays = [
