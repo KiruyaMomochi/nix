@@ -21,6 +21,9 @@
     hplipWithPlugin
     kyaru.ptouch-driver-ppds
   ];
+  # services.printing.extraConf = ''
+  #   FileDevice Yes
+  # '';
   services.avahi.enable = true;
 
   # services.avahi.ipv6 = false;
