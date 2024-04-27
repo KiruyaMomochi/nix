@@ -160,7 +160,6 @@
               ./packages/slirp4netns.patch
             ];
           });
-          qemu = kyaru.qemu;
           pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
             (
               python-final: python-prev:

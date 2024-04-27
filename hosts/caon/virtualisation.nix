@@ -59,6 +59,7 @@ in
       unix_sock_group = "libvirtd"
       unix_sock_rw_perms = "0770"
     '';
+    qemu.package = pkgs.kyaru.qemu;
   };
   boot.extraModprobeConfig = ''
     options kvm_intel nested=1
