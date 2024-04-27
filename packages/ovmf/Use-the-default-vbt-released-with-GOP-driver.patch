@@ -1,0 +1,67 @@
+diff --git a/OvmfPkg/OvmfPkgX64.dsc b/OvmfPkg/OvmfPkgX64.dsc
+index bf4c7906c4..7cecbb07c4 100644
+--- a/OvmfPkg/OvmfPkgX64.dsc
++++ b/OvmfPkg/OvmfPkgX64.dsc
+@@ -1013,6 +1013,8 @@
+ 
+   OvmfPkg/TdxDxe/TdxDxe.inf
+ 
++  OvmfPkg/Vbt/Vbt.inf
++
+ !if $(SMM_REQUIRE) == TRUE
+   OvmfPkg/SmmAccess/SmmAccess2Dxe.inf
+   OvmfPkg/SmmControl2Dxe/SmmControl2Dxe.inf
+diff --git a/OvmfPkg/OvmfPkgX64.fdf b/OvmfPkg/OvmfPkgX64.fdf
+index f47ab1727e..cb38788f9c 100644
+--- a/OvmfPkg/OvmfPkgX64.fdf
++++ b/OvmfPkg/OvmfPkgX64.fdf
+@@ -332,6 +332,8 @@ INF MdeModulePkg/Logo/LogoDxe.inf
+ 
+ INF OvmfPkg/TdxDxe/TdxDxe.inf
+ 
++INF  RuleOverride=CSM OvmfPkg/Vbt/Vbt.inf
++
+ #
+ # Network modules
+ #
+@@ -516,6 +518,17 @@ FILE FV_IMAGE = 9E21FD93-9C72-4c15-8C4B-E77F1DB2D792 {
+     VERSION   STRING="$(INF_VERSION)" Optional BUILD_NUM=$(BUILD_NUMBER)
+   }
+ 
++[Rule.Common.USER_DEFINED.ACPITABLE]
++  FILE FREEFORM = $(NAMED_GUID) {
++    RAW ACPI               |.acpi
++    RAW ASL                |.aml
++  }
++
++[Rule.Common.USER_DEFINED.CSM]
++  FILE FREEFORM = $(NAMED_GUID) {
++    RAW BIN                |.bin
++  }
++
+ [Rule.Common.SEC.RESET_VECTOR]
+   FILE RAW = $(NAMED_GUID) {
+     RAW BIN   Align = 16   |.bin
+diff --git a/OvmfPkg/Vbt/Vbt.inf b/OvmfPkg/Vbt/Vbt.inf
+new file mode 100644
+index 0000000000..daac31d7ad
+--- /dev/null
++++ b/OvmfPkg/Vbt/Vbt.inf
+@@ -0,0 +1,17 @@
++## @file
++#  Vbt Binary
++#
++#  Copyright (c) 2006 - 2011, Intel Corporation.<BR>
++#  SPDX-License-Identifier: BSD-2-Clause-Patent
++#
++##
++
++[Defines]
++  INF_VERSION                    = 0x00010005
++  BASE_NAME                      = Vbt
++  FILE_GUID                      = 1647B4F3-3E8A-4FEF-81C8-328ED647AB1A
++  MODULE_TYPE                    = USER_DEFINED
++  VERSION_STRING                 = 1.0
++
++[Binaries]
++  BIN|Vbt.bin|*

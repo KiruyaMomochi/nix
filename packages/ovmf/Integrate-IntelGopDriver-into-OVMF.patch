@@ -1,0 +1,49 @@
+diff --git a/OvmfPkg/IntelGop/IntelGopDriver.inf b/OvmfPkg/IntelGop/IntelGopDriver.inf
+new file mode 100644
+index 0000000000..011620f0d2
+--- /dev/null
++++ b/OvmfPkg/IntelGop/IntelGopDriver.inf
+@@ -0,0 +1,17 @@
++## @file
++#  IntelGopDriver Binary
++#
++#  Copyright (c) 2006 - 2011, Intel Corporation.<BR>
++#  SPDX-License-Identifier: BSD-2-Clause-Patent
++#
++##
++
++[Defines]
++  INF_VERSION                    = 0x00010005
++  BASE_NAME                      = IntelGopDriver
++  FILE_GUID                      = 1647B4F3-3E8A-4FDD-81C8-328ED647AB1A
++  MODULE_TYPE                    = UEFI_DRIVER
++  VERSION_STRING                 = 1.0
++
++[Binaries.X64]
++  PE32|IntelGopDriver.efi|*
+diff --git a/OvmfPkg/OvmfPkgX64.dsc b/OvmfPkg/OvmfPkgX64.dsc
+index f2edd3bbc0..42f9ec62c9 100644
+--- a/OvmfPkg/OvmfPkgX64.dsc
++++ b/OvmfPkg/OvmfPkgX64.dsc
+@@ -971,6 +971,8 @@
+ 
+   OvmfPkg/TdxDxe/TdxDxe.inf
+ 
++  OvmfPkg/IntelGop/IntelGopDriver.inf
++
+ !if $(SMM_REQUIRE) == TRUE
+   OvmfPkg/SmmAccess/SmmAccess2Dxe.inf
+   OvmfPkg/SmmControl2Dxe/SmmControl2Dxe.inf
+diff --git a/OvmfPkg/OvmfPkgX64.fdf b/OvmfPkg/OvmfPkgX64.fdf
+index fecb1fcfda..26840e4edf 100644
+--- a/OvmfPkg/OvmfPkgX64.fdf
++++ b/OvmfPkg/OvmfPkgX64.fdf
+@@ -326,6 +326,8 @@ INF MdeModulePkg/Logo/LogoDxe.inf
+ 
+ INF OvmfPkg/TdxDxe/TdxDxe.inf
+ 
++INF OvmfPkg/IntelGop/IntelGopDriver.inf
++
+ #
+ # Network modules
+ #
