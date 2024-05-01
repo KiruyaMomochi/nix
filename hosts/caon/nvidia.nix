@@ -1,13 +1,17 @@
 { inputs, config, lib, pkgs, ... }:
 
 {
-
   # https://nixos.wiki/wiki/Nvidia
   hardware.opengl = {
     enable = true;
     driSupport = true;
     driSupport32Bit = true;
   };
+
+  boot.kernelParams = [
+    # https://bbs.archlinux.org/viewtopic.php?id=286976
+    "pcie_port_pm=off"
+  ];
 
   services.xserver.videoDrivers = [ "nvidia" "intel" ];
   hardware.nvidia = {
