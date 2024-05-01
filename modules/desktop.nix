@@ -67,7 +67,7 @@ in
         # services.printing.enable = true;
 
         # Enable touchpad support (enabled default in most desktopManager).
-        services.xserver.libinput.enable = true;
+        services.libinput.enable = true;
         services.openssh.settings.X11Forwarding = true;
         services.xrdp.openFirewall = true;
 
