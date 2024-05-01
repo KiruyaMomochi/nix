@@ -35,6 +35,7 @@
     lurk # strace
     aria
     lnav
+    pciutils # lspci
 
     # common commands
     file
@@ -158,7 +159,6 @@
   # ls
   programs.eza = {
     enable = true;
-    enableAliases = true;
   };
 
   # top
