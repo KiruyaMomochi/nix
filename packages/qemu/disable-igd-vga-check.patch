@@ -1,0 +1,14 @@
+diff --git a/hw/vfio/igd.c b/hw/vfio/igd.c
+index b31ee79c60..fb9a5e2c34 100644
+--- a/hw/vfio/igd.c
++++ b/hw/vfio/igd.c
+@@ -383,8 +383,7 @@ void vfio_probe_igd_bar4_quirk(VFIOPCIDevice *vdev, int nr)
+      * consider enabling legacy mode.  The vBIOS has dependencies on the
+      * PCI bus address.
+      */
+-    if (!vfio_pci_is(vdev, PCI_VENDOR_ID_INTEL, PCI_ANY_ID) ||
+-        !vfio_is_vga(vdev) || nr != 4 ||
++    if (!vfio_pci_is(vdev, PCI_VENDOR_ID_INTEL, PCI_ANY_ID) || nr != 4 ||
+         &vdev->pdev != pci_find_device(pci_device_root_bus(&vdev->pdev),
+                                        0, PCI_DEVFN(0x2, 0))) {
+         return;

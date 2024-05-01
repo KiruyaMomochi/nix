@@ -19,8 +19,11 @@
   networking.interfaces.enp0s20f0u4u2c2.useDHCP = true;
 
   # Enable desktop, but do not start automatically
-  # Also use systemd-networkd instead of networkmanagger
   services.xserver.autorun = false;
+  # modules/services/misc/graphical-desktop.nix
+  systemd.defaultUnit = lib.mkForce "multi-user.target";
+
+  # Also use systemd-networkd instead of networkmanagger
   boot.kernelParams = [
     "console=ttyS1,115200n8"
   ];
