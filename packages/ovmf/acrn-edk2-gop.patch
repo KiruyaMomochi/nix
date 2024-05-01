@@ -1,0 +1,1397 @@
+diff --git a/OvmfPkg/GvtGopDxe/Gop.c b/OvmfPkg/GvtGopDxe/Gop.c
+new file mode 100644
+index 0000000000..e56b1b7a66
+--- /dev/null
++++ b/OvmfPkg/GvtGopDxe/Gop.c
+@@ -0,0 +1,329 @@
++/*
++ * Copyright (C) 2019 Intel Corporation. All rights reserved.
++ *
++ * SPDX-License-Identifier: BSD-2-Clause
++ */
++
++
++#include "Gop.h"
++
++STATIC EFI_GRAPHICS_OUTPUT_MODE_INFORMATION mModeList[] = {
++  {
++    .Version = 0,
++    .PixelFormat = PixelBlueGreenRedReserved8BitPerColor,
++    .HorizontalResolution = 1024,
++    .PixelsPerScanLine = 1024,
++    .VerticalResolution = 768,
++  },
++};
++
++//
++// Graphics Output Protocol Member Functions
++//
++
++EFI_STATUS
++EFIAPI
++GvtGopQueryMode (
++  IN  EFI_GRAPHICS_OUTPUT_PROTOCOL          *This,
++  IN  UINT32                                ModeNumber,
++  OUT UINTN                                 *SizeOfInfo,
++  OUT EFI_GRAPHICS_OUTPUT_MODE_INFORMATION  **Info
++  )
++{
++  EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *ModeInfo;
++
++  if (!mPrivate) {
++    return EFI_NOT_STARTED;
++  }
++
++  if (ModeNumber >= GVT_GOP_MAX_MODE) {
++    return EFI_INVALID_PARAMETER;
++  }
++
++  ModeInfo = AllocateZeroPool (sizeof(*ModeInfo));
++  if (ModeInfo == NULL) {
++    return EFI_OUT_OF_RESOURCES;
++  }
++
++  CopyMem (ModeInfo, &mModeList[0], sizeof(*ModeInfo));
++
++  DEBUG ((EFI_D_INFO, "%a:%d Get mode %dx%d\n", __FUNCTION__, __LINE__,
++        ModeInfo->HorizontalResolution,
++        ModeInfo->VerticalResolution));
++
++  *SizeOfInfo = sizeof (*ModeInfo);
++  *Info = ModeInfo;
++
++  return EFI_SUCCESS;
++}
++
++EFI_STATUS
++EFIAPI
++GvtGopSetMode (
++  IN  EFI_GRAPHICS_OUTPUT_PROTOCOL *This,
++  IN  UINT32                       ModeNumber
++  )
++{
++  EFI_GRAPHICS_OUTPUT_BLT_PIXEL Black;
++  EFI_STATUS                    Status;
++
++  DEBUG ((EFI_D_INFO, "%a:%d index:%d\n", __FUNCTION__, __LINE__, ModeNumber));
++
++  if (ModeNumber >= GVT_GOP_MAX_MODE) {
++    DEBUG ((EFI_D_WARN, "ModeNumber is out of range\n"));
++    return EFI_UNSUPPORTED;
++  }
++
++  if (!mPrivate) {
++    DEBUG ((EFI_D_WARN, "mPrivate is invalid\n"));
++    return EFI_NOT_STARTED;
++  }
++
++  //
++  // Re-initialize the frame buffer configure when mode changes.
++  //
++  Status = FrameBufferBltConfigure (
++             (VOID*) (UINTN) This->Mode->FrameBufferBase,
++             This->Mode->Info,
++             mPrivate->FrameBufferBltConfigure,
++             &mPrivate->FrameBufferBltConfigureSize
++             );
++  if (Status == RETURN_BUFFER_TOO_SMALL) {
++    //
++    // Frame buffer configure may be larger in new mode.
++    //
++
++    mPrivate->FrameBufferBltConfigure =
++      AllocatePool (mPrivate->FrameBufferBltConfigureSize);
++    ASSERT (mPrivate->FrameBufferBltConfigure != NULL);
++
++    //
++    // Create the configuration for FrameBufferBltLib
++    //
++    Status = FrameBufferBltConfigure (
++                (VOID*) (UINTN) This->Mode->FrameBufferBase,
++                This->Mode->Info,
++                mPrivate->FrameBufferBltConfigure,
++                &mPrivate->FrameBufferBltConfigureSize
++                );
++  }
++  ASSERT (Status == RETURN_SUCCESS);
++
++  //
++  // Per UEFI Spec, need to clear the visible portions of the output display to black.
++  //
++  ZeroMem (&Black, sizeof (Black));
++  Status = This->Blt (This,
++              &Black,
++              EfiBltVideoFill,
++              0, 0,
++              0, 0,
++              This->Mode->Info->HorizontalResolution,
++              This->Mode->Info->VerticalResolution,
++              0);
++  ASSERT_RETURN_ERROR (Status);
++
++  return Status;
++}
++
++EFI_STATUS
++EFIAPI
++GvtGopBlt (
++  IN  EFI_GRAPHICS_OUTPUT_PROTOCOL          *This,
++  IN  EFI_GRAPHICS_OUTPUT_BLT_PIXEL         *BltBuffer, OPTIONAL
++  IN  EFI_GRAPHICS_OUTPUT_BLT_OPERATION     BltOperation,
++  IN  UINTN                                 SourceX,
++  IN  UINTN                                 SourceY,
++  IN  UINTN                                 DestinationX,
++  IN  UINTN                                 DestinationY,
++  IN  UINTN                                 Width,
++  IN  UINTN                                 Height,
++  IN  UINTN                                 Delta
++  )
++{
++  EFI_STATUS                      Status;
++  EFI_TPL                         OriginalTPL;
++
++  if (!mPrivate || !mPrivate->FrameBufferBltConfigure)
++    return EFI_NOT_STARTED;
++
++  //
++  // We have to raise to TPL Notify, so we make an atomic write the frame buffer.
++  // We would not want a timer based event (Cursor, ...) to come in while we are
++  // doing this operation.
++  //
++  OriginalTPL = gBS->RaiseTPL (TPL_NOTIFY);
++
++  switch (BltOperation) {
++  case EfiBltVideoToBltBuffer:
++  case EfiBltBufferToVideo:
++  case EfiBltVideoFill:
++  case EfiBltVideoToVideo:
++    Status = FrameBufferBlt (
++      mPrivate->FrameBufferBltConfigure,
++      BltBuffer,
++      BltOperation,
++      SourceX,
++      SourceY,
++      DestinationX,
++      DestinationY,
++      Width,
++      Height,
++      Delta
++      );
++    break;
++
++  default:
++    Status = EFI_INVALID_PARAMETER;
++    break;
++  }
++
++  gBS->RestoreTPL (OriginalTPL);
++
++  return Status;
++}
++
++//
++//  functions to prepare/update/clear GOP
++//
++
++EFI_STATUS
++SetupGvtGop (
++  IN GVT_GOP_PRIVATE_DATA  *Private
++  )
++{
++  EFI_STATUS                    Status = EFI_SUCCESS;
++  EFI_GRAPHICS_OUTPUT_PROTOCOL  *Gop;
++
++  DEBUG ((EFI_D_VERBOSE, "%a:%d\n", __FUNCTION__, __LINE__));
++
++  Private->FrameBufferBltConfigure = NULL;
++  Private->FrameBufferBltConfigureSize = 0;
++
++  Gop            = &Private->Gop;
++  Gop->QueryMode = GvtGopQueryMode;
++  Gop->SetMode   = GvtGopSetMode;
++  Gop->Blt       = GvtGopBlt;
++
++  //
++  // Initialize the private data
++  //
++  Status = gBS->AllocatePool (
++      EfiBootServicesData,
++      sizeof (EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE),
++      (VOID **) &Private->Gop.Mode
++      );
++  if (EFI_ERROR (Status)) {
++    return Status;
++  }
++
++  Status = gBS->AllocatePool (
++                  EfiBootServicesData,
++                  sizeof (EFI_GRAPHICS_OUTPUT_MODE_INFORMATION),
++                  (VOID **) &Private->Gop.Mode->Info
++                  );
++
++  if (EFI_ERROR (Status)) {
++    return Status;
++  }
++
++  Private->Gop.Mode->MaxMode = GVT_GOP_MAX_MODE;
++  Private->Gop.Mode->Mode    = 0;
++  Private->Gop.Mode->SizeOfInfo = sizeof (EFI_GRAPHICS_OUTPUT_MODE_INFORMATION);
++  CopyMem (Private->Gop.Mode->Info,
++          &mModeList[0],
++          sizeof (EFI_GRAPHICS_OUTPUT_MODE_INFORMATION));
++
++  return Status;
++}
++
++EFI_STATUS
++CleanUpGvtGop (
++  IN GVT_GOP_PRIVATE_DATA  *Private
++  )
++{
++  if (Private->FrameBufferBltConfigure) {
++    FreePool (Private->FrameBufferBltConfigure);
++    Private->FrameBufferBltConfigure = NULL;
++    Private->FrameBufferBltConfigureSize = 0;
++  }
++
++  if (!Private->Gop.Mode) {
++    return EFI_SUCCESS;
++  }
++
++  if (!Private->Gop.Mode->Info) {
++    goto FreeMode;
++  }
++
++  gBS->FreePool (Private->Gop.Mode->Info);
++  Private->Gop.Mode->Info = NULL;
++
++FreeMode:
++  gBS->FreePool (Private->Gop.Mode);
++  Private->Gop.Mode = NULL;
++
++  return EFI_SUCCESS;
++}
++
++EFI_STATUS
++UpdateGvtGop (
++  IN GVT_GOP_PRIVATE_DATA  *Private
++  )
++{
++  EFI_STATUS            Status;
++  UINT32                Notify = VGT_G2V_GOP_SETUP;
++  GVT_GOP_INFO          GopInfo;
++
++  DEBUG ((EFI_D_VERBOSE, "%a:%d\n", __FUNCTION__, __LINE__));
++  Status = Private->PciIo->Mem.Write (
++        Private->PciIo,
++        EfiPciIoWidthUint32,
++        PCI_BAR_IDX0,
++        VGT_IF_BASE + VGT_G2V_OFFSET,
++        sizeof (Notify) / sizeof (UINT32),
++        &Notify
++        );
++  if (EFI_ERROR (Status)) {
++    goto Done;
++  }
++
++  //Check GVT Gop settings
++  Status = Private->PciIo->Mem.Read (
++        Private->PciIo,
++        EfiPciIoWidthUint32,
++        PCI_BAR_IDX0,
++        VGT_IF_BASE + VGT_GOP_OFFSET,
++        sizeof (GopInfo) / sizeof (UINT32),
++        &GopInfo
++        );
++  if (EFI_ERROR (Status)) {
++    goto Done;
++  }
++
++  if (GopInfo.FbBase == 0) {
++    DEBUG ((EFI_D_WARN, "Failed to get FbBase\n"));
++    Status = EFI_UNSUPPORTED;
++    goto Done;
++  }
++
++  DEBUG ((EFI_D_INFO, "w:%d h:%d p:%d b:%d s:%d base:%lx\n",
++        GopInfo.Width, GopInfo.Height, GopInfo.Pitch,
++        GopInfo.Bpp, GopInfo.Size, GopInfo.FbBase
++        ));
++
++  Private->Gop.Mode->FrameBufferBase = GopInfo.FbBase;
++  Private->Gop.Mode->FrameBufferSize = GopInfo.Size;
++
++  mModeList[0].HorizontalResolution = GopInfo.Width;
++  mModeList[0].VerticalResolution = GopInfo.Height;
++  mModeList[0].PixelsPerScanLine = GopInfo.Pitch;
++
++  CopyMem (&Private->Info, &GopInfo, sizeof (GVT_GOP_INFO));
++  CopyMem (Private->Gop.Mode->Info,
++          &mModeList[0],
++          sizeof (EFI_GRAPHICS_OUTPUT_MODE_INFORMATION));
++
++Done:
++  return Status;
++}
+diff --git a/OvmfPkg/GvtGopDxe/Gop.h b/OvmfPkg/GvtGopDxe/Gop.h
+new file mode 100644
+index 0000000000..b3e71e38dd
+--- /dev/null
++++ b/OvmfPkg/GvtGopDxe/Gop.h
+@@ -0,0 +1,79 @@
++/*
++ * Copyright (C) 2019 Intel Corporation. All rights reserved.
++ *
++ * SPDX-License-Identifier: BSD-2-Clause
++ */
++
++
++#ifndef __GOP_H_
++#define __GOP_H_
++
++#include <PiDxe.h>
++#include <Protocol/GraphicsOutput.h>
++#include <Library/DebugLib.h>
++#include <Library/BaseLib.h>
++#include <Library/UefiDriverEntryPoint.h>
++#include <Library/UefiLib.h>
++#include <Library/BaseMemoryLib.h>
++#include <Library/MemoryAllocationLib.h>
++#include <Library/UefiBootServicesTableLib.h>
++#include <Protocol/PciIo.h>
++#include <IndustryStandard/Pci.h>
++#include <Library/FrameBufferBltLib.h>
++
++#define VGT_CAPS_GOP_SUPPORT    (1 << 5)
++#define VGT_MAGIC               0x4776544776544776ULL /* 'vGTvGTvG' */
++#define VGT_IF_BASE             0x78000
++#define VGT_G2V_OFFSET          0x818
++#define VGT_GOP_OFFSET          0x860
++#define VGT_G2V_GOP_SETUP       0x8
++
++/* GVT_IF_HDR is part of vgt_if in gvt linux kernel driver */
++
++typedef struct {
++  UINT64        Magic;          /* VGT_MAGIC */
++  UINT16        VersionMajor;
++  UINT16        VersionMinor;
++  UINT32        VgtId;
++  UINT32        VgtCaps;        /* VGT capabilities */
++} GVT_IF_HDR;
++
++typedef struct {
++  UINT32        FbBase;
++  UINT32        Width;
++  UINT32        Height;
++  UINT32        Pitch;
++  UINT32        Bpp;
++  UINT32        Size;
++} GVT_GOP_INFO;
++
++typedef struct {
++  EFI_HANDLE                    Handle;
++  EFI_PCI_IO_PROTOCOL           *PciIo;
++  EFI_GRAPHICS_OUTPUT_PROTOCOL  Gop;
++  FRAME_BUFFER_CONFIGURE        *FrameBufferBltConfigure;
++  UINTN                         FrameBufferBltConfigureSize;
++  GVT_GOP_INFO                  Info;
++} GVT_GOP_PRIVATE_DATA;
++
++extern GVT_GOP_PRIVATE_DATA *mPrivate;
++
++#define GVT_GOP_MAX_MODE 1
++#define INVALIDE_MODE_NUMBER  0xffff
++
++EFI_STATUS
++SetupGvtGop (
++  IN GVT_GOP_PRIVATE_DATA *Private
++  );
++
++EFI_STATUS
++CleanUpGvtGop (
++  IN GVT_GOP_PRIVATE_DATA *Private
++  );
++
++EFI_STATUS
++UpdateGvtGop (
++  IN GVT_GOP_PRIVATE_DATA *Private
++  );
++
++#endif
+diff --git a/OvmfPkg/GvtGopDxe/GopDriver.c b/OvmfPkg/GvtGopDxe/GopDriver.c
+new file mode 100644
+index 0000000000..183ad336c5
+--- /dev/null
++++ b/OvmfPkg/GvtGopDxe/GopDriver.c
+@@ -0,0 +1,328 @@
++/*
++ * Copyright (C) 2019 Intel Corporation. All rights reserved.
++ *
++ * SPDX-License-Identifier: BSD-2-Clause
++ */
++
++
++#include "Gop.h"
++
++GVT_GOP_PRIVATE_DATA  *mPrivate = NULL;
++
++
++STATIC
++EFI_STATUS
++EFIAPI
++DetectGvtDevice (
++  IN EFI_PCI_IO_PROTOCOL *PciIo
++  )
++{
++  EFI_STATUS                    Status;
++  PCI_DEVICE_INDEPENDENT_REGION Hdr;
++  UINT64                        Magic, OrigAttr;
++  UINT32                        GvtCaps;
++
++  DEBUG ((EFI_D_VERBOSE, "%a:%d\n", __FUNCTION__, __LINE__));
++  //
++  // Read the PCI Configuration Header from the PCI Device
++  //
++  Status = PciIo->Pci.Read (
++        PciIo,
++        EfiPciIoWidthUint32,
++        0,
++        sizeof (Hdr) / sizeof (UINT32),
++        &Hdr
++        );
++  if (EFI_ERROR (Status)) {
++    goto Done;
++  }
++
++  Status = EFI_UNSUPPORTED;
++  // Here we check if it's an Intel's VGA controller
++  if (Hdr.ClassCode[2] != PCI_CLASS_DISPLAY ||
++      Hdr.VendorId != 0x8086) {
++    DEBUG ((EFI_D_VERBOSE, "%a: [%x:%x] is not GVT device(class:%x)\n",
++          __FUNCTION__, Hdr.VendorId, Hdr.DeviceId, Hdr.ClassCode[2]));
++    goto Done;
++  }
++
++  //
++  // Save original PCI attributes, and enable IO space access, memory space
++  // access, and Bus Master (DMA).
++  //
++  Status = PciIo->Attributes (PciIo, EfiPciIoAttributeOperationGet, 0,
++                    &OrigAttr);
++  if (EFI_ERROR (Status)) {
++    goto Done;
++  }
++
++  Status = PciIo->Attributes (PciIo, EfiPciIoAttributeOperationEnable,
++                    EFI_PCI_DEVICE_ENABLE, NULL);
++  if (EFI_ERROR (Status)) {
++    goto RestoreAttrib;
++  }
++
++  //Check if the GVT Magic presents
++  Status = PciIo->Mem.Read (
++        PciIo,
++        EfiPciIoWidthUint32,
++        PCI_BAR_IDX0,
++        VGT_IF_BASE,
++        sizeof (Magic) / sizeof (UINT32),
++        &Magic
++        );
++  if (EFI_ERROR (Status)) {
++    goto RestoreAttrib;
++  }
++
++  if (Magic != VGT_MAGIC) {
++    DEBUG ((EFI_D_VERBOSE,
++        "Wrong Magic %x for [%x:%x]\n",
++        Magic,
++        Hdr.VendorId, Hdr.DeviceId));
++    Status = EFI_UNSUPPORTED;
++    goto RestoreAttrib;
++  }
++
++  //Check if the GVT caps matches
++  Status = PciIo->Mem.Read (
++        PciIo,
++        EfiPciIoWidthUint32,
++        PCI_BAR_IDX0,
++        VGT_IF_BASE + OFFSET_OF (GVT_IF_HDR, VgtCaps),
++        sizeof (GvtCaps) / sizeof (UINT32),
++        &GvtCaps
++        );
++  if (EFI_ERROR (Status)) {
++    goto RestoreAttrib;
++  }
++
++  if (!(GvtCaps & VGT_CAPS_GOP_SUPPORT)) {
++    DEBUG ((EFI_D_WARN,
++        "Wrong cap %x for [%x:%x]\n",
++        GvtCaps,
++        Hdr.VendorId, Hdr.DeviceId));
++    Status = EFI_UNSUPPORTED;
++    goto RestoreAttrib;
++  }
++
++  //Now we are all set :)
++  DEBUG ((EFI_D_VERBOSE,
++      "Found GVT device on [%x:%x] %x\n",
++      Hdr.VendorId, Hdr.DeviceId, GvtCaps));
++  Status = EFI_SUCCESS;
++
++RestoreAttrib:
++  PciIo->Attributes (PciIo, EfiPciIoAttributeOperationEnable,
++                    OrigAttr, NULL);
++Done:
++  return Status;
++}
++
++
++STATIC
++EFI_STATUS
++EFIAPI
++GvtGopBindingSupported (
++  IN EFI_DRIVER_BINDING_PROTOCOL *This,
++  IN EFI_HANDLE                  ControllerHandle,
++  IN EFI_DEVICE_PATH_PROTOCOL    *RemainingDevicePath OPTIONAL
++  )
++{
++  EFI_STATUS          Status;
++  EFI_PCI_IO_PROTOCOL *PciIo;
++
++  //
++  // Open the PCI I/O Protocol
++  //
++  Status = gBS->OpenProtocol (
++                  ControllerHandle,
++                  &gEfiPciIoProtocolGuid,
++                  (VOID **) &PciIo,
++                  This->DriverBindingHandle,
++                  ControllerHandle,
++                  EFI_OPEN_PROTOCOL_BY_DRIVER
++                  );
++  if (EFI_ERROR (Status)) {
++    return Status;
++  }
++
++  Status = DetectGvtDevice (PciIo);
++
++  DEBUG ((EFI_D_INFO, "supported? %c\n", Status?'N':'Y'));
++
++  //
++  // Close the PCI I/O Protocol
++  //
++  gBS->CloseProtocol (
++        ControllerHandle,
++        &gEfiPciIoProtocolGuid,
++        This->DriverBindingHandle,
++        ControllerHandle
++        );
++
++  return Status;
++}
++
++
++STATIC
++EFI_STATUS
++EFIAPI
++GvtGopBindingStart (
++  IN EFI_DRIVER_BINDING_PROTOCOL *This,
++  IN EFI_HANDLE                  ControllerHandle,
++  IN EFI_DEVICE_PATH_PROTOCOL    *RemainingDevicePath OPTIONAL
++  )
++{
++  EFI_TPL               OldTpl;
++  EFI_STATUS            Status;
++  if (mPrivate)
++     return EFI_SUCCESS;
++
++  OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
++
++  DEBUG ((EFI_D_VERBOSE, "%a:%d\n", __FUNCTION__, __LINE__));
++
++  mPrivate = AllocateZeroPool (sizeof (GVT_GOP_PRIVATE_DATA));
++  if (mPrivate == NULL) {
++    Status = EFI_OUT_OF_RESOURCES;
++    goto RestoreTPL;
++  }
++
++  // Initialize the gop private data
++  Status = SetupGvtGop (mPrivate);
++  if (EFI_ERROR (Status)) {
++    goto FreePrivate;
++  }
++
++  Status = gBS->OpenProtocol (
++                  ControllerHandle,
++                  &gEfiPciIoProtocolGuid,
++                  (VOID **) &mPrivate->PciIo,
++                  This->DriverBindingHandle,
++                  ControllerHandle,
++                  EFI_OPEN_PROTOCOL_BY_DRIVER
++                  );
++  if (EFI_ERROR (Status)) {
++    goto FreePrivate;
++  }
++
++  // Notify kernel to set up display for Gop
++  Status = UpdateGvtGop (mPrivate);
++  if (EFI_ERROR (Status)) {
++    goto FreePrivate;
++  }
++
++  // Install the gop protocol
++  Status = gBS->InstallMultipleProtocolInterfaces (
++                  &ControllerHandle,
++                  &gEfiGraphicsOutputProtocolGuid,
++                  &mPrivate->Gop,
++                  NULL
++                  );
++
++  if (EFI_ERROR (Status)) {
++    goto FreePrivate;
++  }
++
++  Status = mPrivate->Gop.SetMode (&mPrivate->Gop, 0);
++  if (EFI_ERROR (Status)) {
++    goto FreeProtocol;
++  }
++
++  goto RestoreTPL;
++
++FreeProtocol:
++  gBS->UninstallMultipleProtocolInterfaces (
++         mPrivate->Handle,
++         &gEfiGraphicsOutputProtocolGuid,
++         &mPrivate->Gop,
++         NULL
++      );
++
++FreePrivate:
++  if (mPrivate->PciIo) {
++    gBS->CloseProtocol (
++	ControllerHandle,
++	&gEfiPciIoProtocolGuid,
++	This->DriverBindingHandle,
++	ControllerHandle
++	);
++    mPrivate->PciIo = NULL;
++  }
++
++  CleanUpGvtGop (mPrivate);
++
++  FreePool (mPrivate);
++  mPrivate = NULL;
++
++RestoreTPL:
++  gBS->RestoreTPL (OldTpl);
++  return Status;
++}
++
++
++STATIC
++EFI_STATUS
++EFIAPI
++GvtGopBindingStop (
++  IN  EFI_DRIVER_BINDING_PROTOCOL *This,
++  IN  EFI_HANDLE                  ControllerHandle,
++  IN  UINTN                       NumberOfChildren,
++  IN  EFI_HANDLE                  *ChildHandleBuffer OPTIONAL
++  )
++{
++  if (!mPrivate)
++    return EFI_SUCCESS;
++
++  gBS->UninstallMultipleProtocolInterfaces (
++         mPrivate->Handle,
++         &gEfiGraphicsOutputProtocolGuid,
++         &mPrivate->Gop,
++         NULL
++  );
++
++  if (mPrivate->PciIo) {
++    gBS->CloseProtocol (
++	 ControllerHandle,
++	 &gEfiPciIoProtocolGuid,
++	 This->DriverBindingHandle,
++	 ControllerHandle
++    );
++    mPrivate->PciIo = NULL;
++  }
++
++  CleanUpGvtGop (mPrivate);
++
++  FreePool (mPrivate);
++  mPrivate = NULL;
++
++  return EFI_SUCCESS;
++}
++
++STATIC EFI_DRIVER_BINDING_PROTOCOL mDriverBinding = {
++  GvtGopBindingSupported,
++  GvtGopBindingStart,
++  GvtGopBindingStop,
++  0x10,
++  NULL,
++  NULL
++};
++
++//
++// Entry point of the driver.
++//
++EFI_STATUS
++EFIAPI
++GvtGopEntryPoint (
++  IN EFI_HANDLE       ImageHandle,
++  IN EFI_SYSTEM_TABLE *SystemTable
++  )
++{
++  DEBUG ((EFI_D_VERBOSE, "GopEntry\n"));
++
++  mPrivate = NULL;
++
++  return EfiLibInstallDriverBindingComponentName2 (ImageHandle, SystemTable,
++           &mDriverBinding, ImageHandle, NULL, NULL);
++}
+diff --git a/OvmfPkg/GvtGopDxe/GvtGopDxe.inf b/OvmfPkg/GvtGopDxe/GvtGopDxe.inf
+new file mode 100644
+index 0000000000..4c5d9d7f6e
+--- /dev/null
++++ b/OvmfPkg/GvtGopDxe/GvtGopDxe.inf
+@@ -0,0 +1,42 @@
++## @file
++# Intel GVT-g GOP driver
++#
++# Copyright (C) 2019 Intel Corporation. All rights reserved.
++#
++# SPDX-License-Identifier: BSD-2-Clause
++#
++##
++
++[Defines]
++  INF_VERSION                    = 0x00010005
++  BASE_NAME                      = GvtGopDxe
++  FILE_GUID                      = 2a202dae-364e-4c93-b132-aeab857ebcd4
++  MODULE_TYPE                    = UEFI_DRIVER
++  VERSION_STRING                 = 1.0
++  ENTRY_POINT                    = GvtGopEntryPoint
++
++[Sources]
++  GopDriver.c
++  Gop.c
++  Gop.h
++
++[Packages]
++  MdePkg/MdePkg.dec
++  MdeModulePkg/MdeModulePkg.dec
++  OvmfPkg/OvmfPkg.dec
++
++[LibraryClasses]
++  BaseMemoryLib
++  FrameBufferBltLib
++  DebugLib
++  DevicePathLib
++  MemoryAllocationLib
++  PrintLib
++  UefiBootServicesTableLib
++  UefiDriverEntryPoint
++  UefiLib
++
++[Protocols]
++  gEfiGraphicsOutputProtocolGuid
++  gEfiPciIoProtocolGuid
++  gEfiDevicePathProtocolGuid
+diff --git a/OvmfPkg/Include/Protocol/PlatformGopPolicy.h b/OvmfPkg/Include/Protocol/PlatformGopPolicy.h
+new file mode 100644
+index 0000000000..a17e112207
+--- /dev/null
++++ b/OvmfPkg/Include/Protocol/PlatformGopPolicy.h
+@@ -0,0 +1,67 @@
++/*++
++
++Copyright (c)  1999  - 2020, Intel Corporation. All rights reserved
++
++  This program and the accompanying materials are licensed and made available under
++  the terms and conditions of the BSD License that accompanies this distribution.
++  The full text of the license may be found at
++  http://opensource.org/licenses/bsd-license.php.
++
++  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
++  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
++
++--*/
++
++/** @file
++**/
++
++#ifndef _PLATFORM_GOP_POLICY_PROTOCOL_H_
++#define _PLATFORM_GOP_POLICY_PROTOCOL_H_
++
++#define EFI_PLATFORM_GOP_POLICY_PROTOCOL_GUID \
++  { 0xec2e931b, 0x3281, 0x48a5, 0x81, 0x7, 0xdf, 0x8a, 0x8b, 0xed, 0x3c, 0x5d }
++
++#define PLATFORM_GOP_POLICY_PROTOCOL_REVISION_01 0x01
++#define PLATFORM_GOP_POLICY_PROTOCOL_REVISION_02 x0222
++
++#pragma pack(1)
++
++typedef enum {
++  LidClosed,
++  LidOpen,
++  LidStatusMax
++} LID_STATUS;
++
++typedef enum {
++  Docked,
++  UnDocked,
++  DockStatusMax
++} DOCK_STATUS;
++
++typedef
++EFI_STATUS
++(EFIAPI *GET_PLATFORM_LID_STATUS) (
++   OUT LID_STATUS *CurrentLidStatus
++);
++
++typedef
++EFI_STATUS
++(EFIAPI *GET_VBT_DATA) (
++   OUT EFI_PHYSICAL_ADDRESS *VbtAddress,
++   OUT UINT32 *VbtSize
++);
++
++#pragma pack()
++
++typedef struct _PLATFORM_GOP_POLICY_PROTOCOL {
++  UINT32                             Revision;
++  GET_PLATFORM_LID_STATUS            GetPlatformLidStatus;
++  GET_VBT_DATA                       GetVbtData;
++} PLATFORM_GOP_POLICY_PROTOCOL;
++
++//
++// Extern the GUID for protocol users.
++//
++extern EFI_GUID  gPlatformGOPPolicyGuid;
++
++#endif
+diff --git a/OvmfPkg/OvmfPkg.dec b/OvmfPkg/OvmfPkg.dec
+index fbc81e4c80..73b7a2d150 100644
+--- a/OvmfPkg/OvmfPkg.dec
++++ b/OvmfPkg/OvmfPkg.dec
+@@ -185,6 +185,7 @@
+   gXenBusProtocolGuid                   = {0x3d3ca290, 0xb9a5, 0x11e3, {0xb7, 0x5d, 0xb8, 0xac, 0x6f, 0x7d, 0x65, 0xe6}}
+   gXenIoProtocolGuid                    = {0x6efac84f, 0x0ab0, 0x4747, {0x81, 0xbe, 0x85, 0x55, 0x62, 0x59, 0x04, 0x49}}
+   gIoMmuAbsentProtocolGuid              = {0xf8775d50, 0x8abd, 0x4adf, {0x92, 0xac, 0x85, 0x3e, 0x51, 0xf6, 0xc8, 0xdc}}
++  gPlatformGOPPolicyGuid                = {0xec2e931b, 0x3281, 0x48a5, {0x81, 0x07, 0xdf, 0x8a, 0x8b, 0xed, 0x3c, 0x5d}}
+   gOvmfLoadedX86LinuxKernelProtocolGuid = {0xa3edc05d, 0xb618, 0x4ff6, {0x95, 0x52, 0x76, 0xd7, 0x88, 0x63, 0x43, 0xc8}}
+   gOvmfSevMemoryAcceptanceProtocolGuid  = {0xc5a010fe, 0x38a7, 0x4531, {0x8a, 0x4a, 0x05, 0x00, 0xd2, 0xfd, 0x16, 0x49}}
+   gQemuAcpiTableNotifyProtocolGuid      = {0x928939b2, 0x4235, 0x462f, {0x95, 0x80, 0xf6, 0xa2, 0xb2, 0xc2, 0x1a, 0x4f}}
+diff --git a/OvmfPkg/OvmfPkgX64.dsc b/OvmfPkg/OvmfPkgX64.dsc
+index bf4c7906c4..97ad84c2ad 100644
+--- a/OvmfPkg/OvmfPkgX64.dsc
++++ b/OvmfPkg/OvmfPkgX64.dsc
+@@ -865,6 +865,7 @@
+   OvmfPkg/VirtioPciDeviceDxe/VirtioPciDeviceDxe.inf
+   OvmfPkg/Virtio10Dxe/Virtio10.inf
+   OvmfPkg/VirtioBlkDxe/VirtioBlk.inf
++  OvmfPkg/GvtGopDxe/GvtGopDxe.inf
+   OvmfPkg/VirtioScsiDxe/VirtioScsi.inf
+   OvmfPkg/VirtioRngDxe/VirtioRng.inf
+   OvmfPkg/VirtioSerialDxe/VirtioSerial.inf
+@@ -877,6 +878,7 @@
+ !if $(LSI_SCSI_ENABLE) == TRUE
+   OvmfPkg/LsiScsiDxe/LsiScsiDxe.inf
+ !endif
++  OvmfPkg/PlatformGopPolicy/PlatformGopPolicy.inf
+   MdeModulePkg/Universal/WatchdogTimerDxe/WatchdogTimer.inf
+   MdeModulePkg/Universal/MonotonicCounterRuntimeDxe/MonotonicCounterRuntimeDxe.inf
+   MdeModulePkg/Universal/CapsuleRuntimeDxe/CapsuleRuntimeDxe.inf
+diff --git a/OvmfPkg/OvmfPkgX64.fdf b/OvmfPkg/OvmfPkgX64.fdf
+index f47ab1727e..4f5e562753 100644
+--- a/OvmfPkg/OvmfPkgX64.fdf
++++ b/OvmfPkg/OvmfPkgX64.fdf
+@@ -257,6 +257,7 @@ INF  PcAtChipsetPkg/PcatRealTimeClockRuntimeDxe/PcatRealTimeClockRuntimeDxe.inf
+ INF  OvmfPkg/VirtioPciDeviceDxe/VirtioPciDeviceDxe.inf
+ INF  OvmfPkg/Virtio10Dxe/Virtio10.inf
+ INF  OvmfPkg/VirtioBlkDxe/VirtioBlk.inf
++INF  OvmfPkg/GvtGopDxe/GvtGopDxe.inf
+ INF  OvmfPkg/VirtioScsiDxe/VirtioScsi.inf
+ INF  OvmfPkg/VirtioRngDxe/VirtioRng.inf
+ INF  OvmfPkg/VirtioSerialDxe/VirtioSerial.inf
+@@ -269,6 +270,7 @@ INF  OvmfPkg/MptScsiDxe/MptScsiDxe.inf
+ !if $(LSI_SCSI_ENABLE) == TRUE
+ INF  OvmfPkg/LsiScsiDxe/LsiScsiDxe.inf
+ !endif
++INF  OvmfPkg/PlatformGopPolicy/PlatformGopPolicy.inf
+ 
+ !if $(SECURE_BOOT_ENABLE) == TRUE
+   INF  SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
+diff --git a/OvmfPkg/PlatformGopPolicy/IgdOpRegion.h b/OvmfPkg/PlatformGopPolicy/IgdOpRegion.h
+new file mode 100644
+index 0000000000..cd924d3416
+--- /dev/null
++++ b/OvmfPkg/PlatformGopPolicy/IgdOpRegion.h
+@@ -0,0 +1,179 @@
++/** @file
++  IGD OpRegion definition from Intel Integrated Graphics Device OpRegion
++  Specification.
++
++  https://01.org/sites/default/files/documentation/skl_opregion_rev0p5.pdf
++
++  @note Fixed bug in the spec Mailbox3 - RM31 size from 0x45(69) to 0x46(70)
++
++  Copyright (c) 2020, Intel Corporation. All rights reserved.<BR>
++  This program and the accompanying materials
++  are licensed and made available under the terms and conditions of the BSD License
++  which accompanies this distribution.  The full text of the license may be found at
++  http://opensource.org/licenses/bsd-license.php
++
++  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
++  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
++
++**/
++#ifndef _IGD_OPREGION_H_
++#define _IGD_OPREGION_H_
++
++#define IGD_OPREGION_HEADER_SIGN "IntelGraphicsMem"
++#define IGD_OPREGION_HEADER_MBOX1 BIT0
++#define IGD_OPREGION_HEADER_MBOX2 BIT1
++#define IGD_OPREGION_HEADER_MBOX3 BIT2
++#define IGD_OPREGION_HEADER_MBOX4 BIT3
++#define IGD_OPREGION_HEADER_MBOX5 BIT4
++
++/**
++  OpRegion structures:
++  Sub-structures define the different parts of the OpRegion followed by the
++  main structure representing the entire OpRegion.
++
++  @note These structures are packed to 1 byte offsets because the exact
++  data location is required by the supporting design specification due to
++  the fact that the data is used by ASL and Graphics driver code compiled
++  separately.
++**/
++#pragma pack(1)
++///
++/// OpRegion Mailbox 0 Header structure. The OpRegion Header is used to
++/// identify a block of memory as the graphics driver OpRegion.
++/// Offset 0x0, Size 0x100
++///
++typedef struct {
++  CHAR8  SIGN[0x10];    ///< Offset 0x00 OpRegion Signature
++  UINT32 SIZE;          ///< Offset 0x10 OpRegion Size
++  UINT32 OVER;          ///< Offset 0x14 OpRegion Structure Version
++  UINT8  SVER[0x20];    ///< Offset 0x18 System BIOS Build Version
++  UINT8  VVER[0x10];    ///< Offset 0x38 Video BIOS Build Version
++  UINT8  GVER[0x10];    ///< Offset 0x48 Graphic Driver Build Version
++  UINT32 MBOX;          ///< Offset 0x58 Supported Mailboxes
++  UINT32 DMOD;          ///< Offset 0x5C Driver Model
++  UINT32 PCON;          ///< Offset 0x60 Platform Configuration
++  CHAR16 DVER[0x10];    ///< Offset 0x64 GOP Version
++  UINT8  RM01[0x7C];    ///< Offset 0x84 Reserved Must be zero
++} IGD_OPREGION_HEADER;
++
++///
++/// OpRegion Mailbox 1 - Public ACPI Methods
++/// Offset 0x100, Size 0x100
++///
++typedef struct {
++  UINT32 DRDY;          ///< Offset 0x100 Driver Readiness
++  UINT32 CSTS;          ///< Offset 0x104 Status
++  UINT32 CEVT;          ///< Offset 0x108 Current Event
++  UINT8  RM11[0x14];    ///< Offset 0x10C Reserved Must be Zero
++  UINT32 DIDL[8];       ///< Offset 0x120 Supported Display Devices ID List
++  UINT32 CPDL[8];       ///< Offset 0x140 Currently Attached Display Devices List
++  UINT32 CADL[8];       ///< Offset 0x160 Currently Active Display Devices List
++  UINT32 NADL[8];       ///< Offset 0x180 Next Active Devices List
++  UINT32 ASLP;          ///< Offset 0x1A0 ASL Sleep Time Out
++  UINT32 TIDX;          ///< Offset 0x1A4 Toggle Table Index
++  UINT32 CHPD;          ///< Offset 0x1A8 Current Hotplug Enable Indicator
++  UINT32 CLID;          ///< Offset 0x1AC Current Lid State Indicator
++  UINT32 CDCK;          ///< Offset 0x1B0 Current Docking State Indicator
++  UINT32 SXSW;          ///< Offset 0x1B4 Display Switch Notification on Sx State Resume
++  UINT32 EVTS;          ///< Offset 0x1B8 Events supported by ASL
++  UINT32 CNOT;          ///< Offset 0x1BC Current OS Notification
++  UINT32 NRDY;          ///< Offset 0x1C0 Driver Status
++  UINT8  DID2[0x1C];    ///< Offset 0x1C4 Extended Supported Devices ID List (DOD)
++  UINT8  CPD2[0x1C];    ///< Offset 0x1E0 Extended Attached Display Devices List
++  UINT8  RM12[4];       ///< Offset 0x1FC - 0x1FF Reserved Must be zero
++} IGD_OPREGION_MBOX1;
++
++///
++/// OpRegion Mailbox 2 - Software SCI Interface
++/// Offset 0x200, Size 0x100
++///
++typedef struct {
++  UINT32 SCIC;          ///< Offset 0x200 Software SCI Command / Status / Data
++  UINT32 PARM;          ///< Offset 0x204 Software SCI Parameters
++  UINT32 DSLP;          ///< Offset 0x208 Driver Sleep Time Out
++  UINT8  RM21[0xF4];    ///< Offset 0x20C - 0x2FF Reserved Must be zero
++} IGD_OPREGION_MBOX2;
++
++///
++/// OpRegion Mailbox 3 - BIOS/Driver Notification - ASLE Support
++/// Offset 0x300, Size 0x100
++///
++typedef struct {
++  UINT32 ARDY;          ///< Offset 0x300 Driver Readiness
++  UINT32 ASLC;          ///< Offset 0x304 ASLE Interrupt Command / Status
++  UINT32 TCHE;          ///< Offset 0x308 Technology Enabled Indicator
++  UINT32 ALSI;          ///< Offset 0x30C Current ALS Luminance Reading
++  UINT32 BCLP;          ///< Offset 0x310 Requested Backlight Brightness
++  UINT32 PFIT;          ///< Offset 0x314 Panel Fitting State or Request
++  UINT32 CBLV;          ///< Offset 0x318 Current Brightness Level
++  UINT16 BCLM[0x14];    ///< Offset 0x31C Backlight Brightness Levels Duty Cycle Mapping Table
++  UINT32 CPFM;          ///< Offset 0x344 Current Panel Fitting Mode
++  UINT32 EPFM;          ///< Offset 0x348 Enabled Panel Fitting Modes
++  UINT8  PLUT[0x4A];    ///< Offset 0x34C Panel Look Up Table & Identifier
++  UINT32 PFMB;          ///< Offset 0x396 PWM Frequency and Minimum Brightness
++  UINT32 CCDV;          ///< Offset 0x39A Color Correction Default Values
++  UINT32 PCFT;          ///< Offset 0x39E Power Conservation Features
++  UINT32 SROT;          ///< Offset 0x3A2 Supported Rotation Angles
++  UINT32 IUER;          ///< Offset 0x3A6 Intel Ultrabook(TM) Event Register
++  UINT64 FDSS;          ///< Offset 0x3AA DSS Buffer address allocated for IFFS feature
++  UINT32 FDSP;          ///< Offset 0x3B2 Size of DSS buffer
++  UINT32 STAT;          ///< Offset 0x3B6 State Indicator
++  UINT64 RVDA;          ///< Offset 0x3BA Absolute/Relative Address of Raw VBT Data from OpRegion Base
++  UINT32 RVDS;          ///< Offset 0x3C2 Raw VBT Data Size
++  UINT8  RSVD3[0x3A];   ///< Offset 0x3C6 - 0x3FF  Reserved Must be zero. Bug in spec 0x45(69)
++} IGD_OPREGION_MBOX3;
++
++///
++/// OpRegion Mailbox 4 - VBT Video BIOS Table
++/// Offset 0x400, Size 0x1800
++///
++typedef struct {
++  UINT8  RVBT[0x1800];  ///< Offset 0x400 - 0x1BFF Raw VBT Data
++} IGD_OPREGION_MBOX4;
++
++///
++/// OpRegion Mailbox 5 - BIOS/Driver Notification - Data storage BIOS to Driver data sync
++/// Offset 0x1C00, Size 0x400
++///
++typedef struct {
++  UINT32 PHED;          ///< Offset 0x1C00 Panel Header
++  UINT8  BDDC[0x100];   ///< Offset 0x1C04 Panel EDID (DDC data)
++  UINT8  RM51[0x2FC];   ///< Offset 0x1D04 - 0x1FFF Reserved Must be zero
++} IGD_OPREGION_MBOX5;
++
++///
++/// IGD OpRegion Structure
++///
++typedef struct {
++  IGD_OPREGION_HEADER Header; ///< OpRegion header (Offset 0x0, Size 0x100)
++  IGD_OPREGION_MBOX1  MBox1;  ///< Mailbox 1: Public ACPI Methods (Offset 0x100, Size 0x100)
++  IGD_OPREGION_MBOX2  MBox2;  ///< Mailbox 2: Software SCI Interface (Offset 0x200, Size 0x100)
++  IGD_OPREGION_MBOX3  MBox3;  ///< Mailbox 3: BIOS to Driver Notification (Offset 0x300, Size 0x100)
++  IGD_OPREGION_MBOX4  MBox4;  ///< Mailbox 4: Video BIOS Table (VBT) (Offset 0x400, Size 0x1800)
++  IGD_OPREGION_MBOX5  MBox5;  ///< Mailbox 5: BIOS to Driver Notification Extension (Offset 0x1C00, Size 0x400)
++} IGD_OPREGION_STRUCTURE;
++
++///
++/// VBT Header Structure
++///
++typedef struct {
++  UINT8  Product_String[20];
++  UINT16 Version;
++  UINT16 Header_Size;
++  UINT16 Table_Size;
++  UINT8  Checksum;
++  UINT8  Reserved1;
++  UINT32 Bios_Data_Offset;
++  UINT32 Aim_Data_Offset[4];
++} VBT_HEADER;
++
++typedef struct {
++  UINT8  BDB_Signature[16];
++  UINT16 BDB_Version;
++  UINT16 BDB_Header_Size;
++  UINT16 BDB_Size;
++} VBT_BIOS_DATA_HEADER;
++
++#pragma pack()
++
++#endif
+diff --git a/OvmfPkg/PlatformGopPolicy/PlatformGopPolicy.c b/OvmfPkg/PlatformGopPolicy/PlatformGopPolicy.c
+new file mode 100644
+index 0000000000..7dfb1f382b
+--- /dev/null
++++ b/OvmfPkg/PlatformGopPolicy/PlatformGopPolicy.c
+@@ -0,0 +1,223 @@
++/*++
++
++Copyright (c)  1999  - 2020, Intel Corporation. All rights reserved
++
++  This program and the accompanying materials are licensed and made available under
++  the terms and conditions of the BSD License that accompanies this distribution.
++  The full text of the license may be found at
++  http://opensource.org/licenses/bsd-license.php.
++
++  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
++  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
++
++--*/
++
++/** @file
++**/
++
++#include <Library/BaseMemoryLib.h>
++#include <Library/DebugLib.h>
++#include <Protocol/FirmwareVolume2.h>
++#include <Protocol/PlatformGopPolicy.h>
++
++#include <Library/UefiBootServicesTableLib.h>
++#include <Library/UefiRuntimeServicesTableLib.h>
++#include <Library/PciLib.h>
++#include "IgdOpRegion.h"
++
++#define IGD_OPREGION_VBT_SIZE_6K (6 * SIZE_1KB)
++
++PLATFORM_GOP_POLICY_PROTOCOL  mPlatformGOPPolicy;
++EFI_PHYSICAL_ADDRESS mVbt;
++
++//
++// Function implementations
++//
++
++/**
++  The function will execute with as the platform policy, and gives
++  the Platform Lid Status. IBV/OEM can customize this code for their specific
++  policy action.
++
++  @param CurrentLidStatus  Gives the current LID Status
++
++  @retval EFI_SUCCESS.
++
++**/
++EFI_STATUS
++EFIAPI
++GetPlatformLidStatus (
++   OUT LID_STATUS *CurrentLidStatus
++)
++{
++  return EFI_UNSUPPORTED;
++}
++
++/**
++  The function will execute and gives the Video Bios Table Size and Address.
++
++  @param VbtAddress  Gives the Physical Address of Video BIOS Table
++
++  @param VbtSize     Gives the Size of Video BIOS Table
++
++  @retval EFI_STATUS.
++
++**/
++
++EFI_STATUS
++EFIAPI
++GetVbtData (
++   OUT EFI_PHYSICAL_ADDRESS *VbtAddress,
++   OUT UINT32 *VbtSize
++)
++{
++  IGD_OPREGION_STRUCTURE *OpRegion;
++  EFI_STATUS Status = EFI_INVALID_PARAMETER;
++  UINT16 VerMajor, VerMinor = 0;
++  UINT32 VbtSizeMax = 0;
++
++  OpRegion = (IGD_OPREGION_STRUCTURE*)(UINTN)PciRead32 (
++    PCI_LIB_ADDRESS (
++      0x00,
++      0x02,
++      0x0,
++      0xFC));
++
++  /* Validate IGD OpRegion signature and version */
++  if (OpRegion) {
++    if (CompareMem (OpRegion->Header.SIGN, IGD_OPREGION_HEADER_SIGN, sizeof(OpRegion->Header.SIGN)) != 0) {
++      DEBUG ((EFI_D_ERROR, "%a: Invalid OpRegion signature, expect %s\n",
++        __FUNCTION__, IGD_OPREGION_HEADER_SIGN));
++      return EFI_INVALID_PARAMETER;
++    } else {
++      VerMajor = OpRegion->Header.OVER >> 24;
++      VerMinor = OpRegion->Header.OVER >> 16 & 0xff;
++      /* 
++       * OpRegion version and VBT size:
++       * Before 2.0: VBT is stored in OpRegion Mailbox 4 and the size won't exceed 6K.
++       * For 2.0 and 2.0+:
++       *   If VBT raw data size doesn't exceeds 6K, VBT is stored in Mailbox 4.
++       *   If exceeds 6K, VBT is stored in extended VBT region, the address and
++       *     size are stored in OpRegion head RVDA and RVDS.
++       *   - 2.0, RVDA holds the absolute physical address, don't support this case.
++       *   - 2.0+, RVDA holds the relative address OpRegion base.
++       */
++      if (VerMajor < 2) {
++        VbtSizeMax = IGD_OPREGION_VBT_SIZE_6K;
++        if (((VBT_HEADER*)&OpRegion->MBox4)->Table_Size > IGD_OPREGION_VBT_SIZE_6K) {
++          DEBUG ((EFI_D_ERROR, "%a: VBT Header reports larger size (0x%x) than OpRegion VBT Mailbox (0x%x)\n",
++            __FUNCTION__,
++            ((VBT_HEADER*)&OpRegion->MBox4)->Table_Size, IGD_OPREGION_VBT_SIZE_6K));
++          VbtSizeMax = 0;
++          return EFI_INVALID_PARAMETER;
++        }
++      } else if (VerMajor == 2 && VerMinor == 0 && OpRegion->MBox3.RVDA && OpRegion->MBox3.RVDS){
++        DEBUG ((EFI_D_ERROR, "%a: Unsupported OpRegion version %d.%d with VBT larger than 0x%x\n",
++          __FUNCTION__, VerMajor, VerMinor, IGD_OPREGION_VBT_SIZE_6K));
++        VbtSizeMax = 0;
++        return EFI_UNSUPPORTED;
++      } else {
++        VbtSizeMax = IGD_OPREGION_VBT_SIZE_6K;
++        if (OpRegion->MBox3.RVDA && OpRegion->MBox3.RVDS) {
++          VbtSizeMax = OpRegion->MBox3.RVDS;
++        }
++      }
++    }
++  }
++
++  if (mVbt) {
++    Status = gBS->FreePages (
++                    mVbt,
++                    EFI_SIZE_TO_PAGES (VbtSizeMax)
++                    );
++    mVbt = 0;
++  }
++
++  /* Only operates VBT on support OpRegion */
++  if (VbtSizeMax) {
++    mVbt = SIZE_4GB - 1;
++    Status = gBS->AllocatePages (
++                    AllocateMaxAddress,
++                    EfiReservedMemoryType,
++                    EFI_SIZE_TO_PAGES (VbtSizeMax),
++                    &mVbt
++                    );
++    if (EFI_ERROR (Status)) {
++      DEBUG ((EFI_D_ERROR, "%a: AllocatePages failed for VBT size 0x%x status %d\n",
++        __FUNCTION__, VbtSizeMax, Status));
++      return EFI_OUT_OF_RESOURCES;
++    } else {
++      UINT8 CheckSum = 0;
++
++      /* Zero-out first*/
++      ZeroMem ((VOID*)mVbt, VbtSizeMax);
++      /* Only copy with size as specified in VBT table */
++      if (VerMajor < 2 || !OpRegion->MBox3.RVDA || !OpRegion->MBox3.RVDS) {
++        CopyMem((VOID*)mVbt, (VOID*)OpRegion->MBox4.RVBT, ((VBT_HEADER*)&OpRegion->MBox4)->Table_Size);
++      } else {
++        CopyMem((VOID*)mVbt, (VOID*)OpRegion + OpRegion->MBox3.RVDA, OpRegion->MBox3.RVDS);
++      }
++
++      /* Fix the checksum */
++      for (UINT32 i = 0; i < ((VBT_HEADER*)mVbt)->Table_Size; i++) {
++        CheckSum = (CheckSum + ((UINT8*)mVbt)[i]) & 0xFF;
++      }
++      ((VBT_HEADER*)mVbt)->Checksum += (0x100 - CheckSum);
++
++      *VbtAddress = mVbt;
++      *VbtSize = ((VBT_HEADER*)mVbt)->Table_Size;
++      DEBUG ((DEBUG_INFO, "%a: VBT Version %d size 0x%x\n", __FUNCTION__,
++        ((VBT_BIOS_DATA_HEADER*)(mVbt + ((VBT_HEADER*)mVbt)->Bios_Data_Offset))->BDB_Version,
++        ((VBT_HEADER*)mVbt)->Table_Size));
++      return EFI_SUCCESS;
++    }
++  }
++
++  return EFI_UNSUPPORTED;
++}
++
++/**
++  Entry point for the Platform GOP Policy Driver.
++
++  @param ImageHandle       Image handle of this driver.
++  @param SystemTable       Global system service table.
++
++  @retval EFI_SUCCESS           Initialization complete.
++  @retval EFI_OUT_OF_RESOURCES  Do not have enough resources to initialize the driver.
++
++**/
++
++EFI_STATUS
++EFIAPI
++PlatformGOPPolicyEntryPoint (
++  IN EFI_HANDLE       ImageHandle,
++  IN EFI_SYSTEM_TABLE *SystemTable
++  )
++
++{
++  EFI_STATUS  Status = EFI_SUCCESS;
++
++  gBS = SystemTable->BootServices;
++
++  gBS->SetMem (
++         &mPlatformGOPPolicy,
++         sizeof (PLATFORM_GOP_POLICY_PROTOCOL),
++         0
++         );
++
++  mPlatformGOPPolicy.Revision                = PLATFORM_GOP_POLICY_PROTOCOL_REVISION_01;
++  mPlatformGOPPolicy.GetPlatformLidStatus    = GetPlatformLidStatus;
++  mPlatformGOPPolicy.GetVbtData              = GetVbtData;
++
++  //
++  // Install protocol to allow access to this Policy.
++  //
++  Status = gBS->InstallMultipleProtocolInterfaces (
++                  &ImageHandle,
++                  &gPlatformGOPPolicyGuid,
++                  &mPlatformGOPPolicy,
++                  NULL
++                  );
++
++  return Status;
++}
+diff --git a/OvmfPkg/PlatformGopPolicy/PlatformGopPolicy.inf b/OvmfPkg/PlatformGopPolicy/PlatformGopPolicy.inf
+new file mode 100644
+index 0000000000..c3423a3388
+--- /dev/null
++++ b/OvmfPkg/PlatformGopPolicy/PlatformGopPolicy.inf
+@@ -0,0 +1,50 @@
++#
++#
++# Copyright (c)  1999  - 2020, Intel Corporation. All rights reserved
++#
++# This program and the accompanying materials are licensed and made available under
++# the terms and conditions of the BSD License that accompanies this distribution.
++# The full text of the license may be found at
++# http://opensource.org/licenses/bsd-license.php.
++#
++# THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
++# WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
++#
++#
++#
++##
++
++
++[Defines]
++  INF_VERSION                    = 0x00010005
++  BASE_NAME                      = PlatformGOPPolicy
++  FILE_GUID                      = 9737D7CA-D869-46e5-A5EF-75D9538688DE
++  MODULE_TYPE                    = DXE_DRIVER
++  VERSION_STRING                 = 1.0
++  ENTRY_POINT                    = PlatformGOPPolicyEntryPoint
++
++#
++# The following information is for reference only and not required by the build tools.
++#
++#  VALID_ARCHITECTURES           = X64
++#
++
++[Sources.common]
++  PlatformGopPolicy.c
++
++[Packages]
++  MdePkg/MdePkg.dec
++  OvmfPkg/OvmfPkg.dec
++
++[LibraryClasses]
++  BaseLib
++  DebugLib
++  UefiDriverEntryPoint
++  UefiRuntimeServicesTableLib
++  PciLib
++
++[Protocols]
++  gPlatformGOPPolicyGuid
++
++[Depex]
++  TRUE

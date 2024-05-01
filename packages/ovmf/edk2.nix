@@ -42,6 +42,8 @@ let
     ./Integrate-IntelGopDriver-into-OVMF.patch
     # https://wiki.archlinux.org/title/Intel_GVT-g#Using_DMA-BUF_with_UEFI/OVMF
     ./OvmfPkg-add-IgdAssignmentDxe.patch
+    # Mainly https://github.com/tianocore/edk2/compare/master...johnmave126:edk2:intel-gop-patch
+    ./acrn-edk2-gop.patch
   ];
 
   edk2 = stdenv.mkDerivation rec {
