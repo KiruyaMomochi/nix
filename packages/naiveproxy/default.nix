@@ -10,12 +10,12 @@
 , python3
 }:
 let
-  version = "123.0.6312.40-1";
+  version = "124.0.6367.54-2";
   naiveSrc = fetchFromGitHub {
     repo = "naiveproxy";
     owner = "klzgrad";
     rev = "v${version}";
-    sha256 = "sha256-ySACPxbXMYg0tEsl0PxE1JgQdEc9y+PKnddNMm2AbnQ=";
+    sha256 = "sha256-03mUL+STr153OZDmWN2JXmsyvmu2r/lq1B89BX3LsQ8=";
   };
   packageName = self.packageName;
   # Make chromium library functions use the correct version
@@ -26,18 +26,7 @@ let
   # Copied from https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/networking/browsers/chromium/common.nix
 
   # actually, we don't use any of these libraries
-  # https://source.chromium.org/chromium/chromium/src/+/master:build/linux/unbundle/replace_gn_files.
-  gnSystemLibraries = [
-    # TODO:
-    # "ffmpeg"
-    # "snappy"
-    # "flac"
-    # "libjpeg"
-    # "libpng"
-    # "libwebp"
-    # "libxslt"
-    # "opus"
-  ];
+  gnSystemLibraries = [];
   libExecPath = "$out/libexec/${packageName}";
   chromiumRosettaStone = {
     cpu = platform:
@@ -63,9 +52,8 @@ let
       --replace '"//infra/orchestrator:orchestrator_all",' ""
     # Disable build flags that require LLVM 15:
     substituteInPlace build/config/compiler/BUILD.gn \
-      --replace '"-Xclang",' ""
-      # --replace '"-no-opaque-pointers",' ""
-
+      --replace '"-Xclang",' "" \
+      --replace '"-no-opaque-pointers",' ""
     # remove unused third-party
     for lib in ${toString gnSystemLibraries}; do
       if [ -d "third_party/$lib" ]; then
@@ -205,6 +193,8 @@ let
         "chromium-initial-prefs.patch"
         # qr code generator
         "https://github.com/chromium/chromium/commit/bcf739b95713071687ff25010683248de0092f6a.patch"
+        # --ozone-platform-hint
+        "https://github.com/chromium/chromium/commit/c7f4c58f896a651eba80ad805ebdb49d19ebdbd4.patch"
       ];
       # From common.nix of nixpkgs
       patches = builtins.filter

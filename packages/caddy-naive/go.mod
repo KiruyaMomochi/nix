@@ -2,7 +2,7 @@ module github.com/caddyserver/caddy/v2
 
 go 1.21
 
-toolchain go1.21.6
+toolchain go1.22.1
 
 require (
 	github.com/BurntSushi/toml v1.3.2
@@ -152,4 +152,4 @@ require (
 	howett.net/plist v1.0.0 // indirect
 )
 
-replace github.com/caddyserver/forwardproxy => github.com/klzgrad/forwardproxy v0.0.0-20240218112005-468530137baf
+replace github.com/caddyserver/forwardproxy => github.com/klzgrad/forwardproxy v0.0.0-20240421120909-b12c33ecb72c
