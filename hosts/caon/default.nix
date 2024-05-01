@@ -10,6 +10,7 @@
       ./hardware-configuration.nix
       ./virtualisation.nix
       ./printing.nix
+      ./nvidia.nix
     ];
   kyaru.desktop.enable = true;
   networking.networkmanager.enable = false;
