@@ -3,6 +3,8 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs-master.url = "github:NixOS/nixpkgs";
+
     deploy-rs.url = "github:serokell/deploy-rs";
 
     sops-nix = {

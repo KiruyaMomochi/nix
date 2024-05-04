@@ -1,6 +1,7 @@
 { config
 , lib
 , pkgs
+, inputs
 , ...
 }:
 let
@@ -47,11 +48,8 @@ in
     ];
 
     programs.vscode =
-      let
-        package = pkgs.vscode.fhs;
-      in
       {
-        inherit package;
+        package = inputs.nixpkgs-master.legacyPackages.${pkgs.system}.vscode.fhs;
         enable = true;
       };
   };
