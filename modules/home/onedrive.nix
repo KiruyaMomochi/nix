@@ -29,6 +29,8 @@ in
         ExecStart = "${cfg.package}/bin/rclone mount onedrive: ${config.home.homeDirectory}/OneDrive --vfs-cache-mode full";
         Restart = "on-failure";
         RestartSec = 30;
+        StartLimitInterval = 600;
+        StartLimitBurst = 3;
       };
     };
   };
