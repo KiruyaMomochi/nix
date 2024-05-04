@@ -125,6 +125,12 @@
   # boot.extraModulePackages = [ config.boot.kernelPackages.ddcci-driver ];
   boot.kernelModules = [ "ddcci_backlight" ];
 
+  # containers
+  virtualisation.docker.enable = true;
+  virtualisation.podman.enable = true;
+  virtualisation.containers.enable = true;
+  programs.singularity.enable = true;
+
   # extraRules
   services.udev.extraRules = ''
     # Brother P-Touch PT-P910BT
