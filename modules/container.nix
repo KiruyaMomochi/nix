@@ -105,10 +105,12 @@ in
       (mkIf cfg.nvidia {
         environment.systemPackages = [ pkgs.libnvidia-container ];
         systemd.user.services.docker.path = [ pkgs.nvidia-docker ];
-        virtualisation.docker.enableNvidia = true;
 
-        # virtualisation.podman.enableNvidia = true;
-        # virtualisation.docker.rootless.daemon.settings.runtimes.nvidia.path = "${pkgs.nvidia-docker}/bin/nvidia-container-runtime";
+        # From nixpkgs changelog:
+        # `virtualisation.docker.enableNvidia` and `virtualisation.podman.enableNvidia` options are deprecated. 
+        # `hardware.nvidia-container-toolkit.enable` should be used instead. This option will expose GPUs on containers with the `--device` CLI option.
+        # This is supported by Docker 25, Podman 3.2.0 and Singularity 4. Any container runtime that supports the CDI specification will take advantage of this feature.
+        hardware.nvidia-container-toolkit.enable = true;
       })
     ]);
 }
