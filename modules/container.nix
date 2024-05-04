@@ -48,7 +48,6 @@ in
           # extraOptions = "--iptables=False";
           rootless = {
             enable = true;
-            setSocketVariable = true;
           };
         };
       })
