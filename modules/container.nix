@@ -45,9 +45,19 @@ in
 
         # Docker
         virtualisation.docker = {
-          # extraOptions = "--iptables=False";
+          # FIXME: Remove this when `docker` gets a update
+          package = pkgs.docker_26;
+          daemon.settings.features.cdi = true;
+
           rootless = {
             enable = true;
+            # FIXME: Remove this when `docker` gets a update
+            package = pkgs.docker_26;
+            daemon.settings = {
+              # https://github.com/NVIDIA/nvidia-container-toolkit/issues/434
+              # https://github.com/moby/moby/issues/47676
+              features.cdi = true;
+            };
           };
         };
       })

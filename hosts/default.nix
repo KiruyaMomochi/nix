@@ -93,7 +93,7 @@ in
       }
       {
         inputs.net = mkDefault (singleton {
-          interfaces = ["eth*" "enp0s[0-1]" "lo"];
+          interfaces = [ "eth*" "enp0s[0-1]" "lo" ];
         });
       }
       {
