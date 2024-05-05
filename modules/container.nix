@@ -120,6 +120,7 @@ in
         # `hardware.nvidia-container-toolkit.enable` should be used instead. This option will expose GPUs on containers with the `--device` CLI option.
         # This is supported by Docker 25, Podman 3.2.0 and Singularity 4. Any container runtime that supports the CDI specification will take advantage of this feature.
         hardware.nvidia-container-toolkit.enable = true;
+        virtualisation.containers.cdi.dynamic.nvidia.enable = true;
       })
     ]);
 }
