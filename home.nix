@@ -12,8 +12,8 @@
   home.username = "kyaru";
   home.homeDirectory = "/home/${config.home.username}";
 
-  nixpkgs.config = import ./nixpkgs-config.nix;
-  xdg.configFile."nixpkgs/config.nix".source = ./nixpkgs-config.nix;
+  nixpkgs.config = lib.mkDefault (import ./nixpkgs-config.nix);
+  xdg.configFile."nixpkgs/config.nix".source = lib.mkDefault ./nixpkgs-config.nix;
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" "repl-flake" ];
   };

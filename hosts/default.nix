@@ -20,7 +20,7 @@ in
     substituters = [ "https://objects.kyaru.bond/nix-cache" ];
     trusted-public-keys = [ "kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM=" ];
   };
-  nixpkgs.config = import ../nixpkgs-config.nix;
+  nixpkgs.config = lib.mkDefault (import ../nixpkgs-config.nix);
 
   boot.kernelModules = [
     "nft_tproxy"

@@ -43,9 +43,7 @@
 
       mkPkgs = pkgs: system: import pkgs {
         inherit system;
-        config = {
-          allowUnfree = true;
-        };
+        config = import ./nixpkgs-config.nix;
       };
 
       # https://github.com/NixOS/nixpkgs/pull/157056
