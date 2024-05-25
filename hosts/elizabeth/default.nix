@@ -94,6 +94,17 @@ in
       enable = true;
       internalInterfaces = [ "tailscale0" ];
     };
+    networkmanager.dispatcherScripts = [
+      {
+        type = "pre-up";
+        source = pkgs.writeText "enableGroHook" ''
+          if [[ "$DEVICE_IFACE" == wlp* ]] || [[ "$DEVICE_IFACE" == enp* ]]; then
+            ${pkgs.ethtool}/bin/ethtool -K "$DEVICE_IFACE" rx-udp-gro-forwarding on rx-gro-list off
+            >&2 echo "Enable GRO for $DEVICE_IFACE finished with exit code $?"
+          fi
+        '';
+      }
+    ];
   };
   boot.kernel.sysctl = {
     "net.ipv4.conf.all.forwarding" = true;
