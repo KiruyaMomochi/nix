@@ -144,6 +144,11 @@ in
         };
 
         programs.adb.enable = true;
+
+        # DDC
+        hardware.i2c.enable = true;
+        # boot.extraModulePackages = [ config.boot.kernelPackages.ddcci-driver ];
+        # boot.kernelModules = [ "ddcci_backlight" ];
       }
       (mkIf (cfg.environment == "gnome") {
         # GNOME

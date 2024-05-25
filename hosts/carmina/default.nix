@@ -32,8 +32,6 @@
   # https://github.com/mkubecek/vmware-host-modules/issues/202
   # boot.kernelPackages = pkgs.linuxPackages_latest;
 
-  boot.kernelModules = [ "i2c_dev" ];
-
   hardware.bluetooth.enable = true;
   networking = {
     hosts = {

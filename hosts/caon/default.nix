@@ -120,11 +120,6 @@
   programs.wireshark.enable = true;
   services.telegraf.enable = true;
 
-  # DDC
-  hardware.i2c.enable = true;
-  # boot.extraModulePackages = [ config.boot.kernelPackages.ddcci-driver ];
-  boot.kernelModules = [ "ddcci_backlight" ];
-
   # containers
   virtualisation.docker.enable = true;
   virtualisation.podman.enable = true;
