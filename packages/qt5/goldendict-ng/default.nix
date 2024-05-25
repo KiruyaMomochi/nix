@@ -10,7 +10,7 @@
 (goldendict.override { qtwebkit = null; }).overrideAttrs
   (oldAttrs: rec {
     pname = "goldendict-ng";
-    version = "24.01.22-LoongYear.3dddb3be";
+    version = "24.05.05-LiXia.ecd1138c";
     src = fetchFromGitHub {
       owner = "xiaoyifang";
       repo = pname;
