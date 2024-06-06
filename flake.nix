@@ -162,11 +162,7 @@
           });
           pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
             (
-              python-final: python-prev:
-                {
-                  bindep = python-final.callPackage ./packages/python3/bindep { };
-                  ansible-builder = python-final.callPackage ./packages/python3/ansible-builder { };
-                }
+              python-final: python-prev: { }
             )
           ];
         });
