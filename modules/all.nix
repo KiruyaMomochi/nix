@@ -1,7 +1,7 @@
 { inputs, lib, ... }:
 let
   inherit (lib.attrsets) attrValues filterAttrs;
-  inherit (lib.kyaru.modules) mapModules;
+  inherit (inputs.self.lib.kyaru.modules) mapModules;
 in
 {
   # home modules is not imported because it does not contains default.nix
