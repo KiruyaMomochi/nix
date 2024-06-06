@@ -1,5 +1,5 @@
-#!/usr/bin/env nix-shell
-#!nix-shell -i bash -p go -p nix-prefetch
+#!/usr/bin/env nix
+#!nix shell nixpkgs#bash nixpkgs#go nixpkgs#nix-prefetch --command bash
 # shellcheck shell=bash
 
 set -xeuo pipefail
@@ -18,6 +18,6 @@ popd || exit
 cp -r "$tempdir/go.mod" "$tempdir/go.sum" .
 
 oldHash=$(nix eval --impure --raw --expr '((import <nixpkgs> {}).callPackage ./default.nix {}).vendorHash')
-newHash=$(nix-prefetch -v '{ sha256 }: (callPackage (import ./default.nix) { } ).goModules.overrideAttrs (_: { outputHash = sha256; })')
+newHash=$(nix-prefetch --option extra-experimental-features 'nix-command flakes' -v '{ sha256 }: (callPackage (import ./default.nix) { } ).goModules.overrideAttrs (_: { outputHash = sha256; })')
 echo "${oldHash} -> ${newHash}"
 sed -i "s|vendorHash = \"${oldHash}\"|vendorHash = \"${newHash}\"|" ./default.nix
