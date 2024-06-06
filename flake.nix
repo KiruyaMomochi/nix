@@ -39,7 +39,7 @@
       inherit (lib.kyaru.nixos) mapHosts;
       inherit (lib.kyaru.packages) mapPackages;
       inherit (lib.kyaru.modules) mapModules;
-      inherit (lib.attrsets) optionalAttrs;
+      inherit (lib.attrsets) attrValues optionalAttrs;
 
       mkPkgs = pkgs: system: import pkgs {
         inherit system;
@@ -114,11 +114,9 @@
             pkgs = mkPkgs nixpkgs system;
             extraSpecialArgs = { inherit inputs lib-kyaru; };
             modules = [
-              self.homeModules.all
               inputs.vscode-server.nixosModules.home
-
               ./home.nix
-            ];
+            ] ++ (attrValues inputs.self.homeModules);
           };
           kyaru-desktop = kyaru-headless.override (oldConfig: {
             modules = oldConfig.modules ++ [{

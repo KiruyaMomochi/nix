@@ -149,6 +149,8 @@ in
         hardware.i2c.enable = true;
         # boot.extraModulePackages = [ config.boot.kernelPackages.ddcci-driver ];
         # boot.kernelModules = [ "ddcci_backlight" ];
+
+        programs.nix-ld.enable = true;
       }
       (mkIf (cfg.environment == "gnome") {
         # GNOME

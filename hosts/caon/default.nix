@@ -83,7 +83,6 @@
     firewall = {
       enable = true;
       allowedTCPPorts = [
-        (config.services.zerotierone.port)
         443
         # rdp
         3389
@@ -92,7 +91,6 @@
         3090
       ];
       allowedUDPPorts = [
-        (config.services.zerotierone.port)
         # UPnP
         1900
         # rdp?

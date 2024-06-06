@@ -2,15 +2,15 @@
 let
   inherit (lib.modules) mkDefault mkMerge;
   inherit (lib.lists) optional singleton;
+  inherit (lib.attrsets) attrValues;
   nixos-version-file = pkgs.writeText "nixos-version.json" (builtins.toJSON config.system.nixos);
 in
 {
   imports = [
-    inputs.self.nixosModules.all
     inputs.sops-nix.nixosModules.sops
     # https://github.com/nix-community/lanzaboote/blob/master/docs/QUICK_START.md
     inputs.lanzaboote.nixosModules.lanzaboote
-  ];
+  ] ++ (attrValues inputs.self.nixosModules);
 
   boot.lanzaboote.pkiBundle = "/etc/secureboot";
 
@@ -124,10 +124,12 @@ in
   # from https://nixos-and-flakes.thiscute.world/best-practices/nix-path-and-flake-registry
   # make `nix run nixpkgs#nixpkgs` use the same nixpkgs as the one used by this flake.
   nix.registry.nixpkgs.flake = inputs.nixpkgs;
-
+  nix.channel.enable = false; # remove nix-channel related tools & configs, we use flakes instead.
   # but NIX_PATH is still used by many useful tools, so we set it to the same value as the one used by this flake.
   # Make `nix repl '<nixpkgs>'` use the same nixpkgs as the one used by this flake.
-  nixpkgs.flake.setNixPath = true;
+  environment.etc."nix/inputs/nixpkgs".source = "${inputs.nixpkgs}";
+  # https://github.com/NixOS/nix/issues/9574
+  nix.settings.nix-path = lib.mkForce "nixpkgs=/etc/nix/inputs/nixpkgs";
 
   i18n.defaultLocale = mkDefault "en_US.UTF-8";
 

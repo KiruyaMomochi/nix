@@ -17,8 +17,8 @@ in
     directory:
     # Function to apply to each module. To remove a module, return null.
     fn:
-    filterMapAttrs'
-      (
+    let
+      directoryToModule =
         # filename :: String
         # type :: "regular" | "directory" | "symlink" | "unknown"
         filename: type:
@@ -38,9 +38,9 @@ in
         in
         if module == null then null
         else if module.value == null then null
-        else module
-      )
-      (builtins.readDir directory);
+        else module;
+    in
+    filterMapAttrs' directoryToModule (builtins.readDir directory);
 
   mapModulesRecursive =
     # Directory to map over.
