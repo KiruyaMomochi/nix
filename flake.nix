@@ -175,6 +175,13 @@
         pkgs = mkPkgs nixpkgs system;
       in
       {
+        pkgs =
+          import nixpkgs {
+            inherit system;
+            overlays = [ self.overlays.default ];
+            config = import ./nixpkgs-config.nix;
+          };
+
         formatter = pkgs.nixpkgs-fmt;
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
