@@ -1,10 +1,17 @@
-{
-  pnpm = {
-    path = ./pnpm;
-    description = "pnpm package manager";
-  };
-  ansible = {
-    path = ./ansible;
-    description = "ansible packages";
-  };
-}
+builtins.listToAttrs (builtins.filter
+  (x: x != null)
+  (builtins.attrValues
+    (builtins.mapAttrs
+      (
+        name: value:
+        if value == "directory" then
+          {
+            name = name;
+            value = {
+              path = ./. + "/${name}";
+            };
+          }
+        else null
+      )
+      (builtins.readDir ./.)
+    )))
