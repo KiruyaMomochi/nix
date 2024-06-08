@@ -15,9 +15,10 @@
   nixpkgs.config = lib.mkDefault (import ./nixpkgs-config.nix);
   xdg.configFile."nixpkgs/config.nix".source = lib.mkDefault ./nixpkgs-config.nix;
   nix.settings = {
-    experimental-features = [ "nix-command" "flakes" "repl-flake" ];
+    experimental-features = [ "nix-command" "flakes" ];
   };
-  nix.package = pkgs.nix;
+  nix.package = pkgs.nixVersions.latest
+
 
   # Packages that should be installed to the user profile.
   home.packages = with pkgs; [

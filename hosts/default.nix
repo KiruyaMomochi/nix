@@ -16,7 +16,7 @@ in
 
   # Enable flakes
   nix.settings = {
-    experimental-features = [ "nix-command" "flakes" "repl-flake" ];
+    experimental-features = [ "nix-command" "flakes" ];
     substituters = [ "https://objects.kyaru.bond/nix-cache" ];
     trusted-public-keys = [ "kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM=" ];
   };
@@ -125,6 +125,8 @@ in
   # make `nix run nixpkgs#nixpkgs` use the same nixpkgs as the one used by this flake.
   nix.registry.nixpkgs.flake = inputs.nixpkgs;
   nix.channel.enable = false; # remove nix-channel related tools & configs, we use flakes instead.
+  nix.package = pkgs.nixVersions.latest;
+
   # but NIX_PATH is still used by many useful tools, so we set it to the same value as the one used by this flake.
   # Make `nix repl '<nixpkgs>'` use the same nixpkgs as the one used by this flake.
   environment.etc."nix/inputs/nixpkgs".source = "${inputs.nixpkgs}";
