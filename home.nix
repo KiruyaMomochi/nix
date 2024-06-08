@@ -17,7 +17,7 @@
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
   };
-  nix.package = pkgs.nixVersions.latest
+  nix.package = pkgs.nixVersions.latest;
 
 
   # Packages that should be installed to the user profile.
