@@ -58,8 +58,8 @@ with lib;
         in
         result;
       cfg = config.kyaru.networking;
-      static4 = ((builtins.length cfg.ipv4.addresses) > 0);
-      static6 = ((builtins.length cfg.ipv6.addresses) > 0);
+      static4 = (builtins.length cfg.ipv4.addresses) > 0;
+      static6 = (builtins.length cfg.ipv6.addresses) > 0;
       dhcp =
         if static4 && static6 then "no"
         else if static4 then "ipv6"
@@ -80,7 +80,7 @@ with lib;
           routes = [{
             routeConfig = {
               Gateway = cfg.ipv6.gateway;
-              GatewayOnLink = mkIf cfg.ipv6.gatewayOnLink cfg.ipv6.gatewayOnLink;
+              GatewayOnLink = cfg.ipv6.gatewayOnLink;
             };
           }];
         })
