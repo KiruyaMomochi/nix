@@ -10,12 +10,12 @@
 , python3
 }:
 let
-  version = "124.0.6367.54-2";
+  version = "126.0.6478.40-1";
   naiveSrc = fetchFromGitHub {
     repo = "naiveproxy";
     owner = "klzgrad";
     rev = "v${version}";
-    sha256 = "sha256-03mUL+STr153OZDmWN2JXmsyvmu2r/lq1B89BX3LsQ8=";
+    sha256 = "sha256-H4cpZLLMwn9AfmwL4pa6wq9rGatAtcEQmvWas5C9LSU=";
   };
   packageName = self.packageName;
   # Make chromium library functions use the correct version
@@ -26,7 +26,7 @@ let
   # Copied from https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/networking/browsers/chromium/common.nix
 
   # actually, we don't use any of these libraries
-  gnSystemLibraries = [];
+  gnSystemLibraries = [ ];
   libExecPath = "$out/libexec/${packageName}";
   chromiumRosettaStone = {
     cpu = platform:
@@ -179,6 +179,7 @@ let
         include_transport_security_state_preload_list = false;
         use_nss_certs = false;
 
+        enable_js_protobuf = false;
       } // (lib.optionalAttrs stdenv.hostPlatform.isx86 {
         # https://github.com/klzgrad/naiveproxy/commit/f5034cd7da67f063724dc27fdf0a42384db84379
         use_cfi_icall = false;
@@ -188,22 +189,32 @@ let
       buildInputs = [ openssl ];
 
       ignoredPatches = [
-        "widevine-79.patch"
+        "widevine-disable-auto-download-allow-bundle.patch"
         "angle-wayland-include-protocol.patch"
         "chromium-initial-prefs.patch"
         # qr code generator
         "https://github.com/chromium/chromium/commit/bcf739b95713071687ff25010683248de0092f6a.patch"
-        # --ozone-platform-hint
-        "https://github.com/chromium/chromium/commit/c7f4c58f896a651eba80ad805ebdb49d19ebdbd4.patch"
+        # FIXME: Required before https://github.com/NixOS/nixpkgs/pull/319193 marged
+        "chromium-120-llvm-17.patch"
+        "chromium-121-rust.patch"
       ];
       # From common.nix of nixpkgs
-      patches = builtins.filter
-        (p:
-          if builtins.typeOf p == "path" && (builtins.elem (builtins.baseNameOf p) ignoredPatches) then false
-          else if builtins.typeOf p == "set" && p ? url && (builtins.elem p.url ignoredPatches) then false
-          else true
-        )
-        base.patches;
+      patches =
+        let
+          basePatches = builtins.filter
+            (p:
+              if builtins.typeOf p == "path" && (builtins.elem (builtins.baseNameOf p) ignoredPatches) then false
+              else if builtins.typeOf p == "set" && p ? url && (builtins.elem p.url ignoredPatches) then false
+              else true
+            )
+            base.patches;
+        in
+        basePatches ++ [
+          # FIXME: Required before https://github.com/NixOS/nixpkgs/pull/319193 marged
+          ./chromium-126-llvm-17.patch
+          ./chromium-126-rust.patch
+        ];
+
       inherit postPatch;
 
       # See common.nix of nixpkgs
