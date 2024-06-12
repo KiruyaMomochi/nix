@@ -12,7 +12,7 @@ with lib;
     package = mkPackageOption pkgs "hysteria" { };
 
     logLevel = mkOption {
-      type = types.oneOf [ "debug" "info" "warn" "error" ];
+      type = types.enum [ "debug" "info" "warn" "error" ];
       default = "info";
       description = ''
         Log level.
