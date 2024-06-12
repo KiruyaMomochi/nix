@@ -120,10 +120,14 @@ in
             wantedBy = [ "multi-user.target" ];
             wants = [ "network-online.target" ];
             after = [ "network-online.target" ];
-            preStart = ''
-              umask u=rw,g=,o=
-              ${utils.genJqSecretsReplacementSnippet cfg.settings configPath}
-            '';
+            preStart =
+              let
+                settings = lib.filterAttrs (n: v: v != null) cfg.settings;
+              in
+              ''
+                umask u=rw,g=,o=
+                ${utils.genJqSecretsReplacementSnippet settings configPath}
+              '';
             serviceConfig = {
               DynamicUser = true;
               ExecStart = "${cfg.package}/bin/naive ${configPath}";
