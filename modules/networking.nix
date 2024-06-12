@@ -78,10 +78,8 @@ with lib;
         }
         (mkIf static6 {
           routes = [{
-            routeConfig = {
-              Gateway = cfg.ipv6.gateway;
-              GatewayOnLink = cfg.ipv6.gatewayOnLink;
-            };
+            Gateway = cfg.ipv6.gateway;
+            GatewayOnLink = cfg.ipv6.gatewayOnLink;
           }];
         })
       ]);
