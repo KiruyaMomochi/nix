@@ -122,7 +122,7 @@ in
           qemu = {
             swtpm.enable = true;
             ovmf.enable = true;
-            ovmf.packages = [ pkgs.OVMFFull.fd ]; # Secure boot
+            ovmf.packages = [ pkgs.kyaru.ovmf.fd ]; # Secure boot
           };
         };
         virtualisation.vmware.host = {
