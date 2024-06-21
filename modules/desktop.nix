@@ -20,11 +20,6 @@ in
   config =
     mkIf cfg.enable (mkMerge [
       {
-        hardware.opengl = {
-          driSupport = true;
-          driSupport32Bit = true;
-        };
-
         boot.supportedFilesystems = [ "ntfs" ];
 
         # Enable the X11 windowing system.
