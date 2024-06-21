@@ -194,9 +194,6 @@ let
         "chromium-initial-prefs.patch"
         # qr code generator
         "https://github.com/chromium/chromium/commit/bcf739b95713071687ff25010683248de0092f6a.patch"
-        # FIXME: Required before https://github.com/NixOS/nixpkgs/pull/319193 marged
-        "chromium-120-llvm-17.patch"
-        "chromium-121-rust.patch"
       ];
       # From common.nix of nixpkgs
       patches =
@@ -209,11 +206,7 @@ let
             )
             base.patches;
         in
-        basePatches ++ [
-          # FIXME: Required before https://github.com/NixOS/nixpkgs/pull/319193 marged
-          ./chromium-126-llvm-17.patch
-          ./chromium-126-rust.patch
-        ];
+        basePatches;
 
       inherit postPatch;
 
