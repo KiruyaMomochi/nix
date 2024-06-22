@@ -19,7 +19,7 @@
   };
 
   # https://nixos.wiki/wiki/Nvidia
-  hardware.opengl = {
+  hardware.graphics = {
     enable = true;
   };
 

@@ -2,9 +2,7 @@
 
 {
   # https://nixos.wiki/wiki/Nvidia
-  hardware.opengl = {
-    enable = true;
-  };
+  hardware.graphics.enable = true;
 
   boot.kernelParams = [
     # https://bbs.archlinux.org/viewtopic.php?id=286976
