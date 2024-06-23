@@ -10,7 +10,7 @@
       in
       {
         devShells.default = pkgs.mkShell {
-          packages = with pkgs; [ nodejs nodejs.pkgs.pnpm ];
+          packages = with pkgs; [ nodejs_latest corepack_latest ];
         };
       });
 }
