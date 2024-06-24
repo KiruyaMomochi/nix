@@ -26,6 +26,7 @@ in
       libsForQt5.dolphin
       libsForQt5.yakuake
       konsole
+      qbittorrent
     ];
 
     xdg.dataFile."konsole/Breeze.colorscheme" = lib.mkIf cfg.konsoleRandomBreeze {
