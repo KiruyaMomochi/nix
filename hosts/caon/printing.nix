@@ -44,10 +44,13 @@
     workstation = true;
     domain = true;
   };
-  services.printing.browsing = true;
-  services.printing.listenAddresses = [ "*:631" ]; # Not 100% sure this is needed and you might want to restrict to the local network
-  services.printing.allowFrom = [ "all" ]; # this gives access to anyone on the interface you might want to limit it see the official documentation
-  # services.printing.defaultShared = true; # If you want
+  services.printing = {
+    browsing = true;
+    listenAddresses = [ "*:631" ]; # Not 100% sure this is needed and you might want to restrict to the local network
+    allowFrom = [ "all" ]; # this gives access to anyone on the interface you might want to limit it see the official documentation
+    # defaultShared = true; # If you want
+    openFirewall = true;
+  };
 
   # Scan
   hardware.sane.enable = true;
