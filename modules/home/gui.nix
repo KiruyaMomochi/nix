@@ -34,6 +34,7 @@ in
       vlc
       obsidian
       anki
+      kuro
 
       mattermost-desktop
       # https://github.com/NixOS/nixpkgs/pull/157520 make element-desktop-wayland a shell wrapper
