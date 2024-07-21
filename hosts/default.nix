@@ -89,7 +89,7 @@ in
       (builtins.fromTOML (builtins.readFile ./telegraf.conf))
       {
         agent.interval = mkDefault "10s";
-        agent.flush_interval = mkDefault "10s";
+        agent.flush_interval = mkDefault "1m";
       }
       {
         inputs.net = mkDefault (singleton {

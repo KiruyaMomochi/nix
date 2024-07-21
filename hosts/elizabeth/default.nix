@@ -118,8 +118,8 @@ in
 
   # Telegraf
   services.telegraf.extraConfig = {
-    agent.interval = "60s";
-    agent.flush_interval = "60s";
+    agent.interval = "1m";
+    agent.flush_interval = "5m";
   };
 
   # why not?
