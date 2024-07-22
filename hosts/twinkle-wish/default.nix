@@ -11,7 +11,7 @@
       ./hardware-configuration.nix
       ../modules/vps.nix
     ];
-  
+
   # Define on which hard drive you want to install Grub.
   boot.loader.grub.device = "/dev/vda"; # or "nodev" for efi only
 
