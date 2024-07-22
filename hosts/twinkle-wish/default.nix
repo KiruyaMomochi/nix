@@ -24,24 +24,6 @@
   # Define a user account. Don't forget to set a password with ‘passwd’.
   kyaru.vps.user.name = "yui";
 
-  # List packages installed in system profile. To search, run:
-  # $ nix search wget
-  environment.systemPackages = with pkgs; [
-    influxdb2-cli
-    influxdb2-token-manipulator
-  ];
-
-  # Grafana
-  services.grafana = {
-    enable = true;
-    settings = {
-      server = {
-        http_addr = "127.0.0.1";
-        http_port = 3000;
-      };
-    };
-  };
-
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
   # on your system were taken. It‘s perfectly fine and recommended to leave
