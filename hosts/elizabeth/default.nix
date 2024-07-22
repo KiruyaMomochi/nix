@@ -116,12 +116,6 @@ in
   # Wireshark
   programs.wireshark.enable = true;
 
-  # Telegraf
-  services.telegraf.extraConfig = {
-    agent.interval = "1m";
-    agent.flush_interval = "5m";
-  };
-
   # why not?
   services.guix.enable = true;
 
