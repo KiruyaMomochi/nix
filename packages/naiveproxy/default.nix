@@ -10,12 +10,12 @@
 , python3
 }:
 let
-  version = "126.0.6478.40-1";
+  version = "127.0.6533.64-1";
   naiveSrc = fetchFromGitHub {
     repo = "naiveproxy";
     owner = "klzgrad";
     rev = "v${version}";
-    sha256 = "sha256-H4cpZLLMwn9AfmwL4pa6wq9rGatAtcEQmvWas5C9LSU=";
+    sha256 = "sha256-/PoQpPk7LwpJPhBNwz6CcPFSzUWd3+SOz5yM4uFiDXY=";
   };
   packageName = self.packageName;
   # Make chromium library functions use the correct version
@@ -194,6 +194,11 @@ let
         "chromium-initial-prefs.patch"
         # qr code generator
         "https://github.com/chromium/chromium/commit/bcf739b95713071687ff25010683248de0092f6a.patch"
+        # webui_name_variants
+        "https://github.com/chromium/chromium/commit/2c101186b60ed50f2ba4feaa2e963bd841bcca47.patch"
+        "https://github.com/chromium/chromium/commit/f2b43c18b8ecfc3ddc49c42c062d796c8b563984.patch"
+        "https://github.com/chromium/chromium/commit/4ca70656fde83d2db6ed5a8ac9ec9e7443846924.patch"
+        "https://github.com/chromium/chromium/commit/50d63ffee3f7f1b1b9303363742ad8ebbfec31fa.patch"
       ];
       # From common.nix of nixpkgs
       patches =
