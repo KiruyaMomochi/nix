@@ -18,14 +18,20 @@ in
       '';
     };
 
-    nvidia = mkOption {
-      type = types.bool;
-      example = true;
-      default = config.hardware.nvidia.modesetting.enable;
-      description = ''
-        Enable NVIDIA support
-      '';
-    };
+    nvidia =
+      let
+        # /nix/store/qxf6anli54ij0q1sdlnlgx9hyl658a4v-source/nixos/modules/hardware/video/nvidia.nix:105:38
+        nvidiaEnabled = (lib.elem "nvidia" config.services.xserver.videoDrivers);
+        nvidia_x11 = if nvidiaEnabled || config.hardware.nvidia.datacenter.enable then config.hardware.nvidia.package else null;
+      in
+      mkOption {
+        type = types.bool;
+        example = true;
+        default = if nvidia_x11 != null then config.hardware.nvidia.modesetting.enable else false;
+        description = ''
+          Enable NVIDIA support
+        '';
+      };
 
     btrfs = mkOption {
       type = types.bool;
@@ -66,7 +72,7 @@ in
         # https://github.com/NixOS/nixpkgs/issues/226365
         networking.firewall.interfaces."podman*".allowedUDPPorts = [ 53 5353 ];
         environment.systemPackages = [ pkgs.podman-compose ];
-        
+
         # Podman
         virtualisation.podman = {
           # Required for containers under podman-compose to be able to talk to each other.
