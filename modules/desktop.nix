@@ -87,7 +87,8 @@ in
         # Select internationalisation properties.
         i18n.supportedLocales = [ "all" ];
         i18n.inputMethod = {
-          enabled = "fcitx5";
+          type = "fcitx5";
+          enable = true;
           fcitx5.waylandFrontend = true;
 
           fcitx5.addons = with pkgs; [
