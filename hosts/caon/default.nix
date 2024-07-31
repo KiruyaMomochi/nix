@@ -120,6 +120,12 @@
   programs.wireshark.enable = true;
   services.telegraf.enable = true;
 
+  services.vlmcsd = {
+    enable = true;
+    package = pkgs.kyaru.vlmcsd;
+    openFirewall = true;
+  };
+
   # containers
   virtualisation.docker.enable = true;
   virtualisation.podman.enable = true;
