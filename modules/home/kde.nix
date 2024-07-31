@@ -13,21 +13,31 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    home.packages = with pkgs; [
-      ark
-      kcolorchooser
+    # https://wiki.nixos.org/w/index.php?title=KDE
+    home.packages = (with pkgs; [
       krita
-      kate
-      qalculate-qt # latte-dock
+      qalculate-qt
       libreoffice-qt
       hunspell
       hunspellDicts.en-us-large
+      qbittorrent # qbittorrent-enhanced
+    ]) ++ (with pkgs.kdePackages; [
+      ark
+      kcolorchooser
+      kate
       krdc
-      libsForQt5.dolphin
-      libsForQt5.yakuake
-      konsole
-      qbittorrent
-    ];
+      dolphin
+      yakuake
+      (konsole.overrideAttrs (oldAttrs: {
+        src = pkgs.fetchFromGitLab {
+          domain = "invent.kde.org";
+          owner = "utilities";
+          repo = "konsole";
+          rev = "bb5c2d2d75646231556da69331708c46ce5d5eb5";
+          hash = "sha256-l78+q1yTDXFnPMYgnQtekjwryDfu5D2wKvCzwhTe6yQ=";
+        };
+      }))
+    ]);
 
     xdg.dataFile."konsole/Breeze.colorscheme" = lib.mkIf cfg.konsoleRandomBreeze {
       source =
