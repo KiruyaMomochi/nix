@@ -8,6 +8,8 @@ let
   ];
   macvtaps = [
     "macvtap0"
+    "macvtap1"
+    "macvtap2"
   ];
 in
 {
@@ -95,11 +97,32 @@ in
 
   # Why 40?
   # See https://github.com/NixOS/nixpkgs/blob/nixos-unstable/nixos/modules/tasks/network-interfaces-systemd.nix
-  systemd.network.networks."40-eno1" = {
-    macvtap = macvtaps;
+  systemd.network.networks = {
+    "40-eno1" = {
+      macvtap = macvtaps;
+    };
+    "40-virbr1" = {
+      matchConfig = {
+        Name = "virbr1";
+      };
+      networkConfig = {
+        Address = "192.168.87.1/24";
+        Gateway = "192.168.87.1";
+        DNS = "192.168.87.11";
+        Domains = "corp.kyaru.bond";
+        # IPMasquerade = "ipv4";
+      };
+    };
   };
 
-  systemd.network.netdevs = builtins.listToAttrs (builtins.map
+  systemd.network.netdevs = {
+    "40-virbr1" = {
+      netdevConfig = {
+        Name = "virbr1";
+        Kind = "bridge";
+      };
+    };
+  } // (builtins.listToAttrs (builtins.map
     (name: {
       name = "40-${name}";
       value = {
@@ -113,7 +136,7 @@ in
         '';
       };
     })
-    macvtaps);
+    macvtaps));
 
   # VMWare
   # virtualisation.vmware.host = {
