@@ -116,8 +116,8 @@ in
   # Wireshark
   programs.wireshark.enable = true;
 
-  # why not?
-  services.guix.enable = true;
+  # fail to compile
+  # services.guix.enable = true;
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
