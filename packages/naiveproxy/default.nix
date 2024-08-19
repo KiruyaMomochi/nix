@@ -10,12 +10,12 @@
 , python3
 }:
 let
-  version = "127.0.6533.64-1";
+  version = "128.0.6613.40-1";
   naiveSrc = fetchFromGitHub {
     repo = "naiveproxy";
     owner = "klzgrad";
     rev = "v${version}";
-    sha256 = "sha256-/PoQpPk7LwpJPhBNwz6CcPFSzUWd3+SOz5yM4uFiDXY=";
+    sha256 = "sha256-dOaGjpfrNlVxbf6BHiEqJkpPIbwWC0Gl2LaKzu0DUxA=";
   };
   packageName = self.packageName;
   # Make chromium library functions use the correct version
