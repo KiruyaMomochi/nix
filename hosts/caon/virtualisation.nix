@@ -63,6 +63,12 @@ in
     '';
     qemu.package = pkgs.kyaru.qemu;
   };
+
+  # single thread download under bad network environment
+  virtualisation.containers.containersConf.settings = {
+    engine.image_parallel_copies = 1;
+  };
+
   boot.extraModprobeConfig = ''
     options kvm_intel nested=1
     options kvm_intel emulate_invalid_guest_state=0
