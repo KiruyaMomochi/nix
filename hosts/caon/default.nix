@@ -76,7 +76,6 @@
 
   # Networking
   hardware.bluetooth.enable = true;
-  services.zerotierone.enable = true;
   services.tailscale.enable = true;
   services.cloudflared.enable = true;
   networking = {
