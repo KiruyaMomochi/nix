@@ -6,7 +6,7 @@ let
   inherit (lib.kyaru.modules) mapModules;
   inherit (builtins) baseNameOf;
 
-  defaultSystem = inputs.flake-utils.lib.system.x86_64-linux;
+  defaultSystem = "x86_64-linux";
 in
 {
   mkHost = path: attrs @ { system ? defaultSystem, ... }:

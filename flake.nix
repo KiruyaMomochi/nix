@@ -21,7 +21,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    flake-utils.url = "github:numtide/flake-utils";
+    haumea = {
+      url = "github:nix-community/haumea";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    flake-parts.url = "github:hercules-ci/flake-parts";
 
     # Fixes for vscode server under NixOS
     vscode-server.url = "github:nix-community/nixos-vscode-server";
@@ -34,7 +39,7 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
   };
 
-  outputs = inputs@{ self, flake-utils, deploy-rs, ... }:
+  outputs = inputs@{ self, flake-parts, deploy-rs, haumea, ... }:
     let
       inherit (lib.kyaru.nixos) mapHosts;
       inherit (lib.kyaru.packages) mapPackages;
@@ -91,127 +96,141 @@
         kyaru = lib-kyaru;
       });
     in
-    {
-      inherit inputs lib;
-
-      nixosConfigurations = mapHosts ./hosts { };
-
-      # https://github.com/nix-community/home-manager/pull/3969
-      homeConfigurations =
-        let
-          # TODO: is it possible to make it contains self?
-          # inherit (lib.fixedPoints) extends;
-          # makeOverridableHomeManagerConfig
-          homeManagerConfiguration = inputs.home-manager.lib.homeManagerConfiguration;
-          makeOverridableHomeManagerConfig = config:
-            (homeManagerConfiguration config) // {
-              override = f: makeOverridableHomeManagerConfig (config // f config);
-            };
-        in
-        rec {
-          kyaru = kyaru-headless;
-          kyaru-headless = makeOverridableHomeManagerConfig {
-            pkgs = mkPkgs nixpkgs system;
-            extraSpecialArgs = { inherit inputs lib-kyaru; };
-            modules = [
-              inputs.vscode-server.nixosModules.home
-              ./home.nix
-            ] ++ (attrValues inputs.self.homeModules);
-          };
-          kyaru-desktop = kyaru-headless.override (oldConfig: {
-            modules = oldConfig.modules ++ [{
-              programs.kyaru = {
-                desktop.enable = true;
-                kde.enable = true;
-              };
-            }];
-          });
-        };
-
-      nixosModules = mapModules ./modules import;
-
-      deploy.nodes =
-        let
-          mkDeployConfig = nixos:
-            let system = nixos.pkgs.system; in
-            {
-              hostname = nixos.config.networking.hostName;
-              profiles.system = {
-                user = "root";
-                sshOpts = [ "-A" "-t" ];
-                path = self.deployPkgs.${system}.deploy-rs.lib.activate.nixos nixos;
-              } // (optionalAttrs (nixos.config.kyaru.vps.user ? name) { profiles.system.sshUser = nixos.config.kyaru.vps.user.name; });
-            };
-        in
-        builtins.mapAttrs (_: mkDeployConfig)
-          self.nixosConfigurations;
-
-      homeModules = mapModules ./modules/home import;
-
-      overlay = self.overlays.default;
-
-      overlays = {
-        default = (final: prev: rec {
-          kyaru = mapPackages final { };
-          slirp4netns = prev.slirp4netns.overrideAttrs (oldAttrs: {
-            patches = (oldAttrs.patches or [ ]) ++ [
-              ./packages/slirp4netns.patch
-            ];
-          });
-          pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
-            (
-              python-final: python-prev: { }
-            )
-          ];
-        });
-      };
-
-      templates = import ./templates;
-      checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
-    } // flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = mkPkgs nixpkgs system;
-      in
+    # top-level module definitiom
+    flake-parts.lib.mkFlake
       {
-        pkgs =
-          import nixpkgs {
-            inherit system;
-            overlays = [ self.overlays.default ];
-            config = import ./nixpkgs-config.nix;
+        inherit inputs;
+      }
+      # module options
+      ({ withSystem, ... }: {
+        flake = {
+          inherit inputs lib;
+
+          nixosConfigurations = mapHosts ./hosts { };
+
+          # https://github.com/nix-community/home-manager/pull/3969
+          homeConfigurations =
+            let
+              # TODO: is it possible to make it contains self?
+              # inherit (lib.fixedPoints) extends;
+              # makeOverridableHomeManagerConfig
+              homeManagerConfiguration = inputs.home-manager.lib.homeManagerConfiguration;
+              makeOverridableHomeManagerConfig = config:
+                (homeManagerConfiguration config) // {
+                  override = f: makeOverridableHomeManagerConfig (config // f config);
+                };
+            in
+            rec {
+              kyaru = kyaru-headless;
+              kyaru-headless = makeOverridableHomeManagerConfig {
+                pkgs = mkPkgs nixpkgs system;
+                extraSpecialArgs = { inherit inputs lib-kyaru; };
+                modules = [
+                  inputs.vscode-server.nixosModules.home
+                  ./home.nix
+                ] ++ (attrValues inputs.self.homeModules);
+              };
+              kyaru-desktop = kyaru-headless.override (oldConfig: {
+                modules = oldConfig.modules ++ [{
+                  programs.kyaru = {
+                    desktop.enable = true;
+                    kde.enable = true;
+                  };
+                }];
+              });
+            };
+
+          nixosModules = mapModules ./modules import;
+
+          deploy.nodes =
+            let
+              mkDeployConfig = nixos:
+                withSystem (nixos.pkgs.system) ({ deployPkgs, ... }:
+                  {
+                    hostname = nixos.config.networking.hostName;
+                    profiles.system = {
+                      user = "root";
+                      sshOpts = [ "-A" "-t" ];
+                      path = deployPkgs.deploy-rs.lib.activate.nixos nixos;
+                    } // (optionalAttrs (nixos.config.kyaru.vps.user ? name) { profiles.system.sshUser = nixos.config.kyaru.vps.user.name; });
+                  });
+            in
+            builtins.mapAttrs (_: mkDeployConfig) self.nixosConfigurations;
+
+          homeModules = mapModules ./modules/home import;
+
+          overlay = self.overlays.default;
+
+          overlays = {
+            default = (final: prev: rec {
+              kyaru = mapPackages final { };
+              slirp4netns = prev.slirp4netns.overrideAttrs (oldAttrs: {
+                patches = (oldAttrs.patches or [ ]) ++ [
+                  ./packages/slirp4netns.patch
+                ];
+              });
+              pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
+                (
+                  python-final: python-prev: { }
+                )
+              ];
+            });
           };
 
-        formatter = pkgs.nixpkgs-fmt;
-        devShells.default = pkgs.mkShell {
-          packages = with pkgs; [
-            sops
-            age
-            ssh-to-age
-            ssh-to-pgp
-            jq
-            yq
-            vscode-langservers-extracted
-            self.deployPkgs.${system}.deploy-rs.deploy-rs
-          ];
+          templates = import ./templates;
+          checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
         };
-        packages = (mapPackages pkgs { });
-        deployPkgs = import nixpkgs {
-          inherit system;
-          overlays = [
-            deploy-rs.overlay
-            (self: super: { deploy-rs = { inherit (pkgs) deploy-rs; lib = super.deploy-rs.lib; }; })
-          ];
-        };
-      }
-    );
+        systems = [
+          "x86_64-linux"
+        ];
+        perSystem = (
+          # module arguments
+          { config, self', inputs', pkgs, deployPkgs, system, ... }:
+          {
+            _module.args = {
+              pkgs =
+                import nixpkgs {
+                  inherit system;
+                  overlays = [ self.overlays.default ];
+                  config = import ./nixpkgs-config.nix;
+                };
 
+              # https://github.com/serokell/deploy-rs/blob/3867348fa92bc892eba5d9ddb2d7a97b9e127a8a/README.md?plain=1#L102-L107
+              deployPkgs = import nixpkgs {
+                inherit system;
+                overlays = [
+                  deploy-rs.overlay
+                  (self: super: { deploy-rs = { inherit (pkgs) deploy-rs; lib = super.deploy-rs.lib; }; })
+                ];
+              };
+            };
+
+            formatter = pkgs.nixpkgs-fmt;
+            devShells.default = pkgs.mkShell {
+              packages = with pkgs; [
+                sops
+                age
+                ssh-to-age
+                ssh-to-pgp
+                jq
+                yq
+                deployPkgs.deploy-rs.deploy-rs
+              ];
+            };
+            packages = (mapPackages pkgs { });
+          }
+        );
+      });
   nixConfig = {
     extra-substituters = [
       "https://nix-community.cachix.org"
+      "https://cuda-maintainers.cachix.org"
       "https://objects.kyaru.bond/nix-cache"
     ];
     extra-trusted-public-keys = [
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       "kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM="
+      "cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E="
     ];
   };
 }
