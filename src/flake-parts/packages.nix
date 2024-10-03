@@ -31,7 +31,7 @@ let
     if module ? package then (module.callPackage module.package { }) else module;
 
   mkPackages = pkgs: inputs.haumea.lib.load {
-    src = ../../../packages;
+    src = ../../packages;
     loader = [ matcher ];
     transformer = [ (moduleToPackageSpec pkgs) callEachPackage ];
   };
@@ -47,7 +47,7 @@ in
         kyaru = mkPackages final;
         slirp4netns = prev.slirp4netns.overrideAttrs (oldAttrs: {
           patches = (oldAttrs.patches or [ ]) ++ [
-            ../../../packages/slirp4netns.patch
+            ../../packages/slirp4netns.patch
           ];
         });
         pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
