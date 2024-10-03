@@ -53,6 +53,7 @@
       mkPkgs = pkgs: system: import pkgs {
         inherit system;
         config = import ./nixpkgs-config.nix;
+        overlays = [ self.overlays.default ];
       };
 
       # https://github.com/NixOS/nixpkgs/pull/157056
@@ -73,27 +74,6 @@
           src = inputs.nixpkgs;
           patches = map originPkgs.fetchpatch patches;
         };
-
-      originLib = originNixpkgs.lib;
-      # Copied from <nixpkgs>/flake.nix
-      patchedLib = originLib.lists.foldl (a: b: a.extend b)
-        (import (patchedNixpkgs + "/lib"))
-        [
-          (import (patchedNixpkgs + "/lib/flake-version-info.nix") self)
-          (final: prev: {
-            nixos = import (patchedNixpkgs + "/nixos/lib") { lib = final; };
-            nixosSystem = args:
-              import (patchedNixpkgs + "/nixos/lib/eval-config.nix") (
-                {
-                  lib = final;
-                  # Allow system to be set modularly in nixpkgs.system.
-                  # We set it to null, to remove the "legacy" entrypoint's
-                  # non-hermetic default.
-                  system = null;
-                } // args
-              );
-          })
-        ];
 
       nixpkgs = originNixpkgs;
       # lib = originLib.extend (self: super: {
