@@ -3,38 +3,32 @@
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
 { config, pkgs, lib, ... }:
+let
+  inherit (lib.modules) mkForce;
+in
 {
   imports =
     [
       # Include the results of the hardware scan.
       ./hardware-configuration.nix
       ./virtualisation.nix
-      ./printing.nix
-      ./nvidia.nix
     ];
+
+  kyaru.enable = true;
   kyaru.desktop.enable = true;
-  networking.networkmanager.enable = false;
-  networking.useNetworkd = true;
-  networking.interfaces.eno1.useDHCP = true;
-  # networking.interfaces.eno2.useDHCP = true;
-  networking.interfaces.enp0s20f0u4u2c2.useDHCP = true;
+  virtualisation.docker.enable = true;
+  virtualisation.podman.enable = true;
+  # virtualisation.docker.rootless.enable = true;
 
-  # Enable desktop, but do not start automatically
-  services.xserver.autorun = false;
-  # modules/services/misc/graphical-desktop.nix
-  systemd.defaultUnit = lib.mkForce "multi-user.target";
-
-  # Also use systemd-networkd instead of networkmanagger
-  boot.kernelParams = [
-    "console=ttyS1,115200n8"
-  ];
-  boot.kernelPackages = pkgs.linuxPackages_latest;
-
+  # Filesystem
   fileSystems = {
-    # "/".options = [ ];
-    # "/home".options = [ ];
-    "/nix".options = [ "noatime" ];
+    "/".options = [ "compress=zstd" ];
+    "/home".options = [ "compress=zstd" ];
+    "/nix".options = [ "compress=zstd" "noatime" ];
+    "/swap".options = [ "noatime" ];
   };
+
+  swapDevices = [{ device = "/swap/swapfile"; }];
 
   # Lanzaboote currently replaces the systemd-boot module.
   # This setting is usually set to true in configuration.nix
@@ -44,20 +38,42 @@
   boot.loader.systemd-boot.enable = false;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  system.autoUpgrade.enable = true;
-  hardware.cpu.intel.updateMicrocode = true;
+  boot.kernelModules = [
+    "nft_tproxy"
+    "nft_socket"
+    "amdgpu"
+  ];
+
+  # Use latest kernel
+  boot.kernelPackages = pkgs.linuxPackages_latest;
+
+  services.fwupd.enable = true;
+
+  # For AMD
+  hardware.graphics = {
+    enable = true;
+    extraPackages = with pkgs; [
+      rocm-opencl-icd
+      rocm-opencl-runtime
+      amdvlk
+    ];
+  };
+  hardware.cpu.amd.updateMicrocode = true;
+  services.xserver.videoDrivers = [ "amdgpu" ];
 
   # Set your time zone.
   time.timeZone = "Asia/Taipei";
 
+  # Enable CUPS to print documents.
+  # services.printing.enable = true;
+
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.kyaru = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "libvirtd" "adbusers" "wireshark" "podman" "i2c" "scanner" "lp" ]; # Enable ‘sudo’ for the user.
+    extraGroups = [ "wheel" "networkmanager" "libvirtd" "adbusers" ]; # Enable ‘sudo’ for the user.
     packages = with pkgs; [
       firefox
-      tdesktop
-      nil
+      telegram-desktop
     ];
     shell = pkgs.fish;
     description = "百地 希留耶";
@@ -68,74 +84,41 @@
   # $ nix search wget
   environment.systemPackages = with pkgs; [ ];
 
+  # Programs
+  programs.kdeconnect.enable = true;
+
   # List services that you want to enable:
-  # Enable the OpenSSH daemon.
-  # Remote access
-  # RDP
-  services.xrdp.enable = true;
+  system.autoUpgrade.enable = true;
 
   # Networking
   hardware.bluetooth.enable = true;
-  services.tailscale.enable = true;
-  services.cloudflared.enable = true;
   networking = {
-    firewall = {
-      enable = true;
-      allowedTCPPorts = [
-        443
-        # rdp
-        3389
-        # testing
-        8964
-        3090
-      ];
-      allowedUDPPorts = [
-        # UPnP
-        1900
-        # rdp?
-        3389
-        # tailscale
-        41641
-        # stun
-        3478
-        # testing
-        8964
-        3090
-      ];
-    };
-    # hosts = {
-    #   "151.101.66.217" = ["cache.nixos.org" "channels.nixos.org"];
-    # };
     nat = {
       enable = true;
       internalInterfaces = [ "tailscale0" ];
     };
+    networkmanager.dispatcherScripts = [
+      {
+        type = "pre-up";
+        source = pkgs.writeText "enableGroHook" ''
+          if [[ "$DEVICE_IFACE" == wlp* ]] || [[ "$DEVICE_IFACE" == enp* ]]; then
+            ${pkgs.ethtool}/bin/ethtool -K "$DEVICE_IFACE" rx-udp-gro-forwarding on rx-gro-list off
+            >&2 echo "Enable GRO for $DEVICE_IFACE finished with exit code $?"
+          fi
+        '';
+      }
+    ];
   };
   boot.kernel.sysctl = {
     "net.ipv4.conf.all.forwarding" = true;
     "net.ipv6.conf.all.forwarding" = true;
   };
 
+  # Wireshark
   programs.wireshark.enable = true;
-  services.telegraf.enable = true;
 
-  services.vlmcsd = {
-    enable = true;
-    package = pkgs.kyaru.vlmcsd;
-    openFirewall = true;
-  };
-
-  # containers
-  virtualisation.docker.enable = true;
-  virtualisation.podman.enable = true;
-  virtualisation.containers.enable = true;
-  programs.singularity.enable = true;
-
-  # extraRules
-  services.udev.extraRules = ''
-    # Brother P-Touch PT-P910BT
-    SUBSYSTEM=="usb", ATTRS{idVendor}=="04f9", ATTRS{idProduct}=="20c7", TAG+="uaccess", MODE="0660"
-  '';
+  # fail to compile
+  # services.guix.enable = true;
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions

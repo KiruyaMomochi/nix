@@ -12,6 +12,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    systems = {
+      url = "github:nix-systems/default";
+    };
+
     lanzaboote = {
       url = "github:nix-community/lanzaboote";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -39,12 +43,12 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
   };
 
-  outputs = inputs@{ self, flake-parts, deploy-rs, haumea, ... }:
+  outputs = inputs@{ self, flake-parts, deploy-rs, systems, haumea, ... }:
     let
-      inherit (lib.kyaru.nixos) mapHosts;
-      inherit (lib.kyaru.packages) mapPackages;
-      inherit (lib.kyaru.modules) mapModules;
-      inherit (lib.attrsets) attrValues optionalAttrs;
+      # inherit (lib.kyaru.nixos) mapHosts;
+      # inherit (lib.kyaru.packages) mapPackages;
+      # inherit (lib.kyaru.modules) mapModules;
+      inherit (nixpkgs.lib.attrsets) attrValues optionalAttrs unionOfDisjoint;
 
       mkPkgs = pkgs: system: import pkgs {
         inherit system;
@@ -52,7 +56,7 @@
       };
 
       # https://github.com/NixOS/nixpkgs/pull/157056
-      lib-kyaru = import ./lib { inherit inputs lib; };
+      # lib-kyaru = import ./lib { inherit inputs lib; };
       system = "x86_64-linux";
 
       # Patching nixpkgs
@@ -92,9 +96,9 @@
         ];
 
       nixpkgs = originNixpkgs;
-      lib = originLib.extend (self: super: {
-        kyaru = lib-kyaru;
-      });
+      # lib = originLib.extend (self: super: {
+      #   kyaru = lib-kyaru;
+      # });
     in
     # top-level module definitiom
     flake-parts.lib.mkFlake
@@ -102,11 +106,36 @@
         inherit inputs;
       }
       # module options
-      ({ withSystem, ... }: {
-        flake = {
-          inherit inputs lib;
+      ({ withSystem, flake-parts-lib, ... }: {
+        systems = import systems;
+        debug = true;
 
-          nixosConfigurations = mapHosts ./hosts { };
+        imports =
+          let
+            modules = inputs.haumea.lib.load {
+              src = ./src/flake-parts;
+              loader = args: path: flake-parts-lib.importApply path args;
+              inputs = {
+                inherit withSystem;
+                flake = self;
+              };
+            };
+            # parsePerSystem = module: {
+            #   perSystem = module;
+            # };
+            liftedModules =
+              if modules ? "perSystem" then
+                (
+                  unionOfDisjoint
+                    (builtins.removeAttrs modules [ "perSystem" ])
+                    # (builtins.map parsePerSystem (builtins.attrValues attrs.perSystem))
+                    (modules.perSystem)
+                ) else modules;
+          in
+          builtins.attrValues liftedModules;
+
+        flake = {
+          inherit inputs;
 
           # https://github.com/nix-community/home-manager/pull/3969
           homeConfigurations =
@@ -124,7 +153,10 @@
               kyaru = kyaru-headless;
               kyaru-headless = makeOverridableHomeManagerConfig {
                 pkgs = mkPkgs nixpkgs system;
-                extraSpecialArgs = { inherit inputs lib-kyaru; };
+                extraSpecialArgs = {
+                  inherit inputs;
+                  lib-kyaru = { };
+                };
                 modules = [
                   inputs.vscode-server.nixosModules.home
                   ./home.nix
@@ -139,8 +171,6 @@
                 }];
               });
             };
-
-          nixosModules = mapModules ./modules import;
 
           deploy.nodes =
             let
@@ -157,32 +187,11 @@
             in
             builtins.mapAttrs (_: mkDeployConfig) self.nixosConfigurations;
 
-          homeModules = mapModules ./modules/home import;
-
-          overlay = self.overlays.default;
-
-          overlays = {
-            default = (final: prev: rec {
-              kyaru = mapPackages final { };
-              slirp4netns = prev.slirp4netns.overrideAttrs (oldAttrs: {
-                patches = (oldAttrs.patches or [ ]) ++ [
-                  ./packages/slirp4netns.patch
-                ];
-              });
-              pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
-                (
-                  python-final: python-prev: { }
-                )
-              ];
-            });
-          };
+          # homeModules = mapModules ./modules/home import;
 
           templates = import ./templates;
           checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
         };
-        systems = [
-          "x86_64-linux"
-        ];
         perSystem = (
           # module arguments
           { config, self', inputs', pkgs, deployPkgs, system, ... }:
@@ -217,7 +226,6 @@
                 deployPkgs.deploy-rs.deploy-rs
               ];
             };
-            packages = (mapPackages pkgs { });
           }
         );
       });

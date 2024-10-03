@@ -1,11 +1,11 @@
 { config, pkgs, lib, ... }:
 let
   inherit (lib.modules) mkDefault mkMerge mkIf;
-  inherit (lib.options) mkOption;
+  inherit (lib.options) mkOption mkEnableOption;
 in
 {
   options = {
-    # kyaru.vps.user.enable = mkEnableOption (lib.mdDoc "Enable the VPS user");
+    kyaru.vps.enable = mkEnableOption "Enablt the VPS config";
     kyaru.vps.user.enable = mkOption {
       type = lib.types.bool;
       default = true;
@@ -19,7 +19,7 @@ in
     };
   };
 
-  config = mkMerge [
+  config = mkIf config.kyaru.vps.enable (mkMerge [
     {
       # Use the GRUB 2 boot loader.
       boot.loader.grub.enable = mkDefault true;
@@ -69,5 +69,5 @@ in
         nix.settings.trusted-users = [ username ];
       }
     )
-  ];
+  ]);
 }

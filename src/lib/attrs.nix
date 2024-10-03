@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ ... }:
 {
   /*
     Like `mapAttrs'`, but any null results are removed.

@@ -1,8 +1,8 @@
-{ self, lib, ... }:
+{ self, super, lib, ... }:
 let
   inherit (lib.attrsets) nameValuePair filterAttrs mapAttrs';
   inherit (lib.strings) hasPrefix hasSuffix removeSuffix;
-  inherit (self.attrs) filterMapAttrs';
+  inherit (super.attrs) filterMapAttrs';
 in
 {
   /*
@@ -62,7 +62,7 @@ in
             then nameValuePair filename (fn path)
             # Recurse into directories
             else if type == "directory"
-            then nameValuePair filename (self.modules.mapModulesRecursive path fn)
+            then nameValuePair filename (self.mapModulesRecursive path fn)
             # Add regular files ending with .nix
             else if type == "regular" && filename != "default.nix" && hasSuffix ".nix" filename
             then nameValuePair (removeSuffix ".nix" filename) (fn path)

@@ -2,6 +2,12 @@
 
 For all my hosts see [hosts](hosts/README.md).
 
+## Concept
+
+The basic idea is:
+
+
+
 ## TODO
 
 - [ ] https://tailscale.com/kb/1320/performance-best-practices#ethtool-configuration
@@ -14,6 +20,7 @@ For all my hosts see [hosts](hosts/README.md).
 ## References
 
 - [hlissner/dotfiles](https://github.com/hlissner/dotfiles)
+- [pedorich-n/home-server-nixos](https://github.com/pedorich-n/home-server-nixos)
 
 ## Old way to handle sops secrets in-place
 
