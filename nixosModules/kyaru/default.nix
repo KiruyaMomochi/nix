@@ -141,6 +141,12 @@ in
     nix.channel.enable = false; # remove nix-channel related tools & configs, we use flakes instead.
     nix.package = pkgs.nixVersions.latest;
 
+    nix.registry.nixpkgs-unstable = {
+      from.id = "nixpkgs-unstable";
+      from.type = "indirect";
+      to = builtins.parseFlakeRef "github:NixOS/nixpkgs/nixos-unstable";
+    };
+
     # but NIX_PATH is still used by many useful tools, so we set it to the same value as the one used by this flake.
     # Make `nix repl '<nixpkgs>'` use the same nixpkgs as the one used by this flake.
     environment.etc."nix/inputs/nixpkgs".source = "${inputs.nixpkgs}";
