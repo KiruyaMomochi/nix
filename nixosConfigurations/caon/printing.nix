@@ -64,16 +64,16 @@
   # https://nixos.wiki/wiki/Samba#Printer_sharing
   services.samba = {
     enable = true;
-    package = pkgs.sambaFull;
+    package = pkgs.sambaFull.override (oldAttrs: { enableCephFS = false; });
     openFirewall = true;
-    securityType = "user";
 
-    extraConfig = ''
-      load printers = yes
-      printing = cups
-      printcap name = cups
-    '';
-    shares = {
+    settings = {
+      global = {
+        "load printers" = "yes";
+        "printing" = "cups";
+        "printcap name" = "cups";
+        security = "user";
+      };
       printers = {
         comment = "All Printers";
         path = "/var/spool/samba";
