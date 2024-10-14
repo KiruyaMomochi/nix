@@ -75,14 +75,14 @@ in
       firefox
       telegram-desktop
     ];
-    shell = pkgs.fish;
+    shell = pkgs.nushell;
     description = "百地 希留耶";
   };
   nix.settings.trusted-users = [ "kyaru" ];
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
-  environment.systemPackages = with pkgs; [ ];
+  environment.systemPackages = with pkgs; [ nushell ];
 
   # Programs
   programs.kdeconnect.enable = true;

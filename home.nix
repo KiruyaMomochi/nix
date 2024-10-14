@@ -167,6 +167,16 @@
   # top
   programs.htop.enable = true;
 
+  # shell completion
+  programs.carapace.enable = true;
+  programs.nushell = {
+    enable = true;
+    # https://github.com/nushell/nushell/blob/main/crates/nu-utils/src/sample_config/default_config.nu
+    configFile.source = ./homeModules/nushell/config.nu;
+    # https://github.com/nushell/nushell/blob/main/crates/nu-utils/src/sample_config/default_env.nu
+    envFile.source = ./homeModules/nushell/env.nu;
+  };
+
   # editor
   programs.helix =
     {
