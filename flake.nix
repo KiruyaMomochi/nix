@@ -50,11 +50,6 @@
       # inherit (lib.kyaru.modules) mapModules;
       inherit (nixpkgs.lib.attrsets) attrValues optionalAttrs unionOfDisjoint;
 
-      mkPkgs = pkgs: system: import pkgs {
-        inherit system;
-        config = import ./nixpkgs-config.nix;
-        overlays = [ self.overlays.default ];
-      };
 
       # https://github.com/NixOS/nixpkgs/pull/157056
       # lib-kyaru = import ./lib { inherit inputs lib; };
@@ -113,101 +108,6 @@
                 ) else modules;
           in
           builtins.attrValues liftedModules;
-
-        flake = {
-          inherit inputs;
-
-          # https://github.com/nix-community/home-manager/pull/3969
-          homeConfigurations =
-            let
-              # TODO: is it possible to make it contains self?
-              # inherit (lib.fixedPoints) extends;
-              # makeOverridableHomeManagerConfig
-              homeManagerConfiguration = inputs.home-manager.lib.homeManagerConfiguration;
-              makeOverridableHomeManagerConfig = config:
-                (homeManagerConfiguration config) // {
-                  override = f: makeOverridableHomeManagerConfig (config // f config);
-                };
-            in
-            rec {
-              kyaru = kyaru-headless;
-              kyaru-headless = makeOverridableHomeManagerConfig {
-                pkgs = mkPkgs nixpkgs system;
-                extraSpecialArgs = {
-                  inherit inputs;
-                  lib-kyaru = { };
-                };
-                modules = [
-                  inputs.vscode-server.nixosModules.home
-                  ./home.nix
-                ] ++ (attrValues inputs.self.homeModules);
-              };
-              kyaru-desktop = kyaru-headless.override (oldConfig: {
-                modules = oldConfig.modules ++ [{
-                  programs.kyaru = {
-                    desktop.enable = true;
-                    kde.enable = true;
-                  };
-                }];
-              });
-            };
-
-          deploy.nodes =
-            let
-              mkDeployConfig = nixos:
-                withSystem (nixos.pkgs.system) ({ deployPkgs, ... }:
-                  {
-                    hostname = nixos.config.networking.hostName;
-                    profiles.system = {
-                      user = "root";
-                      sshOpts = [ "-A" "-t" ];
-                      path = deployPkgs.deploy-rs.lib.activate.nixos nixos;
-                    } // (optionalAttrs (nixos.config.kyaru.vps.user ? name) { profiles.system.sshUser = nixos.config.kyaru.vps.user.name; });
-                  });
-            in
-            builtins.mapAttrs (_: mkDeployConfig) self.nixosConfigurations;
-
-          # homeModules = mapModules ./modules/home import;
-
-          templates = import ./templates;
-          checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) deploy-rs.lib;
-        };
-        perSystem = (
-          # module arguments
-          { config, self', inputs', pkgs, deployPkgs, system, ... }:
-          {
-            _module.args = {
-              pkgs =
-                import nixpkgs {
-                  inherit system;
-                  overlays = [ self.overlays.default ];
-                  config = import ./nixpkgs-config.nix;
-                };
-
-              # https://github.com/serokell/deploy-rs/blob/3867348fa92bc892eba5d9ddb2d7a97b9e127a8a/README.md?plain=1#L102-L107
-              deployPkgs = import nixpkgs {
-                inherit system;
-                overlays = [
-                  deploy-rs.overlay
-                  (self: super: { deploy-rs = { inherit (pkgs) deploy-rs; lib = super.deploy-rs.lib; }; })
-                ];
-              };
-            };
-
-            formatter = pkgs.nixpkgs-fmt;
-            devShells.default = pkgs.mkShell {
-              packages = with pkgs; [
-                sops
-                age
-                ssh-to-age
-                ssh-to-pgp
-                jq
-                yq
-                deployPkgs.deploy-rs.deploy-rs
-              ];
-            };
-          }
-        );
       });
   nixConfig = {
     extra-substituters = [

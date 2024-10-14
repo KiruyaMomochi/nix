@@ -1,7 +1,8 @@
-{ self, super, root, ... }: { inputs, pkgs, ... }:
+{ self, super, root, ... }: { inputs, ... }:
 # TODO: support patching package with only .patch files?
 let
   mkCallPackaage = pkgs: set: {
+    # default = a: b: (builtins.trace pkgs (pkgs.callPackage a b));
     default = pkgs.callPackage;
     qt5 = pkgs.libsForQt5.callPackage;
   }."${set}";
@@ -37,7 +38,12 @@ let
   };
 in
 {
-  perSystem = {
+  perSystem = { system, pkgs, ... }: {
+    _module.args.pkgs = import inputs.nixpkgs {
+      inherit system;
+      overlays = [ inputs.self.overlays.default ];
+      config = import ../../nixpkgs-config.nix;
+    };
     packages = mkPackages pkgs;
   };
   flake = rec {

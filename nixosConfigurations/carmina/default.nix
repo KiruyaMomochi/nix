@@ -11,6 +11,7 @@
       ./virtualization.nix
     ];
 
+  kyaru.enable = true;
   kyaru.desktop.enable = true;
 
   fileSystems = {
