@@ -9,8 +9,11 @@
     [
       # Include the results of the hardware scan.
       ./hardware-configuration.nix
-      ../modules/vps.nix
     ];
+
+
+  kyaru.enable = true;
+  kyaru.vps.enable = true;
 
   # Define on which hard drive you want to install Grub.
   boot.loader.grub.device = "/dev/vda"; # or "nodev" for efi only
