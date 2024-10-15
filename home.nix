@@ -23,7 +23,7 @@
 
 
   # Packages that should be installed to the user profile.
-  home.packages = with pkgs; [
+  home.packages = (with pkgs; [
     # utils
     bat # cat
     fd # find
@@ -71,7 +71,12 @@
     rclone
 
     awscli2
-  ];
+  ]) ++ (with pkgs.nushellPlugins; [
+    polars
+    formats
+    gstat
+    query
+  ]);
 
   home.sessionVariables = {
     EDITOR = "${pkgs.helix}/bin/hx";
