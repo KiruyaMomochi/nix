@@ -24,7 +24,7 @@
   };
   perSystem = (
     # module arguments
-    { pkgs, ... }:
+    { pkgs, deployPkgs, ... }:
     {
       formatter = pkgs.nixpkgs-fmt;
       devShells.default = pkgs.mkShell {
