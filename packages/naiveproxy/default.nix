@@ -10,12 +10,12 @@
 , python3
 }:
 let
-  version = "128.0.6613.40-1";
+  version = "130.0.6723.40-1";
   naiveSrc = fetchFromGitHub {
     repo = "naiveproxy";
     owner = "klzgrad";
     rev = "v${version}";
-    sha256 = "sha256-dOaGjpfrNlVxbf6BHiEqJkpPIbwWC0Gl2LaKzu0DUxA=";
+    sha256 = "sha256-6zpJPkXgaZd1/bSTWiF4R1uOTc32nW8XRhAL5xCoa9w=";
   };
   packageName = self.packageName;
   # Make chromium library functions use the correct version
@@ -162,6 +162,17 @@ let
       gnFlags = {
         fatal_linker_warnings = false;
 
+        is_cronet_build = true;
+        # # LLVM 12: unsupported instrumentation profile format version
+        # chrome_pgo_phase = 2;
+        # # https://github.com/NixOS/nixpkgs/pull/101786
+        # pgo_data_path =
+        #   builtins.toString (builtins.fetchurl {
+        #     # https://github.com/chromium/chromium/blob/130.0.6723.40/chrome/build/linux.pgo.txt
+        #     url = "https://commondatastorage.googleapis.com/chromium-optimization-profiles/pgo_profiles/chrome-linux-6723-1728387217-9f5646f93bc4ba3a2a9310010e81c26b70db13b1-f044eaa32696eb5c9c4d3ffede525cf50c8cc3e9.profdata";
+        #     sha256 = "sha256:1libr521l97y6z22dmsxzwg68i6kmmhsha7a176fsq6xbwi40whm";
+        #   });
+
         enable_base_tracing = false;
         use_udev = false;
         use_aura = false;
@@ -172,14 +183,14 @@ let
         use_glib = false;
 
         disable_file_support = true;
+        disable_zstd_filter = false;
         enable_websockets = false;
         use_kerberos = false;
         enable_mdns = false;
         enable_reporting = false;
         include_transport_security_state_preload_list = false;
         use_nss_certs = false;
-
-        enable_js_protobuf = false;
+        enable_bracketed_proxy_uris = true;
       } // (lib.optionalAttrs stdenv.hostPlatform.isx86 {
         # https://github.com/klzgrad/naiveproxy/commit/f5034cd7da67f063724dc27fdf0a42384db84379
         use_cfi_icall = false;
