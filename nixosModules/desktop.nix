@@ -147,6 +147,8 @@ in
         # boot.kernelModules = [ "ddcci_backlight" ];
 
         programs.nix-ld.enable = true;
+
+        programs.localsend.enable = true;
       }
       (mkIf (cfg.environment == "gnome") {
         # GNOME
