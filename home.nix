@@ -119,7 +119,10 @@
     ];
 
     delta.enable = true;
-    lfs.enable = true;
+    lfs = {
+      enable = true;
+      skipSmudge = true;
+    };
     extraConfig = {
       init.defaultBranch = "main";
     };
