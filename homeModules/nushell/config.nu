@@ -896,3 +896,8 @@ $env.config = {
         }
     ]
 }
+
+const extra_config = $nu.default-config-dir | path join 'config.local.nu'
+if ($extra_config | path exists) {
+    source $extra_config
+}
