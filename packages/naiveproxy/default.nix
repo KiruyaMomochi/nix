@@ -210,6 +210,8 @@ let
         "https://github.com/chromium/chromium/commit/f2b43c18b8ecfc3ddc49c42c062d796c8b563984.patch"
         "https://github.com/chromium/chromium/commit/4ca70656fde83d2db6ed5a8ac9ec9e7443846924.patch"
         "https://github.com/chromium/chromium/commit/50d63ffee3f7f1b1b9303363742ad8ebbfec31fa.patch"
+        # rust std::hardware_destructive_interference_size
+        "https://github.com/chromium/chromium/commit/fc838e8cc887adbe95110045d146b9d5885bf2a9.patch"
       ];
       # From common.nix of nixpkgs
       patches =
