@@ -26,7 +26,7 @@ in
       (google-chrome.override {
         commandLineArgs = "--enable-features=WebUIDarkMode --force-dark-mode --disable-features=UserAgentClientHint";
       })
-      kyaru.qt5.goldendict-ng
+      goldendict-ng
       ddcui
       drawio
       remmina
