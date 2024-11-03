@@ -62,7 +62,7 @@
       tdesktop
       nil
     ];
-    shell = pkgs.fish;
+    shell = pkgs.nushell;
     description = "百地 希留耶";
   };
   nix.settings.trusted-users = [ "kyaru" ];
