@@ -2,8 +2,10 @@
 {
   imports = [
     ./hardware-configuration.nix
-    ../modules/vps.nix
   ];
+
+  kyaru.enable = true;
+  kyaru.vps.enable = true;
 
   boot.loader.grub.device = "/dev/vda"; # or "nodev" for efi only
   time.timeZone = "Europe/Amsterdam";
