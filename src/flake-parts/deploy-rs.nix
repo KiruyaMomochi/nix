@@ -20,13 +20,12 @@
               hostname = nixos.config.networking.hostName;
               profiles.system = {
                 user = "root";
-                sshOpts = [ "-A" "-t" ];
                 path = deployPkgs.deploy-rs.lib.activate.nixos nixos;
               } // (inputs.nixpkgs.lib.optionalAttrs
                 (nixos.config.kyaru.vps.user ? name)
                 { profiles.system.sshUser = nixos.config.kyaru.vps.user.name; });
             });
       in
-      builtins.mapAttrs (_: mkDeployConfig) self.nixosConfigurations;
+      builtins.mapAttrs (_: mkDeployConfig) inputs.self.nixosConfigurations;
   };
 }
