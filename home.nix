@@ -176,13 +176,25 @@
   programs.htop.enable = true;
 
   # shell completion
-  programs.carapace.enable = true;
+  programs.carapace = {
+    enable = true;
+    enableBashIntegration = false;
+    enableFishIntegration = false;
+    enableNushellIntegration = true;
+  };
+
   programs.nushell = {
     enable = true;
     # https://github.com/nushell/nushell/blob/main/crates/nu-utils/src/sample_config/default_config.nu
     configFile.source = ./homeModules/nushell/config.nu;
     # https://github.com/nushell/nushell/blob/main/crates/nu-utils/src/sample_config/default_env.nu
     envFile.source = ./homeModules/nushell/env.nu;
+    environmentVariables = {
+      CARAPACE_BRIDGES = (lib.strings.concatStringsSep "," [ "fish" "bash" "inshellisense" ]);
+      CARAPACE_EXCLUDES = (lib.strings.concatStringsSep "," [
+        "nix" # just use the one from fish/bash
+      ]);
+    };
   };
 
   # editor
