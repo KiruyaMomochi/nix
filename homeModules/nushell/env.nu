@@ -99,7 +99,7 @@ $env.NU_PLUGIN_DIRS = [
 
 # To load from a custom file you can use:
 # source ($nu.default-config-dir | path join 'custom.nu')
-const extra_env = $nu.default-config-dir | path join 'env.local.nu'
-if ($extra_env | path exists) {
-    source $extra_env
+const extra_config = $nu.default-config-dir | path join 'config.local.nu'
+if not ($extra_config | path exists) {
+    touch $extra_config
 }

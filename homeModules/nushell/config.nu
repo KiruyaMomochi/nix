@@ -901,9 +901,7 @@ $env.config = {
 }
 
 const extra_config = $nu.default-config-dir | path join 'config.local.nu'
-if ($extra_config | path exists) {
-    source $extra_config
-}
+source $extra_config
 
 def --env set-proxy [$proxy: string] {
     ["http", "https", "all"] | each { $in + "_proxy"} | append ($in | str upcase) | reduce --fold {} {|elm, acc| $acc | insert $elm $proxy} | load-env
