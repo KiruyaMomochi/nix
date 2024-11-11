@@ -209,6 +209,15 @@
           name = "nix";
           formatter = { command = "${pkgs.nixpkgs-fmt}/bin/nixpkgs-fmt"; };
         }
+        {
+          name = "sshclientconfig";
+          file-types = [
+            { glob = ".ssh/config"; }
+            { glob = ".ssh/config.d/*"; }
+            { glob = "/etc/ssh/ssh_config"; }
+            { glob = "/etc/ssh/ssh_config.d/*"; }
+          ];
+        }
       ];
     };
 
