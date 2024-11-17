@@ -225,7 +225,7 @@
   programs.zellij = {
     enable = true;
     settings = {
-      default_shell = "${config.programs.fish.package}/bin/fish";
+      default_shell = "${pkgs.nushell}/bin/nu";
     };
   };
 
