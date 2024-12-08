@@ -106,11 +106,7 @@ in
           monaspace
           sarasa-gothic
           roboto
-          (nerdfonts.override {
-            fonts = [
-              "Monaspace"
-            ];
-          })
+          nerd-fonts.monaspace
         ];
         fonts.fontDir.enable = true;
         fonts.enableDefaultPackages = true;
