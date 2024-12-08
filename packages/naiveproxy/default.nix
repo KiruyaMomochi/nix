@@ -10,18 +10,30 @@
 , python3
 }:
 let
-  version = "130.0.6723.40-1";
+  version = "131.0.6778.86-1";
+  hash = "sha256-SW6VJN61rm0jZDlrI13uNSoQC6LPhUZVnVJg98/P754=";
   naiveSrc = fetchFromGitHub {
     repo = "naiveproxy";
     owner = "klzgrad";
     rev = "v${version}";
-    sha256 = "sha256-6zpJPkXgaZd1/bSTWiF4R1uOTc32nW8XRhAL5xCoa9w=";
+    sha256 = hash;
   };
+
   packageName = self.packageName;
   # Make chromium library functions use the correct version
   mkChromiumDerivation = (chromium.override (previous: {
-    upstream-info = chromium.upstream-info // { inherit version; };
-  })).mkDerivation;
+    upstream-info = chromium.upstream-info // {
+      inherit version;
+      DEPS = builtins.removeAttrs chromium.upstream-info.DEPS [ "src" ];
+    };
+    # newScope = chromium: packagePath: overrideArgs: ((previous.newScope chromium) packagePath overrideArgs);
+  })).mkDerivation.override (previous: {
+    stdenv = previous.stdenv // {
+      mkDerivation = args: previous.stdenv.mkDerivation (args // {
+        gn = "${previous.gnChromium}/bin/gn";
+      });
+    };
+  });
 
   # Copied from https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/networking/browsers/chromium/common.nix
 
@@ -47,6 +59,8 @@ let
   };
 
   postPatch = ''
+    # Skipping isElectron patches from commit 8dd2f1a: fetch src from git instead of using release tarball
+  '' + ''
     # Workaround/fix for https://bugs.chromium.org/p/chromium/issues/detail?id=1313361:
     substituteInPlace BUILD.gn \
       --replace '"//infra/orchestrator:orchestrator_all",' ""
@@ -82,9 +96,9 @@ let
     fi
 
     # skip setuid_sandbox_host patch
+    # skip audio_sandbox_hook_linux patch
   '' + ''
     # chrome_paths does not exist
-    # clang-format directory does not exist
 
     # Add final newlines to scripts that do not end with one.
     # This is a temporary workaround until https://github.com/NixOS/nixpkgs/pull/255463 (or similar) has been merged,
@@ -228,6 +242,19 @@ let
 
       inherit postPatch;
 
+
+      # Upstream is using Google's src, so we remove it and use our own.
+      postUnpack = ''
+        cp -r $src/. src
+        chmod u+w -R src
+      '';
+
+      # Ignore nodejs
+      npmRoot = null;
+      npmDeps = null;
+      preConfigure = null;
+      nativeBuildInputs = lib.lists.reverseList (lib.lists.drop 2 (lib.lists.reverseList base.nativeBuildInputs));
+
       # See common.nix of nixpkgs
       buildPhase =
         let
@@ -249,7 +276,7 @@ let
         # This is to ensure expansion of $out.
         libExecPath="${libExecPath}"
         ${python3.pythonOnBuildForHost}/bin/python3 build/linux/unbundle/replace_gn_files.py --system-libraries ${toString gnSystemLibraries}
-        ${self.passthru.chromiumDeps.gn}/bin/gn gen --args=${lib.escapeShellArg patchedGnFlags} out/Release | tee gn-gen-outputs.txt
+        $gn gen --args=${lib.escapeShellArg patchedGnFlags} out/Release | tee gn-gen-outputs.txt
 
         # Fail if `gn gen` contains a WARNING.
         grep -o WARNING gn-gen-outputs.txt && echo "Found gn WARNING, exiting nix build" && exit 1
