@@ -1,0 +1,5 @@
+.#naiveproxy
+.#caddy-naive
+.#nixosConfigurations.caon.config.system.build.toplevel
+.#nixosConfigurations.elizabeth.config.system.build.toplevel
+.#homeConfigurations.kyaru.activation-script
