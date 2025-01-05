@@ -193,6 +193,7 @@
       CARAPACE_BRIDGES = (lib.strings.concatStringsSep "," [ "fish" "bash" "inshellisense" ]);
       CARAPACE_EXCLUDES = (lib.strings.concatStringsSep "," [
         "nix" # just use the one from fish/bash
+        "scp" # fish implementation is much better
       ]);
     };
   };
