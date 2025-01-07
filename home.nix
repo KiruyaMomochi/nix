@@ -34,7 +34,6 @@
     ripgrep # grep
     erdtree # tree and du
     choose # cut and sometimes awk
-    comma # quickly run command
     lurk # strace
     aria
     lnav
@@ -185,9 +184,9 @@
 
   programs.nushell = {
     enable = true;
-    # https://github.com/nushell/nushell/blob/main/crates/nu-utils/src/sample_config/default_config.nu
+    # # https://github.com/nushell/nushell/blob/main/crates/nu-utils/src/default_files/default_config.nu
     configFile.source = ./homeModules/nushell/config.nu;
-    # https://github.com/nushell/nushell/blob/main/crates/nu-utils/src/sample_config/default_env.nu
+    # # https://github.com/nushell/nushell/blob/main/crates/nu-utils/src/default_files/default_env.nu
     envFile.source = ./homeModules/nushell/env.nu;
     environmentVariables = {
       CARAPACE_BRIDGES = (lib.strings.concatStringsSep "," [ "fish" "bash" "inshellisense" ]);
@@ -196,6 +195,23 @@
         "scp" # fish implementation is much better
       ]);
     };
+    extraConfig = lib.strings.concatStringsSep "\n" [
+      ''
+        $env.config.hooks.command_not_found = { |cmd_name|
+          try {
+            let commands = (^"${config.programs.nix-index.package}/bin/nix-locate" --type x --type s --top-level --whole-name --at-root $"/bin/($cmd_name)" | lines | split column --collapse-empty " " name size type path)
+            if ($commands | is-empty) {
+              return null
+            }
+            let $pkgs = ($commands | get name | str join " ")
+            return (
+              $"(ansi $env.config.color_config.shape_external)($cmd_name)(ansi reset) " +
+              $"may be found in the following packages:\n($pkgs)"
+            )
+          }
+        }
+      ''
+    ];
   };
 
   # editor
@@ -229,6 +245,9 @@
       default_shell = "${pkgs.nushell}/bin/nu";
     };
   };
+
+  programs.nix-index-database.comma.enable = true;
+  programs.nix-index.enable = true;
 
   xdg.dataFile."fcitx5/rime/default.custom.yaml".source = (pkgs.formats.yaml { }).generate "default.custom.yaml" {
     patch = {
