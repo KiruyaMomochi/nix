@@ -28,6 +28,7 @@
           };
           modules = [
             inputs.vscode-server.nixosModules.home
+            inputs.nix-index-database.hmModules.nix-index
             ../../home.nix
           ] ++ (inputs.nixpkgs.lib.attrValues inputs.self.homeModules);
         };

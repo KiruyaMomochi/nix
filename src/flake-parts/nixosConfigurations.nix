@@ -24,8 +24,8 @@ let
         nixpkgs.overlays = [ inputs.self.overlay ];
         networking.hostName = mkDefault hostname;
       }
-      # all flake.nixosModules
       defaultConfig
+      # maybe import all flake.nixosModules here, but currently manually importing with default.nix
       ../../nixosModules/kyaru/default.nix
     ];
   };

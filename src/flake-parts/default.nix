@@ -1,9 +1,4 @@
 { self, super, root, ... }: { inputs, ... }: {
-  # flake.nixosModules = inputs.haumea.lib.load {
-  #   src = ../modules;
-  #   loader = args: path: import path;
-  #   transformer = [ inputs.haumea.lib.transformers.liftDefault ];
-  # };
   flake = {
     nixosModules = inputs.haumea.lib.load {
       src = ../../nixosModules;

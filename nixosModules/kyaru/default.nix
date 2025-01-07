@@ -9,6 +9,7 @@ in
 {
   imports = [
     inputs.sops-nix.nixosModules.sops
+    inputs.nix-index-database.nixosModules.nix-index
     # https://github.com/nix-community/lanzaboote/blob/master/docs/QUICK_START.md
     inputs.lanzaboote.nixosModules.lanzaboote
     ./vps.nix

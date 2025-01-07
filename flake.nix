@@ -3,6 +3,9 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nix-index-database.url = "github:nix-community/nix-index-database";
+    nix-index-database.inputs.nixpkgs.follows = "nixpkgs";
+
     nixpkgs-master.url = "github:NixOS/nixpkgs";
 
     deploy-rs.url = "github:serokell/deploy-rs";
@@ -48,11 +51,8 @@
       # inherit (lib.kyaru.nixos) mapHosts;
       # inherit (lib.kyaru.packages) mapPackages;
       # inherit (lib.kyaru.modules) mapModules;
-      inherit (nixpkgs.lib.attrsets) attrValues optionalAttrs unionOfDisjoint;
+      inherit (nixpkgs.lib.attrsets) unionOfDisjoint;
 
-
-      # https://github.com/NixOS/nixpkgs/pull/157056
-      # lib-kyaru = import ./lib { inherit inputs lib; };
       system = "x86_64-linux";
 
       # Patching nixpkgs
@@ -71,9 +71,6 @@
         };
 
       nixpkgs = originNixpkgs;
-      # lib = originLib.extend (self: super: {
-      #   kyaru = lib-kyaru;
-      # });
     in
     # top-level module definitiom
     flake-parts.lib.mkFlake
@@ -95,15 +92,11 @@
                 flake = self;
               };
             };
-            # parsePerSystem = module: {
-            #   perSystem = module;
-            # };
             liftedModules =
               if modules ? "perSystem" then
                 (
                   unionOfDisjoint
                     (builtins.removeAttrs modules [ "perSystem" ])
-                    # (builtins.map parsePerSystem (builtins.attrValues attrs.perSystem))
                     (modules.perSystem)
                 ) else modules;
           in
