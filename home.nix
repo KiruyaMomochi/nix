@@ -267,6 +267,11 @@
 
   services.vscode-server.enable = true;
 
+  # User directories
+  # https://wiki.archlinux.org/title/XDG_user_directories
+  # xdg.userDirs.enable = true;
+  xdg.userDirs.createDirectories = true;
+
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
 
