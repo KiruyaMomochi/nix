@@ -68,6 +68,7 @@ $env.config.color_config = {
 }
 
 $env.config.show_banner = false;
+$env.config.history.isolation = true;
 $env.config.history.file_format = "sqlite";
 $env.config.completions.algorithm = "fuzzy";
 
