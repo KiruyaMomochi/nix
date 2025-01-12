@@ -182,10 +182,11 @@
     enableNushellIntegration = true;
   };
   xdg.configFile."carapace/bridges.yaml".source =
-    (pkgs.formats.yaml {}).generate "bridges.yaml" {
+    (pkgs.formats.yaml { }).generate "bridges.yaml" {
       nix = "fish";
       ssh = "fish";
       scp = "fish";
+      rsync = "fish";
     };
 
   programs.nushell = {
@@ -198,7 +199,8 @@
       CARAPACE_BRIDGES = (lib.strings.concatStringsSep "," [ "fish" "bash" "inshellisense" ]);
       CARAPACE_EXCLUDES = (lib.strings.concatStringsSep "," [
         "nix" # just use the one from fish/bash
-        "scp" # fish implementation is much better
+        "scp"
+        "rsync" # fish implementation is much better
       ]);
     };
     extraConfig = lib.strings.concatStringsSep "\n" [
