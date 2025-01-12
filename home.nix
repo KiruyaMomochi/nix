@@ -181,6 +181,12 @@
     enableFishIntegration = false;
     enableNushellIntegration = true;
   };
+  xdg.configFile."carapace/bridges.yaml".source =
+    (pkgs.formats.yaml {}).generate "bridges.yaml" {
+      nix = "fish";
+      ssh = "fish";
+      scp = "fish";
+    };
 
   programs.nushell = {
     enable = true;
