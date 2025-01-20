@@ -12,6 +12,7 @@ in
     inputs.nix-index-database.nixosModules.nix-index
     # https://github.com/nix-community/lanzaboote/blob/master/docs/QUICK_START.md
     inputs.lanzaboote.nixosModules.lanzaboote
+    inputs.nixos-wsl.nixosModules.wsl
     ./vps.nix
     ../container.nix
     ../dendrite.nix

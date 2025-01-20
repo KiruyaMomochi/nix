@@ -1,4 +1,6 @@
 { self, super, root, ... }: { inputs, ... }: {
+  # We can also define custom flake attribute here
+  # https://flake.parts/define-custom-flake-attribute.html
   flake = {
     nixosModules = inputs.haumea.lib.load {
       src = ../../nixosModules;
@@ -11,6 +13,7 @@
     lib = inputs.haumea.lib.load {
       src = ../lib;
       inputs = {
+        inherit inputs;
         lib = inputs.nixpkgs.lib;
       };
     };

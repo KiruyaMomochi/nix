@@ -1,4 +1,4 @@
-{ self, super, root, ... }: { inputs, flake, ... }:
+{ self, super, root, flake, ... }: { inputs, ... }:
 let
   inherit (inputs.nixpkgs.lib) mkDefault filterAttrs;
 
@@ -11,13 +11,19 @@ let
     if depth == 0 then module
     else if depth == 1 then (module.default or null)
     else null;
+  # hosts.xxx -> nixosConfigurations/xxx/default.nix
   hosts = inputs.haumea.lib.load {
     src = ../../nixosConfigurations;
     loader = [ matcher ];
     transformer = [ transformer ];
   };
+
+  # TODO: refactor this to use src/lib/nixos.nix
+  systemOverride = {
+    "lucent-academy" = "aarch64-linux";
+  };
   mkSystem = hostname: defaultConfig: inputs.nixpkgs.lib.nixosSystem {
-    system = "x86_64-linux";
+    system = systemOverride.${hostname} or "x86_64-linux";
     specialArgs = { inherit inputs; };
     modules = [
       {

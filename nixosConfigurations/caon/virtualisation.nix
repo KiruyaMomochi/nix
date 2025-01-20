@@ -116,6 +116,7 @@ in
         Gateway = "192.168.87.1";
         DNS = "192.168.87.11";
         Domains = "corp.kyaru.bond";
+        UseRoutes = false;
         # IPMasquerade = "ipv4";
       };
     };

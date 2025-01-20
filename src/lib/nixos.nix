@@ -15,7 +15,7 @@ in
       specialArgs = { inherit inputs; };
       modules = [
         {
-          nixpkgs.overlays = [ inputs.self.overlay ];
+          nixpkgs.overlays = [ inputs.self.overlays.default ];
           networking.hostName = mkDefault (removeSuffix ".nix" (baseNameOf path));
         }
         (filterAttrs (name: value: name != "system") attrs)

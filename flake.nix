@@ -39,7 +39,7 @@
     vscode-server.url = "github:nix-community/nixos-vscode-server";
     # Windows subsystem for Linux support
     nixos-wsl = {
-      url = "github:nix-community/NixOS-WSL?ref=22.05-5c211b47";
+      url = "github:nix-community/NixOS-WSL";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -73,6 +73,7 @@
       nixpkgs = originNixpkgs;
     in
     # top-level module definitiom
+      # flake-parts docs: https://flake.parts/options/flake-parts.html
     flake-parts.lib.mkFlake
       {
         inherit inputs;
@@ -84,15 +85,27 @@
 
         imports =
           let
+            # haumea docs: https://nix-community.github.io/haumea/intro/getting-started.html
             modules = inputs.haumea.lib.load {
+              # each imported files have two arguments
+              # refer to ./src/flake-parts/default.nix for example
+              # first one is the `args` referenced int the `loader` line 
+              # second one is the module argument, which is "all module options" and "special args"
               src = ./src/flake-parts;
+              # importApply docs: https://flake.parts/define-module-in-separate-file.html#importapply
+              # args are: { self, super, root, flake, withSystem }
               loader = args: path: flake-parts-lib.importApply path args;
+              # additional args are defined here
               inputs = {
                 inherit withSystem;
                 flake = self;
               };
             };
+            # lift src/flake-parts/per-system/*.nix to the root
+            # this *only lift the directory layout*, does not touch the directory layout
             liftedModules =
+              # perSystem is a flake-parts attribute
+              # we want to bring them up
               if modules ? "perSystem" then
                 (
                   unionOfDisjoint
