@@ -12,6 +12,7 @@
         yq
         deployPkgs.deploy-rs.deploy-rs
         act
+        yaml-language-server
       ];
     };
   };
