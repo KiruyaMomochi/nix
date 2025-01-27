@@ -25,17 +25,6 @@
     { pkgs, deployPkgs, ... }:
     {
       formatter = pkgs.nixpkgs-fmt;
-      devShells.default = pkgs.mkShell {
-        packages = with pkgs; [
-          sops
-          age
-          ssh-to-age
-          ssh-to-pgp
-          jq
-          yq
-          deployPkgs.deploy-rs.deploy-rs
-        ];
-      };
     }
   );
 
