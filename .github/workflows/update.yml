@@ -1,0 +1,42 @@
+name: "Nix flake update"
+on:
+  pull_request:
+  push:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install AWS CLI
+      if: ${{ env.ACT }}
+      run: |
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+        unzip -q /tmp/awscliv2.zip -d /tmp
+        rm /tmp/awscliv2.zip
+        sudo /tmp/aws/install --update
+        rm -rf /tmp/aws/
+    - name: Setup AWS profile
+      env:
+        AWS_CREDENTIALS: ${{ secrets.aws_credentials }}
+        NIX_SECRET_KEY: ${{ secrets.nix_secret_key }}
+      run: |
+        aws configure set endpoint_url https://usc1.contabostorage.com
+        echo -n "$AWS_CREDENTIALS" > ~/.aws/credentials
+        mkdir -p ~/.config/nix
+        echo -n "$NIX_SECRET_KEY" > ~/.config/nix/secret-key
+        chmod 0600 ~/.aws/credentials ~/.config/nix/secret-key
+    - uses: cachix/install-nix-action@v27
+      with:
+        github_access_token: ${{ secrets.GITHUB_TOKEN }}
+        extra_nix_config: |
+          accept-flake-config = true
+    - uses: DeterminateSystems/magic-nix-cache-action@main
+      if: ${{ ! env.ACT }}
+      with:
+        diagnostic-endpoint: ""
+        use-flakehub: false
+    - name: Copy to S3
+      run: ./scripts/copy.sh
+    # - name: Build all targets
+    #   run: nix build ".#naiveproxy" ".#caddy-naive" ".#nixosConfigurations.caon.config.system.build.toplevel" ".#nixosConfigurations.elizabeth.config.system.build.toplevel" ".#homeConfigurations.kyaru.activation-script" -L
+    # - run: nix flake check
