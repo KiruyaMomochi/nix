@@ -247,6 +247,13 @@
       ];
     };
 
+  programs.starship = {
+    enable = true;
+    enableBashIntegration = false;
+    enableFishIntegration = false;
+    enableTransience = true;
+  };
+
   # tmux
   programs.zellij = {
     enable = true;
