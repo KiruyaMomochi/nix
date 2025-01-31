@@ -30,11 +30,6 @@ jobs:
         github_access_token: ${{ secrets.GITHUB_TOKEN }}
         extra_nix_config: |
           accept-flake-config = true
-    - uses: DeterminateSystems/magic-nix-cache-action@main
-      if: ${{ ! env.ACT }}
-      with:
-        diagnostic-endpoint: ""
-        use-flakehub: false
     - name: Copy to S3
       run: ./scripts/copy.sh
     # - name: Build all targets
