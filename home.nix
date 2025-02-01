@@ -219,6 +219,8 @@
             )
           }
         }
+
+        hide-env TRANSIENT_PROMPT_COMMAND_RIGHT
       ''
     ];
   };
@@ -251,8 +253,17 @@
     enable = true;
     enableBashIntegration = false;
     enableFishIntegration = false;
+    enableNushellIntegration = false;
     enableTransience = true;
+    settings = builtins.fromTOML (builtins.readFile ./homeModules/starship.toml);
   };
+  # https://starship.rs/guide/#%F0%9F%9A%80-installation
+  xdg.dataFile."nushell/vendor/autoload/starship.nu".source = pkgs.runCommand "starship.nu" {} ''
+    ${config.programs.starship.package}/bin/starship init nu > $out
+    echo '$env.PROMPT_INDICATOR = " \n> "' >> $out
+    echo '$env.TRANSIENT_PROMPT_INDICATOR = "> "' >> $out
+    echo '$env.TRANSIENT_PROMPT_COMMAND = ""' >> $out
+  '';
 
   # tmux
   programs.zellij = {
