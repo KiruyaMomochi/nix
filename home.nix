@@ -260,8 +260,7 @@
   # https://starship.rs/guide/#%F0%9F%9A%80-installation
   xdg.dataFile."nushell/vendor/autoload/starship.nu".source = pkgs.runCommand "starship.nu" {} ''
     ${config.programs.starship.package}/bin/starship init nu > $out
-    echo '$env.PROMPT_INDICATOR = " \n> "' >> $out
-    echo '$env.TRANSIENT_PROMPT_INDICATOR = "> "' >> $out
+    echo '$env.PROMPT_INDICATOR = "> "' >> $out
     echo '$env.TRANSIENT_PROMPT_COMMAND = ""' >> $out
   '';
 

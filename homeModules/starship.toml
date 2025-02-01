@@ -79,7 +79,7 @@ $env_var\
 $crystal\
 $custom\
 $sudo\
-$line_break\
+$line_break\r\
 $jobs\
 $battery\
 $os\
