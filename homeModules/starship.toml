@@ -89,6 +89,8 @@ $character"""
 
 right_format = "$cmd_duration$time$status"
 
+add_newline = false
+
 [aws]
 disabled = true
 
