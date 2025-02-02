@@ -87,8 +87,7 @@ $container\
 $shell\
 $character"""
 
-right_format = """
-$cmd_duration$time$status"""
+right_format = "$cmd_duration$time$status"
 
 [aws]
 disabled = true
