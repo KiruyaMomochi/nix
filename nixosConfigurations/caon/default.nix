@@ -32,6 +32,7 @@
     "console=ttyS1,115200n8"
   ];
   boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.loader.systemd-boot.edk2-uefi-shell.enable = true;
 
   fileSystems = {
     # "/".options = [ ];
