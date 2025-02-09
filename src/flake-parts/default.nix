@@ -9,6 +9,10 @@
     homeModules = inputs.haumea.lib.load {
       src = ../../homeModules;
       loader = inputs.haumea.lib.loaders.verbatim;
+      transformer = [
+        # load default only
+        (_: mod: if mod ? "default" then mod.default else mod)
+      ];
     };
     lib = inputs.haumea.lib.load {
       src = ../lib;
