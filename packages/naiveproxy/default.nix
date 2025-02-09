@@ -10,17 +10,19 @@
 , python3
 }:
 let
-  version = "131.0.6778.86-1";
+  version = "133.0.6943.49-1";
   hash = "sha256-SW6VJN61rm0jZDlrI13uNSoQC6LPhUZVnVJg98/P754=";
   naiveSrc = fetchFromGitHub {
     repo = "naiveproxy";
     owner = "klzgrad";
     rev = "v${version}";
-    sha256 = hash;
+    sha256 = "sha256-qSAQKsodsZZvXGmuUmBQifBr8OVDjW98W+irN2vPmYk=";
   };
 
   packageName = self.packageName;
+
   # Make chromium library functions use the correct version
+  # chroimum.mkDerivation (default.nix) -> callPackage common.nix
   mkChromiumDerivation = (chromium.override (previous: {
     upstream-info = chromium.upstream-info // {
       inherit version;
@@ -203,8 +205,10 @@ let
         enable_mdns = false;
         enable_reporting = false;
         include_transport_security_state_preload_list = false;
-        use_nss_certs = false;
+        enable_device_bound_sessions = false;
         enable_bracketed_proxy_uris = true;
+
+        use_nss_certs = false;
       } // (lib.optionalAttrs stdenv.hostPlatform.isx86 {
         # https://github.com/klzgrad/naiveproxy/commit/f5034cd7da67f063724dc27fdf0a42384db84379
         use_cfi_icall = false;
