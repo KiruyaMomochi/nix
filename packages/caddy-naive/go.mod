@@ -9,7 +9,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/alecthomas/chroma/v2 v2.14.0
 	github.com/aryann/difflib v0.0.0-20210328193216-ff5ff6dc229b
-	github.com/caddyserver/certmagic v0.21.5
+	github.com/caddyserver/certmagic v0.21.6
 	github.com/caddyserver/forwardproxy v0.0.0-00010101000000-000000000000
 	github.com/caddyserver/zerossl v0.1.3
 	github.com/dustin/go-humanize v1.0.1
@@ -157,4 +157,4 @@ require (
 	howett.net/plist v1.0.0 // indirect
 )
 
-replace github.com/caddyserver/forwardproxy => github.com/klzgrad/forwardproxy v0.0.0-20240421120909-b12c33ecb72c
+replace github.com/caddyserver/forwardproxy => github.com/klzgrad/forwardproxy v0.0.0-20250118002110-d62c80d3dd2c
