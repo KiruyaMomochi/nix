@@ -255,8 +255,9 @@
     enableFishIntegration = false;
     enableNushellIntegration = false;
     enableTransience = true;
-    settings = builtins.fromTOML (builtins.readFile ./homeModules/starship.toml);
+    settings = builtins.fromTOML (builtins.readFile ./homeModules/starship/config.toml);
   };
+  programs.kyaru.starship.presets = [ "nerd-font-symbols" ];
   # https://starship.rs/guide/#%F0%9F%9A%80-installation
   xdg.dataFile."nushell/vendor/autoload/starship.nu".source = pkgs.runCommand "starship.nu" {} ''
     ${config.programs.starship.package}/bin/starship init nu > $out
