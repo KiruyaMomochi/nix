@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
-set -x
+set -uxo pipefail
 
 SCRIPT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
 mapfile -t targets < "$SCRIPT_DIR/targets.txt"
 for target in "${targets[@]}"; do
   echo "::group::$target"
-  nix copy --print-build-logs --to 's3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key='$(realpath ~/.config/nix/secret-key) "$target"
+  normalized_target="${target//#/}"
+  normalized_target="${normalized_target//./}"
+  nix copy --print-build-logs --to 's3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key='$(realpath ~/.config/nix/secret-key) "$target" | tee "$normalized_target.log"
+  result=$?
+  if [ $result -ne 0 ]; then
+    echo "::error title=$target::build failed ($result)"
+  fi
   echo "::endgroup::"
 done
