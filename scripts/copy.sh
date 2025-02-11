@@ -2,6 +2,8 @@
 set -uxo pipefail
 
 SCRIPT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
+error_occurred=0
+
 mapfile -t targets < "$SCRIPT_DIR/targets.txt"
 for target in "${targets[@]}"; do
   echo "::group::$target"
@@ -11,6 +13,9 @@ for target in "${targets[@]}"; do
   result=$?
   if [ $result -ne 0 ]; then
     echo "::error title=$target::build failed ($result)"
+    error_occurred=1
   fi
   echo "::endgroup::"
 done
+
+exit "$error_occurred"
