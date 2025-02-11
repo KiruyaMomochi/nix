@@ -189,11 +189,19 @@
         ]
       },
       "locked": {
+<<<<<<< HEAD
         "lastModified": 1744919155,
         "narHash": "sha256-IJksPW32V9gid9vDxoloJMRk+YGjxq5drFHBFeBkKU8=",
         "owner": "nix-community",
         "repo": "home-manager",
         "rev": "72526a5f7cde2ef9075637802a1e2a8d2d658f70",
+=======
+        "lastModified": 1739284024,
+        "narHash": "sha256-eh7FiKPqrWF/EPwJ6lC7W/UJpDaoYKUo8YU+aGijB5w=",
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "rev": "59fe145f0bb7cfde99f148140a47a54deb8cc23f",
+>>>>>>> 5a1b52d (deps: update)
         "type": "github"
       },
       "original": {
@@ -214,11 +222,19 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
+<<<<<<< HEAD
         "lastModified": 1741442524,
         "narHash": "sha256-tVcxLDLLho8dWcO81Xj/3/ANLdVs0bGyCPyKjp70JWk=",
         "owner": "nix-community",
         "repo": "lanzaboote",
         "rev": "d8099586d9a84308ffedac07880e7f07a0180ff4",
+=======
+        "lastModified": 1739186342,
+        "narHash": "sha256-2j+sln9RwQn+g7J4GmdFFgvqXnLkvWBNMaUzONlkzUE=",
+        "owner": "nix-community",
+        "repo": "lanzaboote",
+        "rev": "3bdeebbc484a09391c4f0ec8a37bb77809426660",
+>>>>>>> 5a1b52d (deps: update)
         "type": "github"
       },
       "original": {
@@ -317,11 +333,19 @@
     },
     "nixpkgs-master": {
       "locked": {
+<<<<<<< HEAD
         "lastModified": 1744983335,
         "narHash": "sha256-rBniieqZEVGIIzl4GJqe70FEQSJQVQCkiamPO9XP3eQ=",
         "owner": "NixOS",
         "repo": "nixpkgs",
         "rev": "0b4a36dca180335d32944ee8ca3cbed7b262135e",
+=======
+        "lastModified": 1739284297,
+        "narHash": "sha256-pV5TJEpm8+o7zQFjzG8yz+i7yILVsA0M8mFn9cf1rao=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "b4744ad4dac6759775c19367afd19ceb6a0a6e49",
+>>>>>>> 5a1b52d (deps: update)
         "type": "github"
       },
       "original": {
@@ -431,11 +455,19 @@
         ]
       },
       "locked": {
+<<<<<<< HEAD
         "lastModified": 1744669848,
         "narHash": "sha256-pXyanHLUzLNd3MX9vsWG+6Z2hTU8niyphWstYEP3/GU=",
         "owner": "Mic92",
         "repo": "sops-nix",
         "rev": "61154300d945f0b147b30d24ddcafa159148026a",
+=======
+        "lastModified": 1739262228,
+        "narHash": "sha256-7JAGezJ0Dn5qIyA2+T4Dt/xQgAbhCglh6lzCekTVMeU=",
+        "owner": "Mic92",
+        "repo": "sops-nix",
+        "rev": "07af005bb7d60c7f118d9d9f5530485da5d1e975",
+>>>>>>> 5a1b52d (deps: update)
         "type": "github"
       },
       "original": {
