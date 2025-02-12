@@ -190,6 +190,7 @@
       },
       "locked": {
 <<<<<<< HEAD
+<<<<<<< HEAD
         "lastModified": 1744919155,
         "narHash": "sha256-IJksPW32V9gid9vDxoloJMRk+YGjxq5drFHBFeBkKU8=",
         "owner": "nix-community",
@@ -202,6 +203,13 @@
         "repo": "home-manager",
         "rev": "59fe145f0bb7cfde99f148140a47a54deb8cc23f",
 >>>>>>> 5a1b52d (deps: update)
+=======
+        "lastModified": 1739314552,
+        "narHash": "sha256-ggVf2BclyIW3jexc/uvgsgJH4e2cuG6Nyg54NeXgbFI=",
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "rev": "83bd3a26ac0526ae04fa74df46738bb44b89dcdd",
+>>>>>>> e32165f (deps: update again)
         "type": "github"
       },
       "original": {
@@ -334,6 +342,7 @@
     "nixpkgs-master": {
       "locked": {
 <<<<<<< HEAD
+<<<<<<< HEAD
         "lastModified": 1744983335,
         "narHash": "sha256-rBniieqZEVGIIzl4GJqe70FEQSJQVQCkiamPO9XP3eQ=",
         "owner": "NixOS",
@@ -346,6 +355,13 @@
         "repo": "nixpkgs",
         "rev": "b4744ad4dac6759775c19367afd19ceb6a0a6e49",
 >>>>>>> 5a1b52d (deps: update)
+=======
+        "lastModified": 1739370336,
+        "narHash": "sha256-hI57jIMdtLWFxyXLMwj2qD7pVluhtrSQzctZnW8PBcE=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "171b47803df9f2340b73aadd18e7f749a461dab0",
+>>>>>>> e32165f (deps: update again)
         "type": "github"
       },
       "original": {
@@ -356,11 +372,19 @@
     },
     "nixpkgs_2": {
       "locked": {
+<<<<<<< HEAD
         "lastModified": 1744463964,
         "narHash": "sha256-LWqduOgLHCFxiTNYi3Uj5Lgz0SR+Xhw3kr/3Xd0GPTM=",
         "owner": "NixOS",
         "repo": "nixpkgs",
         "rev": "2631b0b7abcea6e640ce31cd78ea58910d31e650",
+=======
+        "lastModified": 1739214665,
+        "narHash": "sha256-26L8VAu3/1YRxS8MHgBOyOM8xALdo6N0I04PgorE7UM=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "64e75cd44acf21c7933d61d7721e812eac1b5a0a",
+>>>>>>> e32165f (deps: update again)
         "type": "github"
       },
       "original": {
