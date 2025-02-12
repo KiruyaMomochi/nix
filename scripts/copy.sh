@@ -12,7 +12,7 @@ for target in "${targets[@]}"; do
   nix copy --print-build-logs --to 's3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key='$(realpath ~/.config/nix/secret-key) "$target" | tee "$normalized_target.log"
   result=$?
   if [ $result -ne 0 ]; then
-    echo "::error title=$target::build failed ($result)"
+    echo "::error title=build failed ($result)::$target"
     error_occurred=1
   fi
   echo "::endgroup::"
