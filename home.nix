@@ -170,6 +170,7 @@
   # ls
   programs.eza = {
     enable = true;
+    enableNushellIntegration = false;
   };
 
   # top
