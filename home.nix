@@ -260,7 +260,7 @@
   };
   programs.kyaru.starship.presets = [ "nerd-font-symbols" ];
   # https://starship.rs/guide/#%F0%9F%9A%80-installation
-  xdg.dataFile."nushell/vendor/autoload/starship.nu".source = pkgs.runCommand "starship.nu" {} ''
+  xdg.dataFile."nushell/vendor/autoload/starship.nu".source = pkgs.runCommand "starship.nu" { } ''
     ${config.programs.starship.package}/bin/starship init nu > $out
     echo '$env.PROMPT_INDICATOR = "> "' >> $out
     echo '$env.TRANSIENT_PROMPT_COMMAND = ""' >> $out
@@ -269,6 +269,9 @@
   # tmux
   programs.zellij = {
     enable = true;
+    enableBashIntegration = false;
+    enableFishIntegration = false;
+    enableZshIntegration = false;
     settings = {
       default_shell = "${pkgs.nushell}/bin/nu";
     };
