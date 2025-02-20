@@ -82,3 +82,5 @@ def --env set-proxy [$proxy: string] {
 def --env hide-proxy [] {
     ["http", "https", "all"] | each { $in + "_proxy"} | append ($in | str upcase) | hide-env ...$in
 }
+
+use std/dirs shells-aliases *
