@@ -21,7 +21,6 @@ in
       font-awesome
       zotero
       microsoft-edge
-      filelight
       keepassxc
       (google-chrome.override {
         commandLineArgs = "--enable-features=WebUIDarkMode --force-dark-mode --disable-features=UserAgentClientHint";
