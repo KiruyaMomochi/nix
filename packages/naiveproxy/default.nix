@@ -151,6 +151,8 @@ let
     "use_cups"
     "use_pulseaudio"
     "use_qt"
+    "use_qt5"
+    "use_qt6"
     "use_system_libffi"
     "v8_snapshot_toolchain"
 
