@@ -10,13 +10,13 @@
 , python3
 }:
 let
-  version = "133.0.6943.49-1";
+  version = "134.0.6998.39-1";
   hash = "sha256-SW6VJN61rm0jZDlrI13uNSoQC6LPhUZVnVJg98/P754=";
   naiveSrc = fetchFromGitHub {
     repo = "naiveproxy";
     owner = "klzgrad";
     rev = "v${version}";
-    sha256 = "sha256-qSAQKsodsZZvXGmuUmBQifBr8OVDjW98W+irN2vPmYk=";
+    sha256 = "sha256-1jjpqrWaenNDmSQ+QxbpUACD3ROEjaD5nj1HykeVYuA=";
   };
 
   packageName = self.packageName;
