@@ -78,7 +78,7 @@
   ]);
 
   home.sessionVariables = {
-    EDITOR = "${pkgs.helix}/bin/hx";
+    EDITOR = "${config.programs.helix.package}/bin/hx";
   };
 
   home.shellAliases = {
@@ -220,6 +220,8 @@
             )
           }
         }
+
+        $env.config.buffer_editor = "${config.programs.helix.package}/bin/hx"
 
         hide-env TRANSIENT_PROMPT_COMMAND_RIGHT
       ''
