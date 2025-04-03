@@ -89,6 +89,7 @@
       },
       "locked": {
 <<<<<<< HEAD
+<<<<<<< HEAD
         "lastModified": 1743550720,
         "narHash": "sha256-hIshGgKZCgWh6AYJpJmRgFdR3WUbkY04o82X05xqQiY=",
         "owner": "hercules-ci",
@@ -101,6 +102,13 @@
         "repo": "flake-parts",
         "rev": "f4330d22f1c5d2ba72d3d22df5597d123fdb60a9",
 >>>>>>> 198de89 (deps: update flakes and naiveproxy)
+=======
+        "lastModified": 1743550720,
+        "narHash": "sha256-hIshGgKZCgWh6AYJpJmRgFdR3WUbkY04o82X05xqQiY=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "c621e8422220273271f52058f618c94e405bb0f5",
+>>>>>>> a810a4d (deps: update nix flake lock)
         "type": "github"
       },
       "original": {
@@ -202,6 +210,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         "lastModified": 1744919155,
         "narHash": "sha256-IJksPW32V9gid9vDxoloJMRk+YGjxq5drFHBFeBkKU8=",
         "owner": "nix-community",
@@ -242,6 +251,13 @@
         "repo": "home-manager",
         "rev": "c657142e24a43ea1035889f0b0a7c24598e0e18a",
 >>>>>>> c75fdad (deps: update nix flake lock)
+=======
+        "lastModified": 1743648554,
+        "narHash": "sha256-23JFd+zd2GamTTdnGuFVeIg8x8C3hLpQJRh/PGTORzo=",
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "rev": "107352dde4ff3c01cb5a0b3fe17f5beef37215bc",
+>>>>>>> a810a4d (deps: update nix flake lock)
         "type": "github"
       },
       "original": {
@@ -309,6 +325,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         "lastModified": 1744518957,
         "narHash": "sha256-RLBSWQfTL0v+7uyskC5kP6slLK1jvIuhaAh8QvB75m4=",
         "owner": "nix-community",
@@ -335,6 +352,13 @@
         "repo": "nix-index-database",
         "rev": "2cfb4e1ca32f59dd2811d7a6dd5d4d1225f0955c",
 >>>>>>> c75fdad (deps: update nix flake lock)
+=======
+        "lastModified": 1743306489,
+        "narHash": "sha256-LROaIjSLo347cwcHRfSpqzEOa2FoLSeJwU4dOrGm55E=",
+        "owner": "nix-community",
+        "repo": "nix-index-database",
+        "rev": "b3696bfb6c24aa61428839a99e8b40c53ac3a82d",
+>>>>>>> a810a4d (deps: update nix flake lock)
         "type": "github"
       },
       "original": {
@@ -345,6 +369,7 @@
     },
     "nixos-hardware": {
       "locked": {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -374,6 +399,13 @@
         "repo": "nixos-hardware",
         "rev": "4f4d97d7b7be387286cc9c988760a7ebaa5be1f1",
 >>>>>>> c75fdad (deps: update nix flake lock)
+=======
+        "lastModified": 1743420942,
+        "narHash": "sha256-b/exDDQSLmENZZgbAEI3qi9yHkuXAXCPbormD8CSJXo=",
+        "owner": "NixOS",
+        "repo": "nixos-hardware",
+        "rev": "de6fc5551121c59c01e2a3d45b277a6d05077bc4",
+>>>>>>> a810a4d (deps: update nix flake lock)
         "type": "github"
       },
       "original": {
@@ -391,6 +423,7 @@
         ]
       },
       "locked": {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -420,6 +453,13 @@
         "repo": "NixOS-WSL",
         "rev": "bc827c2924c46f2344d3168fd82c6711aaceb610",
 >>>>>>> c75fdad (deps: update nix flake lock)
+=======
+        "lastModified": 1743125458,
+        "narHash": "sha256-0z+5AMacL2Eqo92fAd0eCWeKVecWrxPJwd5/BIfcdJ8=",
+        "owner": "nix-community",
+        "repo": "NixOS-WSL",
+        "rev": "394c77f61ac76399290bfc2ef9d47b1fba31b215",
+>>>>>>> a810a4d (deps: update nix flake lock)
         "type": "github"
       },
       "original": {
@@ -447,6 +487,7 @@
     "nixpkgs-lib": {
       "locked": {
 <<<<<<< HEAD
+<<<<<<< HEAD
         "lastModified": 1743296961,
         "narHash": "sha256-b1EdN3cULCqtorQ4QeWgLMrd5ZGOjLSLemfa00heasc=",
         "owner": "nix-community",
@@ -459,6 +500,13 @@
         "repo": "nixpkgs.lib",
         "rev": "147dee35aab2193b174e4c0868bd80ead5ce755c",
 >>>>>>> 198de89 (deps: update flakes and naiveproxy)
+=======
+        "lastModified": 1743296961,
+        "narHash": "sha256-b1EdN3cULCqtorQ4QeWgLMrd5ZGOjLSLemfa00heasc=",
+        "owner": "nix-community",
+        "repo": "nixpkgs.lib",
+        "rev": "e4822aea2a6d1cdd36653c134cacfd64c97ff4fa",
+>>>>>>> a810a4d (deps: update nix flake lock)
         "type": "github"
       },
       "original": {
@@ -469,6 +517,7 @@
     },
     "nixpkgs-master": {
       "locked": {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -514,6 +563,13 @@
         "repo": "nixpkgs",
         "rev": "317736b1556fc50cffc6462f47ce6d40501a1103",
 >>>>>>> c75fdad (deps: update nix flake lock)
+=======
+        "lastModified": 1743717387,
+        "narHash": "sha256-mu1wgMQ3cbYdzBqs7m0LxEKrBXM+Mm+1pgkkSK8YfuE=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "2910ed0faccc0fcab883d9cbdc41fcbe80c60ead",
+>>>>>>> a810a4d (deps: update nix flake lock)
         "type": "github"
       },
       "original": {
@@ -524,6 +580,7 @@
     },
     "nixpkgs_2": {
       "locked": {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -561,6 +618,13 @@
         "repo": "nixpkgs",
         "rev": "c80f6a7e10b39afcc1894e02ef785b1ad0b0d7e5",
 >>>>>>> c75fdad (deps: update nix flake lock)
+=======
+        "lastModified": 1743583204,
+        "narHash": "sha256-F7n4+KOIfWrwoQjXrL2wD9RhFYLs2/GGe/MQY1sSdlE=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "2c8d3f48d33929642c1c12cd243df4cc7d2ce434",
+>>>>>>> a810a4d (deps: update nix flake lock)
         "type": "github"
       },
       "original": {
@@ -658,6 +722,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         "lastModified": 1744669848,
         "narHash": "sha256-pXyanHLUzLNd3MX9vsWG+6Z2hTU8niyphWstYEP3/GU=",
         "owner": "Mic92",
@@ -684,6 +749,13 @@
         "repo": "sops-nix",
         "rev": "787afce414bcce803b605c510b60bf43c11f4b55",
 >>>>>>> c75fdad (deps: update nix flake lock)
+=======
+        "lastModified": 1743604509,
+        "narHash": "sha256-Hf5aYGP3hP+uNbcd4NrEMUAR+1o518uGzoeVyMzzJwo=",
+        "owner": "Mic92",
+        "repo": "sops-nix",
+        "rev": "4521de68fba1a36fae8caebce3d6e047179661f7",
+>>>>>>> a810a4d (deps: update nix flake lock)
         "type": "github"
       },
       "original": {
