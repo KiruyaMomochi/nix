@@ -211,6 +211,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         "lastModified": 1744919155,
         "narHash": "sha256-IJksPW32V9gid9vDxoloJMRk+YGjxq5drFHBFeBkKU8=",
         "owner": "nix-community",
@@ -258,6 +259,13 @@
         "repo": "home-manager",
         "rev": "107352dde4ff3c01cb5a0b3fe17f5beef37215bc",
 >>>>>>> a810a4d (deps: update nix flake lock)
+=======
+        "lastModified": 1744038920,
+        "narHash": "sha256-9a4V1wQXS8hXZtc7mRtz0qINkGW+C99aDrmXY6oYBFg=",
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "rev": "a4d8020820a85b47f842eae76ad083b0ec2a886a",
+>>>>>>> 45b2686 (deps: update nix flake lock)
         "type": "github"
       },
       "original": {
@@ -326,6 +334,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         "lastModified": 1744518957,
         "narHash": "sha256-RLBSWQfTL0v+7uyskC5kP6slLK1jvIuhaAh8QvB75m4=",
         "owner": "nix-community",
@@ -359,6 +368,13 @@
         "repo": "nix-index-database",
         "rev": "b3696bfb6c24aa61428839a99e8b40c53ac3a82d",
 >>>>>>> a810a4d (deps: update nix flake lock)
+=======
+        "lastModified": 1743911143,
+        "narHash": "sha256-4j4JPwr0TXHH4ZyorXN5yIcmqIQr0WYacsuPA4ktONo=",
+        "owner": "nix-community",
+        "repo": "nix-index-database",
+        "rev": "a36f6a7148aec2c77d78e4466215cceb2f5f4bfb",
+>>>>>>> 45b2686 (deps: update nix flake lock)
         "type": "github"
       },
       "original": {
@@ -523,6 +539,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         "lastModified": 1744983335,
         "narHash": "sha256-rBniieqZEVGIIzl4GJqe70FEQSJQVQCkiamPO9XP3eQ=",
         "owner": "NixOS",
@@ -570,6 +587,13 @@
         "repo": "nixpkgs",
         "rev": "2910ed0faccc0fcab883d9cbdc41fcbe80c60ead",
 >>>>>>> a810a4d (deps: update nix flake lock)
+=======
+        "lastModified": 1744110692,
+        "narHash": "sha256-IcYbK9E6kdvdQ3yXiGKXEGQJD9VF/BAFV8e1uLLNmXE=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "6b85966f1f09974ecfe7a56078847c0605c3e99a",
+>>>>>>> 45b2686 (deps: update nix flake lock)
         "type": "github"
       },
       "original": {
@@ -580,6 +604,7 @@
     },
     "nixpkgs_2": {
       "locked": {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -625,6 +650,13 @@
         "repo": "nixpkgs",
         "rev": "2c8d3f48d33929642c1c12cd243df4cc7d2ce434",
 >>>>>>> a810a4d (deps: update nix flake lock)
+=======
+        "lastModified": 1743964447,
+        "narHash": "sha256-nEo1t3Q0F+0jQ36HJfbJtiRU4OI+/0jX/iITURKe3EE=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "063dece00c5a77e4a0ea24e5e5a5bd75232806f8",
+>>>>>>> 45b2686 (deps: update nix flake lock)
         "type": "github"
       },
       "original": {
@@ -723,6 +755,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         "lastModified": 1744669848,
         "narHash": "sha256-pXyanHLUzLNd3MX9vsWG+6Z2hTU8niyphWstYEP3/GU=",
         "owner": "Mic92",
@@ -756,6 +789,13 @@
         "repo": "sops-nix",
         "rev": "4521de68fba1a36fae8caebce3d6e047179661f7",
 >>>>>>> a810a4d (deps: update nix flake lock)
+=======
+        "lastModified": 1744103455,
+        "narHash": "sha256-SR6+qjkPjGQG+8eM4dCcVtss8r9bre/LAxFMPJpaZeU=",
+        "owner": "Mic92",
+        "repo": "sops-nix",
+        "rev": "69d5a5a4635c27dae5a742f36108beccc506c1ba",
+>>>>>>> 45b2686 (deps: update nix flake lock)
         "type": "github"
       },
       "original": {
