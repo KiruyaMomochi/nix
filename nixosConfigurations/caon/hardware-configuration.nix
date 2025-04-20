@@ -26,10 +26,16 @@
   fileSystems."/boot" =
     { device = "/dev/disk/by-uuid/3EC2-DCF9";
       fsType = "vfat";
+      options = [ "fmask=0022" "dmask=0022" ];
     };
 
   fileSystems."/home" =
     { device = "/dev/disk/by-uuid/541d56ec-237c-447d-a238-1bf0420d9566";
+      fsType = "ext4";
+    };
+
+  fileSystems."/home/kyaru/Data/models" =
+    { device = "/dev/disk/by-uuid/ed85e2b6-eafc-4ae3-9d8d-7c151cb1dc57";
       fsType = "ext4";
     };
 
@@ -42,15 +48,9 @@
   # still possible to use this option, but it's recommended to use it in conjunction
   # with explicit per-interface declarations with `networking.interfaces.<interface>.useDHCP`.
   networking.useDHCP = lib.mkDefault true;
-  # networking.interfaces.eno1.useDHCP = lib.mkDefault true;
-  # networking.interfaces.tailscale0.useDHCP = lib.mkDefault true;
-  # networking.interfaces.virbr0.useDHCP = lib.mkDefault true;
-  # networking.interfaces.vmnet1.useDHCP = lib.mkDefault true;
-  # networking.interfaces.vmnet8.useDHCP = lib.mkDefault true;
-  # networking.interfaces.wlp1s0.useDHCP = lib.mkDefault true;
-  # networking.interfaces.zt5u474svu.useDHCP = lib.mkDefault true;
+  networking.interfaces.eno1.useDHCP = lib.mkDefault true;
+  networking.interfaces.eno2.useDHCP = lib.mkDefault true;
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
-  powerManagement.cpuFreqGovernor = lib.mkDefault "ondemand";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
 }
