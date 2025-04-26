@@ -4,7 +4,7 @@
 caddy.override {
   buildGoModule = args: buildGoModule (args // {
     pname = "caddy-naive";
-    vendorHash = "sha256-kXK5ps8+sfUU+nUH9pJZhawvuJs/7xSJJhy2dh12F24=";
+    vendorHash = "sha256-R6/DpbjBOYGx6pOAgOBARVAEvAiWdN+sUUWRiA6n/w8=";
 
     prePatch = ''
       sed -i -e '\!// plug in Caddy modules here!a _ "github.com/caddyserver/forwardproxy"' ./cmd/caddy/main.go
