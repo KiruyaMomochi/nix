@@ -21,6 +21,7 @@ cp -r "$tempdir/go.mod" "$tempdir/go.sum" .
 
 nixpkgs=$(nix eval -I "nixpkgs=flake:github:nixos/nixpkgs" --expr '<nixpkgs>' --impure)
 oldHash=$(nix eval --impure --raw --expr "((import ${nixpkgs} {}).callPackage ./default.nix {}).vendorHash")
+# TODO: may not be the real hash, need inspect
 newHash=$(nurl -e "((import ${nixpkgs} {}).callPackage (import ./default.nix) { } ).goModules")
 echo "${oldHash} -> ${newHash}"
 sed -i "s|vendorHash = \"${oldHash}\"|vendorHash = \"${newHash}\"|" ./default.nix
