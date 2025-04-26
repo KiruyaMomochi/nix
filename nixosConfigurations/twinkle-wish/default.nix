@@ -15,6 +15,17 @@
   kyaru.enable = true;
   kyaru.vps.enable = true;
 
+  services.tailscale = {
+    enable = true;
+    derper = {
+      # TODO: Not enabling tailscale derp server
+      # as it has a hard dependency on nginx
+      # Need to consider manually implement with caddy instead?
+      # https://github.com/NixOS/nixpkgs/blob/7905f79129074b6f709df4ac9fa7594e36329aad/nixos/modules/services/networking/tailscale-derper.nix#L70
+      verifyClients = true;
+    };
+  };
+
   # Define on which hard drive you want to install Grub.
   boot.loader.grub.device = "/dev/vda"; # or "nodev" for efi only
 
