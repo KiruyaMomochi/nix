@@ -77,10 +77,6 @@
     query
   ]);
 
-  home.sessionVariables = {
-    EDITOR = "${config.programs.helix.package}/bin/hx";
-  };
-
   home.shellAliases = {
     "ip" = "ip -c";
     "cp" = "cp -v";
@@ -155,7 +151,7 @@
     gitCredentialHelper.enable = true;
     settings = {
       prompt = true;
-      editor = config.home.sessionVariables.EDITOR;
+      editor = "${config.programs.helix.package}/bin/hx";
       # https://github.com/nix-community/home-manager/pull/4749
       version = "1";
     };
@@ -205,7 +201,16 @@
         "rsync" # fish implementation is much better
       ]);
     };
+
     extraConfig = lib.strings.concatStringsSep "\n" [
+      # Make home.sessionVariables work with nushell
+      # https://github.com/nix-community/home-manager/issues/4313
+      # home.sessionVariables.EDITOR = "${config.programs.helix.package}/bin/hx";
+      ''
+        if not ("EDITOR" in $env) {
+          $env.EDITOR = "${config.programs.helix.package}/bin/hx"
+        }
+      ''
       ''
         $env.config.hooks.command_not_found = { |cmd_name|
           try {
