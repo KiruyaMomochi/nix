@@ -120,6 +120,7 @@ in
       };
       dhcpV4Config = {
         UseRoutes = false;
+        RouteMetric = 32767;
       };
     };
   };
