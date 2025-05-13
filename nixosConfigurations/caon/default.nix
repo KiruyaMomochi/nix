@@ -11,6 +11,7 @@
       ./virtualisation.nix
       ./printing.nix
       ./nvidia.nix
+      ./services.nix
     ];
 
   kyaru.enable = true;
