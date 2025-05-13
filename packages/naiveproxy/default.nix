@@ -10,13 +10,13 @@
 , python3
 }:
 let
-  version = "134.0.6998.39-1";
+  version = "136.0.7103.44-1";
   hash = "sha256-SW6VJN61rm0jZDlrI13uNSoQC6LPhUZVnVJg98/P754=";
   naiveSrc = fetchFromGitHub {
     repo = "naiveproxy";
     owner = "klzgrad";
     rev = "v${version}";
-    sha256 = "sha256-1jjpqrWaenNDmSQ+QxbpUACD3ROEjaD5nj1HykeVYuA=";
+    sha256 = "sha256-V1KZKm8V66DOUBOIzLCNHvGVB4i7IU0H1XYtZvIUwi0=";
   };
 
   packageName = self.packageName;
@@ -196,7 +196,6 @@ let
         use_aura = false;
         use_ozone = false;
         use_gio = false;
-        use_gtk = false;
         use_platform_icu_alternatives = true;
         use_glib = false;
 
@@ -232,6 +231,8 @@ let
         "https://github.com/chromium/chromium/commit/50d63ffee3f7f1b1b9303363742ad8ebbfec31fa.patch"
         # rust std::hardware_destructive_interference_size
         "https://github.com/chromium/chromium/commit/fc838e8cc887adbe95110045d146b9d5885bf2a9.patch"
+        # nodejs
+        "chromium-136-nodejs-assert-minimal-version-instead-of-exact-match.patch"
       ];
       # From common.nix of nixpkgs
       patches =
