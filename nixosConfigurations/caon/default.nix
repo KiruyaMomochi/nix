@@ -137,6 +137,7 @@
   virtualisation.podman.enable = true;
   virtualisation.containers.enable = true;
   programs.singularity.enable = true;
+  programs.fuse.userAllowOther = true;
 
   # extraRules
   services.udev.extraRules = ''
