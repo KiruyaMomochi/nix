@@ -56,6 +56,9 @@ in
             ../../packages/slirp4netns.patch
           ];
         });
+        singularity = prev.singularity.override ({
+          nvidia-docker = final.libnvidia-container;
+        });
         pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
           (
             python-final: python-prev: {
