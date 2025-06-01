@@ -4,9 +4,9 @@ For all my hosts see [hosts](hosts/README.md).
 
 ## Concept
 
-The basic idea is:
-
-
+* Entrypoint: [flake.nix](./flake.nix).
+* Files are merged by [flake-parts](./src/flake-parts/default.nix).
+* Each part are loaded by haumea. 
 
 ## TODO
 

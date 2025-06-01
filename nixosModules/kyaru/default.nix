@@ -36,7 +36,6 @@ in
       substituters = [ "https://objects.kyaru.bond/nix-cache" ];
       trusted-public-keys = [ "kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM=" ];
     };
-    nixpkgs.config = lib.mkDefault (import ../../nixpkgs-config.nix);
 
     boot.kernelModules = [
       "nft_tproxy"
@@ -142,9 +141,6 @@ in
       useRoutingFeatures = "both";
     };
 
-    # from https://nixos-and-flakes.thiscute.world/best-practices/nix-path-and-flake-registry
-    # make `nix run nixpkgs#nixpkgs` use the same nixpkgs as the one used by this flake.
-    nix.registry.nixpkgs.flake = inputs.nixpkgs;
     nix.channel.enable = false; # remove nix-channel related tools & configs, we use flakes instead.
     nix.package = pkgs.nixVersions.latest;
 

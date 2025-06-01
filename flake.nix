@@ -48,29 +48,7 @@
 
   outputs = inputs@{ self, flake-parts, deploy-rs, systems, haumea, ... }:
     let
-      # inherit (lib.kyaru.nixos) mapHosts;
-      # inherit (lib.kyaru.packages) mapPackages;
-      # inherit (lib.kyaru.modules) mapModules;
-      inherit (nixpkgs.lib.attrsets) unionOfDisjoint;
-
-      system = "x86_64-linux";
-
-      # Patching nixpkgs
-      # See https://github.com/NixOS/nix/issues/3920
-      patches = [ ];
-
-      originNixpkgs = inputs.nixpkgs;
-      patchedNixpkgs =
-        let
-          originPkgs = originNixpkgs.legacyPackages.${system};
-        in
-        originPkgs.applyPatches {
-          name = "nixpkgs-patched";
-          src = inputs.nixpkgs;
-          patches = map originPkgs.fetchpatch patches;
-        };
-
-      nixpkgs = originNixpkgs;
+      inherit (inputs.nixpkgs.lib.attrsets) unionOfDisjoint;
     in
     # top-level module definitiom
       # flake-parts docs: https://flake.parts/options/flake-parts.html
