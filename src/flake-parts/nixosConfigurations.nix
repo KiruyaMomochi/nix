@@ -1,6 +1,6 @@
 { self, super, root, flake, ... }: { inputs, ... }:
 let
-  inherit (inputs.nixpkgs.lib) mkDefault filterAttrs;
+  inherit (flake.lib.nixos) mkHost;
 
   loader = inputs.haumea.lib.loaders.verbatim;
   matcher = { inherit loader; matches = filename: filename == "default.nix"; };
@@ -19,25 +19,14 @@ let
   };
 
   # TODO: refactor this to use src/lib/nixos.nix
-  systemOverride = {
+  systemOverride = hostname: {
     "lucent-academy" = "aarch64-linux";
-  };
-  mkSystem = hostname: defaultConfig: inputs.nixpkgs.lib.nixosSystem {
-    system = systemOverride.${hostname} or "x86_64-linux";
-    specialArgs = { inherit inputs; };
-    modules = [
-      {
-        nixpkgs.overlays = [ inputs.self.overlay ];
-        networking.hostName = mkDefault hostname;
-      }
-      defaultConfig
-      # maybe import all flake.nixosModules here, but currently manually importing with default.nix
-      ../../nixosModules/kyaru/default.nix
-    ];
-  };
+  }.${hostname} or "x86_64-linux";
 in
 {
   flake = {
-    nixosConfigurations = builtins.mapAttrs mkSystem hosts;
+    nixosConfigurations = builtins.mapAttrs
+      (hostname: config: mkHost (systemOverride hostname) hostname config)
+      hosts;
   };
 }
