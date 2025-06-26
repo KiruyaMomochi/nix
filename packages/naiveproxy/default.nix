@@ -10,13 +10,13 @@
 , python3
 }:
 let
-  version = "136.0.7103.44-1";
+  version = "138.0.7204.35-1";
   hash = "sha256-SW6VJN61rm0jZDlrI13uNSoQC6LPhUZVnVJg98/P754=";
   naiveSrc = fetchFromGitHub {
     repo = "naiveproxy";
     owner = "klzgrad";
     rev = "v${version}";
-    sha256 = "sha256-V1KZKm8V66DOUBOIzLCNHvGVB4i7IU0H1XYtZvIUwi0=";
+    sha256 = "sha256-wKdqvcW6KhPQDbioqv8llzF3giJaCuGpZh9nTPOQIyE=";
   };
 
   packageName = self.packageName;
@@ -222,6 +222,7 @@ let
         "widevine-disable-auto-download-allow-bundle.patch"
         "angle-wayland-include-protocol.patch"
         "chromium-initial-prefs.patch"
+        "https://chromium.googlesource.com/chromium/src/+/ddf8f8a465be2779bd826db57f1299ccd2f3aa25^!?format=TEXT"
         # qr code generator
         "https://github.com/chromium/chromium/commit/bcf739b95713071687ff25010683248de0092f6a.patch"
         # webui_name_variants
