@@ -51,14 +51,12 @@ in
 
         # Docker
         virtualisation.docker = {
-          # FIXME: Remove this when `docker` gets a update
-          package = pkgs.docker_26;
+          package = pkgs.docker;
           daemon.settings.features.cdi = true;
 
           rootless = {
             enable = true;
-            # FIXME: Remove this when `docker` gets a update
-            package = pkgs.docker_26;
+            package = pkgs.docker;
             daemon.settings = {
               # https://github.com/NVIDIA/nvidia-container-toolkit/issues/434
               # https://github.com/moby/moby/issues/47676
