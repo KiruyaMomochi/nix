@@ -23,6 +23,7 @@
     };
     templates = import ../templates;
     checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) inputs.deploy-rs.lib;
+    patches = import ../../patches.nix;
   };
   perSystem = (
     # module arguments
