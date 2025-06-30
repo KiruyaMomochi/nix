@@ -3,11 +3,11 @@
   # https://flake.parts/define-custom-flake-attribute.html
   flake = {
     nixosModules = inputs.haumea.lib.load {
-      src = ../../nixosModules;
+      src = ../nixosModules;
       loader = inputs.haumea.lib.loaders.verbatim;
     };
     homeModules = inputs.haumea.lib.load {
-      src = ../../homeModules;
+      src = ../homeModules;
       loader = inputs.haumea.lib.loaders.verbatim;
       transformer = [
         # load default only
@@ -23,7 +23,7 @@
     };
     templates = import ../templates;
     checks = builtins.mapAttrs (system: deployLib: deployLib.deployChecks self.deploy) inputs.deploy-rs.lib;
-    patches = import ../../patches.nix;
+    patches = import ../patches.nix;
   };
   perSystem = (
     # module arguments

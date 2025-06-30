@@ -39,7 +39,7 @@ in
           # from https://nixos-and-flakes.thiscute.world/best-practices/nix-path-and-flake-registry
           # make `nix run nixpkgs#nixpkgs` use the same nixpkgs as the one used by this flake.
           nix.registry.nixpkgs.flake = mkDefault inputs.nixpkgs;
-          nixpkgs.config = mkDefault (import ../../nixpkgs-config.nix);
+          nixpkgs.config = mkDefault (import ../nixpkgs-config.nix);
         }));
       } // builtins.removeAttrs args [ "modules" ]);
       patchedNixosSystem = args: patchedEvalConfig ({
@@ -49,7 +49,7 @@ in
           nixpkgs.flake.source = mkDefault patchedNixpkgs;
           nixpkgs.pkgs = mkDefault (import config.nixpkgs.flake.source {
             system = config.nixpkgs.localSystem.system;
-            config = import ../../nixpkgs-config.nix;
+            config = import ../nixpkgs-config.nix;
           });
         }));
       } // builtins.removeAttrs args [ "modules" ]);
@@ -57,7 +57,7 @@ in
     if builtins.length patches == 0 then originalNixosSystem else patchedNixosSystem;
 
   mkHost = system: hostname: config:
-    self.patchNixosSystem system (import ../../patches.nix) {
+    self.patchNixosSystem system (import ../patches.nix) {
       inherit system;
       specialArgs = { inherit inputs; };
       modules = [
@@ -65,7 +65,7 @@ in
           nixpkgs.overlays = [ inputs.self.overlays.default ];
           networking.hostName = mkDefault hostname;
         }
-        ../../nixosModules/kyaru/default.nix
+        ../nixosModules/kyaru/default.nix
         config
       ];
     };

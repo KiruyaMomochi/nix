@@ -13,12 +13,12 @@ let
     else null;
   # hosts.xxx -> nixosConfigurations/xxx/default.nix
   hosts = inputs.haumea.lib.load {
-    src = ../../nixosConfigurations;
+    src = ../nixosConfigurations;
     loader = [ matcher ];
     transformer = [ transformer ];
   };
 
-  # TODO: refactor this to use src/lib/nixos.nix
+  # TODO: refactor this to use lib/nixos.nix
   systemOverride = hostname: {
     "lucent-academy" = "aarch64-linux";
   }.${hostname} or "x86_64-linux";

@@ -15,7 +15,7 @@ def --env set-proxy [$proxy: string] {
 }
 
 def --env hide-proxy [] {
-    ["http", "https", "all"] | each { $in + "_proxy"} | append ($in | str upcase) | filter { $in in $env } | hide-env ...$in
+    ["http", "https", "all"] | each { $in + "_proxy"} | append ($in | str upcase) | where { $in in $env } | hide-env ...$in
 }
 
 use std/dirs shells-aliases *

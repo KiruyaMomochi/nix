@@ -25,7 +25,7 @@ in
         inputs.vscode-server.nixosModules.home
         inputs.nix-index-database.hmModules.nix-index
         (filterAttrs (name: value: name != "system") attrs)
-        ../../home.nix
+        ../home.nix
       ] ++ (inputs.nixpkgs.lib.attrValues inputs.self.homeModules);
     };
 }

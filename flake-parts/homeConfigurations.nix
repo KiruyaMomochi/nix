@@ -17,7 +17,7 @@ in
         #   modules = [
         #     inputs.vscode-server.nixosModules.home
         #     inputs.nix-index-database.hmModules.nix-index
-        #     ../../home.nix
+        #     ../home.nix
         #   ] ++ (inputs.nixpkgs.lib.attrValues inputs.self.homeModules);
         # };
         kyaru-headless = mkHome { };
