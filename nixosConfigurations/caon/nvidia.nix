@@ -37,6 +37,11 @@
     package = config.boot.kernelPackages.nvidiaPackages.beta;
   };
 
+  virtualisation.containers.containersConf.settings.engine.cdi_spec_dirs = [
+    "/etc/cdi"
+    "/var/run/cdi"
+  ];
+
   security.pam.loginLimits = [{
     domain = "kyaru";
     item = "memlock";
