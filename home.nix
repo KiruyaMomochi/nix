@@ -70,6 +70,10 @@
     rclone
 
     awscli2
+
+    # ai
+    aider-chat-with-help
+    mods
   ]) ++ (with pkgs.nushellPlugins; [
     polars
     formats
