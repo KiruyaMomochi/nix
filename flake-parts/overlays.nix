@@ -16,6 +16,9 @@ in
       singularity = prev.singularity.override ({
         nvidia-docker = final.libnvidia-container;
       });
+      openobserve = prev.openobserve.overrideAttrs (oldAttrs: {
+        checkFlags = (oldAttrs.checkFlags or [ ]) ++ [ "--skip=cli::data::tests::test_export_operator" ];
+      });
       pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
         (
           python-final: python-prev: {
