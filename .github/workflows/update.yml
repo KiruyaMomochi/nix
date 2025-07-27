@@ -23,8 +23,6 @@ jobs:
         aws configure set endpoint_url https://usc1.contabostorage.com
         echo -n "$AWS_CREDENTIALS" > ~/.aws/credentials
         mkdir -p ~/.config/nix
-        echo -n "$NIX_SECRET_KEY" > ~/.config/nix/secret-key
-        chmod 0600 ~/.aws/credentials ~/.config/nix/secret-key
     # https://github.com/orgs/community/discussions/26351
     # https://stackoverflow.com/questions/75536771/github-runner-out-of-disk-space-after-building-docker-image
     - name: Free Disk Space
@@ -47,6 +45,16 @@ jobs:
         github_access_token: ${{ secrets.GITHUB_TOKEN }}
         extra_nix_config: |
           accept-flake-config = true
+    - name: Setup Nix profile
+      env:
+        NIX_SECRET_KEY: ${{ secrets.nix_secret_key }}
+      run: |
+        mkdir -p ~/.config/nix
+        echo -n "$NIX_SECRET_KEY" > ~/.config/nix/secret-key
+        chmod 0600 ~/.aws/credentials ~/.config/nix/secret-key
+        echo "extra-substituters = https://nix-community.cachix.org https://cuda-maintainers.cachix.org s3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key=$(realpath ~/.config/nix/secret-key)" >> ~/.config/nix/nix.conf
+        echo "extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM= cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E=" >> ~/.config/nix/nix.conf
+        nix run nixpkgs#sd -- -f s ' +nixConfig =.*\};\n' '' flake.nix
     - name: Copy to S3
       run: ./scripts/copy.sh
     # - name: Build all targets
