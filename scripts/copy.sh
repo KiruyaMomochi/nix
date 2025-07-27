@@ -4,7 +4,11 @@ set -uxo pipefail
 SCRIPT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
 error_occurred=0
 
-mapfile -t targets < "$SCRIPT_DIR/targets.txt"
+if [ $# -gt 0 ]; then
+    targets=("$@")
+else
+    mapfile -t targets < "$SCRIPT_DIR/targets.txt"
+fi
 for target in "${targets[@]}"; do
   echo "::group::$target"
   normalized_target="${target//#/}"
