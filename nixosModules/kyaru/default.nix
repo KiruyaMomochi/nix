@@ -21,6 +21,7 @@ in
     ../naiveproxy.nix
     ../networking.nix
     ../vlmcsd.nix
+    ../openobserve.nix
   ];
 
   options = {
