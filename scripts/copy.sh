@@ -13,7 +13,21 @@ for target in "${targets[@]}"; do
   echo "::group::$target"
   normalized_target="${target//#/}"
   normalized_target="${normalized_target//./}"
-  nix run github:Mic92/nix-fast-build -- --skip-cached --no-nom --flake "$target" --copy-to "s3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key=$(realpath ~/.config/nix/secret-key)"
+  cmd=(
+    nix 
+    run 
+    github:Mic92/nix-fast-build 
+    -- 
+    --skip-cached
+  )
+  if ! [ -t 1 ]; then
+    cmd+=(--no-nom)
+  fi
+  cmd+=(
+    --flake "$target"
+    --copy-to "s3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key=$(realpath ~/.config/nix/secret-key)"
+  )
+  "${cmd[@]}"
   # nix copy --print-build-logs --to 's3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key='$(realpath ~/.config/nix/secret-key) "$target" | tee "$normalized_target.log"
   result=$?
   if [ $result -ne 0 ]; then
