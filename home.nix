@@ -285,6 +285,7 @@
     enableZshIntegration = false;
     settings = {
       default_shell = "${pkgs.nushell}/bin/nu";
+      pane_frames = false;
     };
   };
 

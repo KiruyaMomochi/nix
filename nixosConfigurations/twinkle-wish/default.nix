@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 {
   imports =
@@ -15,9 +15,11 @@
   kyaru.enable = true;
   kyaru.vps.enable = true;
 
+  services.nginx.enable = lib.mkForce false;
   services.tailscale = {
     enable = true;
     derper = {
+      openFirewall = true;
       # TODO: Not enabling tailscale derp server
       # as it has a hard dependency on nginx
       # Need to consider manually implement with caddy instead?

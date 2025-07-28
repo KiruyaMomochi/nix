@@ -23,7 +23,7 @@ in
           nixpkgs.overlays = [ inputs.self.overlays.default ];
         }
         inputs.vscode-server.nixosModules.home
-        inputs.nix-index-database.hmModules.nix-index
+        inputs.nix-index-database.homeModules.nix-index
         (filterAttrs (name: value: name != "system") attrs)
         ../home.nix
       ] ++ (inputs.nixpkgs.lib.attrValues inputs.self.homeModules);
