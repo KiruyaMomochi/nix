@@ -52,8 +52,8 @@ jobs:
         mkdir -p ~/.config/nix
         echo -n "$NIX_SECRET_KEY" > ~/.config/nix/secret-key
         chmod 0600 ~/.aws/credentials ~/.config/nix/secret-key
-        echo "extra-substituters = https://nix-community.cachix.org https://cuda-maintainers.cachix.org s3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key=$(realpath ~/.config/nix/secret-key)" >> ~/.config/nix/nix.conf
-        echo "extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM= cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E=" >> ~/.config/nix/nix.conf
+        echo "substituters = https://nix-community.cachix.org https://cuda-maintainers.cachix.org https://cache.nixos.org s3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key=$(realpath ~/.config/nix/secret-key) " >> ~/.config/nix/nix.conf
+        echo "trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM= cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E=" >> ~/.config/nix/nix.conf
         nix run nixpkgs#sd -- -f s ' +nixConfig =.*\};\n' '' flake.nix
     - name: Copy to S3
       run: ./scripts/copy.sh
