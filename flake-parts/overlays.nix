@@ -27,6 +27,9 @@ in
           "--skip=service::db::user::tests::test_user"
           "--skip=service::metadata::trace_list_index::tests::test_write"
         ];
+        patches = (oldAttrs.patches or [ ] ) + [
+          ../packages/openobserve.patch
+        ];
       });
       pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
         (
