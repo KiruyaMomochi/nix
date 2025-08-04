@@ -27,15 +27,17 @@ for target in "${targets[@]}"; do
     --copy-to "s3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key=$(realpath ~/.config/nix/secret-key)"
   )
   if ! [ -t 1 ]; then
-    "${cmd[@]}" 2>&1 >"$normalized_target.out.log" | tee "$normalized_target.err.log" | grep -e "error:" -e "pattern:"
+    echo "target: $target"
+    "${cmd[@]}" 2>&1 >"$normalized_target.out.log" | tee "$normalized_target.err.log" | grep -e "error:"
+    result="${PIPESTATUS[0]}"
   else
     "${cmd[@]}"
+    result="$?"
   fi
-  result=$?
   if [ $result -ne 0 ]; then
     echo "::error title=build failed ($result)::$target"
     while IFS= read -r drv; do
-    echo "::error $target::$drv"
+      echo "::error $target::$drv"
       echo "::group::$target::$drv"
       nix log "$drv"
       echo "::endgroup::"
