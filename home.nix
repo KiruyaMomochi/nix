@@ -228,7 +228,7 @@
       ''
         $env.config.hooks.command_not_found = { |cmd_name|
           try {
-            let commands = (^"${config.programs.nix-index.package}/bin/nix-locate" --type x --type s --top-level --whole-name --at-root $"/bin/($cmd_name)" | lines | split column --collapse-empty " " name size type path)
+            let commands = (^"${config.programs.nix-index.package}/bin/nix-locate" --type x --type s --whole-name --at-root $"/bin/($cmd_name)" | lines | split column --collapse-empty " " name size type path)
             if ($commands | is-empty) {
               return null
             }
