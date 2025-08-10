@@ -3,8 +3,8 @@
 # version = "0.101.0"
 
 $env.config.show_banner = false;
-$env.config.history.isolation = true;
 $env.config.history.file_format = "sqlite";
+$env.config.history.isolation = true;
 $env.config.completions.algorithm = "fuzzy";
 
 const extra_config = $nu.default-config-dir | path join 'config.local.nu'
