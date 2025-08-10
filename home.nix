@@ -29,7 +29,9 @@
     fd # find
     procs # ps
     sd # sed
-    btop # htop
+    (btop.override {
+      cudaSupport = true;
+    }) # htop
     delta # diff
     ripgrep # grep
     erdtree # tree and du
@@ -55,6 +57,7 @@
     cachix
     nix-output-monitor
     expect
+    nh
 
     # for developing
     gh
@@ -293,6 +296,9 @@
     settings = {
       default_shell = "${pkgs.nushell}/bin/nu";
       pane_frames = false;
+      keybinds = 
+        { normal = { unbind = "Alt f"; }; };
+      
     };
   };
 
