@@ -18,7 +18,7 @@ jobs:
     - name: Setup AWS profile
       env:
         AWS_CREDENTIALS: ${{ secrets.aws_credentials }}
-      NIX_SECRET_KEY: ${{ secrets.nix_secret_key }}
+        NIX_SECRET_KEY: ${{ secrets.nix_secret_key }}
       run: |
         aws configure set endpoint_url https://usc1.contabostorage.com
         echo -n "$AWS_CREDENTIALS" > ~/.aws/credentials
