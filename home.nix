@@ -29,7 +29,9 @@
     fd # find
     procs # ps
     sd # sed
-    btop # htop
+    (btop.override {
+      cudaSupport = true;
+    }) # htop
     delta # diff
     ripgrep # grep
     erdtree # tree and du
@@ -55,6 +57,7 @@
     cachix
     nix-output-monitor
     expect
+    nh
 
     # for developing
     gh
@@ -225,7 +228,7 @@
       ''
         $env.config.hooks.command_not_found = { |cmd_name|
           try {
-            let commands = (^"${config.programs.nix-index.package}/bin/nix-locate" --type x --type s --top-level --whole-name --at-root $"/bin/($cmd_name)" | lines | split column --collapse-empty " " name size type path)
+            let commands = (^"${config.programs.nix-index.package}/bin/nix-locate" --type x --type s --whole-name --at-root $"/bin/($cmd_name)" | lines | split column --collapse-empty " " name size type path)
             if ($commands | is-empty) {
               return null
             }
@@ -293,6 +296,9 @@
     settings = {
       default_shell = "${pkgs.nushell}/bin/nu";
       pane_frames = false;
+      keybinds = 
+        { normal = { unbind = "Alt f"; }; };
+      
     };
   };
 

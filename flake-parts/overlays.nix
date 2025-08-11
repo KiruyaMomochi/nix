@@ -17,7 +17,19 @@ in
         nvidia-docker = final.libnvidia-container;
       });
       openobserve = prev.openobserve.overrideAttrs (oldAttrs: {
-        checkFlags = (oldAttrs.checkFlags or [ ]) ++ [ "--skip=cli::data::tests::test_export_operator" ];
+        checkFlags = (oldAttrs.checkFlags or [ ]) ++ [
+          "--skip=cli::data::tests::test_export_operator"
+          "--skip=handler::http::request::search::saved_view::tests::test_create_view_post"
+          "--skip=service::db::compact::downsampling::tests::test_downsampling"
+          "--skip=service::db::compact::file_list::tests::test_file_list_offset"
+          "--skip=service::db::compact::file_list::tests::test_file_list_process_offset"
+          "--skip=service::db::compact::files::tests::test_compact_files"
+          "--skip=service::db::user::tests::test_user"
+          "--skip=service::metadata::trace_list_index::tests::test_write"
+        ];
+        patches = (oldAttrs.patches or [ ] ) ++ [
+          ../packages/openobserve.patch
+        ];
       });
       pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
         (

@@ -10,7 +10,6 @@ else
     mapfile -t targets < "$SCRIPT_DIR/targets.txt"
 fi
 for target in "${targets[@]}"; do
-  echo "::group::$target"
   normalized_target="${target//#/}"
   normalized_target="${normalized_target//./}"
   cmd=(
@@ -27,14 +26,24 @@ for target in "${targets[@]}"; do
     --flake "$target"
     --copy-to "s3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key=$(realpath ~/.config/nix/secret-key)"
   )
-  "${cmd[@]}"
-  # nix copy --print-build-logs --to 's3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key='$(realpath ~/.config/nix/secret-key) "$target" | tee "$normalized_target.log"
-  result=$?
+  if ! [ -t 1 ]; then
+    echo "target: $target"
+    "${cmd[@]}" 2>&1 >"$normalized_target.out.log" | tee "$normalized_target.err.log" | grep -e "error:"
+    result="${PIPESTATUS[0]}"
+  else
+    "${cmd[@]}"
+    result="$?"
+  fi
   if [ $result -ne 0 ]; then
     echo "::error title=build failed ($result)::$target"
+    while IFS= read -r drv; do
+      echo "::error $target::$drv"
+      echo "::group::$target::$drv"
+      nix log "$drv"
+      echo "::endgroup::"
+    done < <( grep -oP "nix log \K[^']+" "$normalized_target.err.log" )
     error_occurred=1
   fi
-  echo "::endgroup::"
 done
 
 exit "$error_occurred"
