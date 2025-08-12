@@ -32,7 +32,8 @@
   boot.kernelParams = [
     "console=ttyS1,115200n8"
     # https://github.com/ikawrakow/ik_llama.cpp/pull/278
-    "default_hugepagesz=1G"
+    # https://pvk.ca/Blog/2014/02/18/how-bad-can-1gb-pages-be/
+    # "default_hugepagesz=1G"
   ];
   boot.kernelPackages = pkgs.linuxPackages_latest;
   boot.loader.systemd-boot.edk2-uefi-shell.enable = true;

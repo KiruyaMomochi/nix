@@ -1,3 +1,16 @@
+diff --git a/src/config/src/cluster.rs b/src/config/src/cluster.rs
+index 61b4869da..56c5e7ba4 100644
+--- a/src/config/src/cluster.rs
++++ b/src/config/src/cluster.rs
+@@ -96,7 +96,7 @@ pub fn get_local_grpc_ip() -> String {
+ }
+
+ pub fn get_local_node_ip() -> String {
+-    for adapter in get_if_addrs::get_if_addrs().unwrap() {
++    for adapter in get_if_addrs::get_if_addrs().unwrap_or_else(|_| Vec::new()) {
+         if !adapter.is_loopback() && matches!(adapter.ip(), IpAddr::V4(_)) {
+             return adapter.ip().to_string();
+         }
 diff --git a/src/lib.rs b/src/lib.rs
 index 59f62837d..a32fd65ff 100644
 --- a/src/lib.rs
