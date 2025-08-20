@@ -33,7 +33,7 @@
     "console=ttyS1,115200n8"
     # https://github.com/ikawrakow/ik_llama.cpp/pull/278
     # https://pvk.ca/Blog/2014/02/18/how-bad-can-1gb-pages-be/
-    # "default_hugepagesz=1G"
+    "default_hugepagesz=2M"
   ];
   boot.kernelPackages = pkgs.linuxPackages_latest;
   boot.loader.systemd-boot.edk2-uefi-shell.enable = true;
