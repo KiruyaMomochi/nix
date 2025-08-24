@@ -123,9 +123,19 @@
     "net.ipv4.conf.all.forwarding" = true;
     "net.ipv6.conf.all.forwarding" = true;
   };
+  boot.kernel.sysfs = {
+    # enable transparent hugepages with deferred defragmentaion
+    kernel.mm.transparent_hugepage = {
+      enabled = "always";
+      defrag = "defer";
+      shmem_enabled = "within_size";
+    };
+  };
 
   programs.wireshark.enable = true;
   services.telegraf.enable = true;
+
+  services.networkd-dispatcher.enable = true;
 
   services.vlmcsd = {
     enable = true;
