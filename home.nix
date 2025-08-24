@@ -298,7 +298,8 @@
       pane_frames = false;
       keybinds = 
         { normal = { unbind = "Alt f"; }; };
-      
+      # Windows terminal, https://github.com/zellij-org/zellij/pull/4150
+      support_kitty_keyboard_protocol = false;
     };
   };
 
