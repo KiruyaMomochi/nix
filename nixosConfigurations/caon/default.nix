@@ -127,8 +127,8 @@
     # enable transparent hugepages with deferred defragmentaion
     kernel.mm.transparent_hugepage = {
       enabled = "always";
-      defrag = "defer";
-      shmem_enabled = "within_size";
+      defrag = "defer+madvise";
+      shmem_enabled = "advise";
     };
   };
 

@@ -150,6 +150,7 @@
 
   programs.ssh = {
     enable = lib.mkDefault false;
+    enableDefaultConfig = false;
     includes = [ "~/.ssh/config.d/*" ];
     matchBlocks = {
       "github.com" = {

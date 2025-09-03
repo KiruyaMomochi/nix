@@ -34,6 +34,11 @@ in
       pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
         (
           python-final: python-prev: {
+            open-interpreter = python-prev.open-interpreter.overridePythonAttrs (old: {
+              pythonRelaxDeps = old.pythonRelaxDeps ++ [
+                "html2text"
+              ];
+            });
           }
         )
       ];
