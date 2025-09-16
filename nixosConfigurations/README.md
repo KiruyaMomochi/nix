@@ -24,6 +24,7 @@ I use [guild names](https://princess-connect.fandom.com/wiki/Guilds) from the ga
   - Tokyo, Japan
   - 1C 725M 20G, AMD Ryzen 9 5900X @ 3.693GHz
   - 24.34 USD / 2 years
+  - Next due: 04/07/2026
 - **[小小甜心](./little-lyrical/default.nix)** - LiteServer
   - Dronten, Flevoland, Netherlands
   - 4C 4G 80G, AMD EPYC 7452 @ 2.349GHz
