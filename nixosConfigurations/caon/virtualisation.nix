@@ -61,7 +61,6 @@ in
       unix_sock_group = "libvirtd"
       unix_sock_rw_perms = "0770"
     '';
-    qemu.package = pkgs.kyaru.qemu;
   };
 
   # single thread download under bad network environment
