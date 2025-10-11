@@ -10,13 +10,13 @@
 , python3
 }:
 let
-  version = "138.0.7204.35-1";
+  version = "140.0.7339.123-2";
   hash = "sha256-SW6VJN61rm0jZDlrI13uNSoQC6LPhUZVnVJg98/P754=";
   naiveSrc = fetchFromGitHub {
     repo = "naiveproxy";
     owner = "klzgrad";
     rev = "v${version}";
-    sha256 = "sha256-wKdqvcW6KhPQDbioqv8llzF3giJaCuGpZh9nTPOQIyE=";
+    sha256 = "sha256-N/Ma6SV7dyt+GjlXfulbpDV/vXPmlVKrZg26ito4DHM=";
   };
 
   packageName = self.packageName;
@@ -178,9 +178,9 @@ let
 
       # https://github.com/klzgrad/naiveproxy/blob/master/src/build.sh#L46
       gnFlags = {
-        fatal_linker_warnings = false;
-
-        is_cronet_build = true;
+        # is_official_build = true;
+        exclude_unwind_tables = true;
+        enable_resource_allowlist_generation = false;
         # # LLVM 12: unsupported instrumentation profile format version
         # chrome_pgo_phase = 2;
         # # https://github.com/NixOS/nixpkgs/pull/101786
@@ -190,14 +190,22 @@ let
         #     url = "https://commondatastorage.googleapis.com/chromium-optimization-profiles/pgo_profiles/chrome-linux-6723-1728387217-9f5646f93bc4ba3a2a9310010e81c26b70db13b1-f044eaa32696eb5c9c4d3ffede525cf50c8cc3e9.profdata";
         #     sha256 = "sha256:1libr521l97y6z22dmsxzwg68i6kmmhsha7a176fsq6xbwi40whm";
         #   });
+        symbol_level = 0;
 
-        enable_base_tracing = false;
+        use_sysroot = false;
+
+        fatal_linker_warnings = false;
+        treat_warnings_as_errors = false;
+
+        is_cronet_build = true;
+        
         use_udev = false;
         use_aura = false;
         use_ozone = false;
         use_gio = false;
         use_platform_icu_alternatives = true;
         use_glib = false;
+        is_perfetto_embedder = true;
 
         disable_file_support = true;
         disable_zstd_filter = false;
@@ -208,8 +216,13 @@ let
         include_transport_security_state_preload_list = false;
         enable_device_bound_sessions = false;
         enable_bracketed_proxy_uris = true;
+        enable_quic_proxy_support = true;
+        enable_disk_cache_sql_backend = false;
 
         use_nss_certs = false;
+
+        enable_backup_ref_ptr_support = false;
+        enable_dangling_raw_ptr_checks = false;
       } // (lib.optionalAttrs stdenv.hostPlatform.isx86 {
         # https://github.com/klzgrad/naiveproxy/commit/f5034cd7da67f063724dc27fdf0a42384db84379
         use_cfi_icall = false;
@@ -230,8 +243,6 @@ let
         "https://github.com/chromium/chromium/commit/f2b43c18b8ecfc3ddc49c42c062d796c8b563984.patch"
         "https://github.com/chromium/chromium/commit/4ca70656fde83d2db6ed5a8ac9ec9e7443846924.patch"
         "https://github.com/chromium/chromium/commit/50d63ffee3f7f1b1b9303363742ad8ebbfec31fa.patch"
-        # rust std::hardware_destructive_interference_size
-        "https://github.com/chromium/chromium/commit/fc838e8cc887adbe95110045d146b9d5885bf2a9.patch"
         # nodejs
         "chromium-136-nodejs-assert-minimal-version-instead-of-exact-match.patch"
       ];
