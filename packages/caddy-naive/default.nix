@@ -2,9 +2,9 @@
 , caddy
 }:
 caddy.override {
-  buildGoModule = args: buildGoModule (args // {
+  buildGo125Module = args: buildGoModule (args // {
     pname = "caddy-naive";
-    vendorHash = "sha256-R6/DpbjBOYGx6pOAgOBARVAEvAiWdN+sUUWRiA6n/w8=";
+    vendorHash = "sha256-NLnPeGw1gsCYvP3e0yL8hMH3NE3084/+8Am6mv56MRo=";
 
     prePatch = ''
       sed -i -e '\!// plug in Caddy modules here!a _ "github.com/caddyserver/forwardproxy"' ./cmd/caddy/main.go
