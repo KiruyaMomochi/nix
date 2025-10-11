@@ -44,7 +44,7 @@ jobs:
       with:
         github_access_token: ${{ secrets.GITHUB_TOKEN }}
         extra_nix_config: |
-          accept-flake-config = true
+          accept-flake-config = false
     - name: Setup Nix profile
       env:
         NIX_SECRET_KEY: ${{ secrets.nix_secret_key }}
