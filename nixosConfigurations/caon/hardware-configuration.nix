@@ -37,6 +37,11 @@
   fileSystems."/home/kyaru/Data/models" =
     { device = "/dev/disk/by-uuid/ed85e2b6-eafc-4ae3-9d8d-7c151cb1dc57";
       fsType = "ext4";
+      options = [
+        "defaults"
+        "nofail"
+        "x-systemd.device-timeout=30"
+      ];
     };
 
   swapDevices =
