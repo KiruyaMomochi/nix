@@ -30,6 +30,7 @@
 
   # Also use systemd-networkd instead of networkmanagger
   boot.kernelParams = [
+    "console=tty0"
     "console=ttyS1,115200n8"
     # https://github.com/ikawrakow/ik_llama.cpp/pull/278
     # https://pvk.ca/Blog/2014/02/18/how-bad-can-1gb-pages-be/
