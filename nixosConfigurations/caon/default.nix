@@ -82,6 +82,7 @@
   # Remote access
   # RDP
   services.xrdp.enable = true;
+  services.openssh.ports = [ 22 5022 ];
 
   # Networking
   hardware.bluetooth.enable = true;
