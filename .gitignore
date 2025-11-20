@@ -3,3 +3,4 @@ result
 *.log
 .aider*
 /temp
+/.github/*/local.*.md

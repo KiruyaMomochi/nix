@@ -60,22 +60,10 @@
   time.timeZone = "Asia/Taipei";
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.kyaru = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "libvirtd" "adbusers" "wireshark" "podman" "i2c" "scanner" "lp" ]; # Enable ‘sudo’ for the user.
-    packages = with pkgs; [
-      firefox
-      tdesktop
-      nil
-    ];
-    shell = pkgs.nushell;
-    description = "百地 希留耶";
-  };
-  nix.settings.trusted-users = [ "kyaru" ];
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
-  environment.systemPackages = with pkgs; [ ];
+  environment.systemPackages = [ ];
 
   # List services that you want to enable:
   # Enable the OpenSSH daemon.
