@@ -154,7 +154,6 @@ in
             ++ optionals config.programs.wireshark.enable [ "wireshark" ]
             ++ optionals config.virtualisation.docker.enable [ "docker" ]
             ++ optionals config.virtualisation.podman.enable [ "podman" ]
-            ++ optionals config.virtualisation.lxd.enable [ "lxd" ]
             ++ optionals config.virtualisation.libvirtd.enable [ "libvirtd" ]
             ++ optionals config.hardware.sane.enable [ "scanner" "lp" ]
             ++ optionals config.hardware.i2c.enable [ "i2c" ]
