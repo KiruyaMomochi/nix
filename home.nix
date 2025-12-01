@@ -116,8 +116,11 @@
 
   programs.git = {
     enable = true;
-    userName = "百地 希留耶";
-    userEmail = "65301509+KiruyaMomochi@users.noreply.github.com";
+    settings = {
+      user.name = "百地 希留耶";
+      user.email = "65301509+KiruyaMomochi@users.noreply.github.com";
+      init.defaultBranch = "main";
+    };
     signing = {
       key = "0xE3F508DE86FF810F";
       signByDefault = true;
@@ -128,14 +131,19 @@
       }
     ];
 
-    delta.enable = true;
     lfs = {
       enable = true;
       skipSmudge = true;
     };
-    extraConfig = {
-      init.defaultBranch = "main";
-    };
+  };
+  programs.delta.enable = true;
+  programs.yazi = {
+    enable = true;
+    enableNushellIntegration = true;
+  };
+  programs.zoxide = {
+    enable = true;
+    enableNushellIntegration = true;
   };
 
   programs.gpg = {
@@ -297,7 +305,7 @@
     settings = {
       default_shell = "${pkgs.nushell}/bin/nu";
       pane_frames = false;
-      keybinds = 
+      keybinds =
         { normal = { unbind = "Alt f"; }; };
       # Windows terminal, https://github.com/zellij-org/zellij/pull/4150
       support_kitty_keyboard_protocol = false;
