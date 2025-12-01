@@ -21,7 +21,6 @@ in
       hunspell
       hunspellDicts.en-us-large
       qbittorrent # qbittorrent-enhanced
-      filelight
     ]) ++ (with pkgs.kdePackages; [
       ark
       kcolorchooser
@@ -30,6 +29,7 @@ in
       dolphin
       yakuake
       konsole
+      filelight
     ]);
 
     xdg.dataFile."konsole/Breeze.colorscheme" = lib.mkIf cfg.konsoleRandomBreeze {
