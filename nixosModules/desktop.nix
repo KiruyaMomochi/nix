@@ -70,6 +70,7 @@ in
 
         environment.systemPackages = with pkgs; [
           firefox
+          telegram-desktop
           librime
           ddcutil
         ] ++ (optional config.virtualisation.libvirtd.enable virt-manager);
@@ -100,7 +101,7 @@ in
           noto-fonts
           noto-fonts-cjk-sans
           noto-fonts-cjk-serif
-          noto-fonts-emoji
+          noto-fonts-color-emoji
           liberation_ttf
           monaspace
           sarasa-gothic
@@ -113,8 +114,6 @@ in
         virtualisation.libvirtd = {
           qemu = {
             swtpm.enable = true;
-            ovmf.enable = true;
-            ovmf.packages = [ pkgs.kyaru.ovmf.fd ]; # Secure boot
           };
         };
         virtualisation.vmware.host = {
@@ -145,6 +144,23 @@ in
         programs.nix-ld.enable = true;
 
         programs.localsend.enable = true;
+
+        # Unified user configuration for desktop environment
+        users.users.kyaru = mkDefault {
+          isNormalUser = true;
+          shell = pkgs.nushell;
+          description = "百地 希留耶";
+          extraGroups = [ "wheel" "networkmanager" ]
+            ++ optionals config.programs.wireshark.enable [ "wireshark" ]
+            ++ optionals config.virtualisation.docker.enable [ "docker" ]
+            ++ optionals config.virtualisation.podman.enable [ "podman" ]
+            ++ optionals config.virtualisation.libvirtd.enable [ "libvirtd" ]
+            ++ optionals config.hardware.sane.enable [ "scanner" "lp" ]
+            ++ optionals config.hardware.i2c.enable [ "i2c" ]
+            ++ optionals config.programs.adb.enable [ "adbusers" ];
+        };
+
+        nix.settings.trusted-users = [ "kyaru" ];
       }
       (mkIf (cfg.environment == "gnome") {
         # GNOME

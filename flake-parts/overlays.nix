@@ -27,8 +27,11 @@ in
           "--skip=service::db::user::tests::test_user"
           "--skip=service::metadata::trace_list_index::tests::test_write"
         ];
+        # compile_error!{"Gxhash requires aes and sse2 intrinsics. Make sure the processor supports it and build with RUSTFLAGS="-C target-cpu=native" or RUSTFLAGS="-C target-feature=+aes,+sse2"."}
+        env = oldAttrs.env // {
+          RUSTFLAGS = "-C target-feature=+aes,+sse2";
+        };
         patches = (oldAttrs.patches or [ ] ) ++ [
-          ../packages/openobserve.patch
         ];
       });
       pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [

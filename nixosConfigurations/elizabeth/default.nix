@@ -52,9 +52,6 @@ in
   # For AMD
   hardware.graphics = {
     enable = true;
-    extraPackages = with pkgs; [
-      amdvlk
-    ];
   };
   hardware.cpu.amd.updateMicrocode = true;
   services.xserver.videoDrivers = [ "amdgpu" ];
@@ -66,17 +63,6 @@ in
   # services.printing.enable = true;
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.kyaru = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "libvirtd" "adbusers" ]; # Enable ‘sudo’ for the user.
-    packages = with pkgs; [
-      firefox
-      telegram-desktop
-    ];
-    shell = pkgs.nushell;
-    description = "百地 希留耶";
-  };
-  nix.settings.trusted-users = [ "kyaru" ];
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget

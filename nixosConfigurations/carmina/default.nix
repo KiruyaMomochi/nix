@@ -67,20 +67,10 @@
   services.flatpak.enable = true;
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.kyaru = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "docker" "libvirtd" "lxd" "podman" "wireshark" ]; # Enable ‘sudo’ for the user.
-    packages = with pkgs; [
-      tdesktop
-    ];
-    shell = pkgs.fish;
-    description = "百地 希留耶";
-  };
-  nix.settings.trusted-users = [ "kyaru" ];
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
-  environment.systemPackages = with pkgs; [ ];
+  environment.systemPackages = [ ];
 
   # School is polluting DNS and the changed DNS server's DNSSEC is broken so
   services.resolved.dnssec = "false";

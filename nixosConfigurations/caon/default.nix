@@ -30,6 +30,7 @@
 
   # Also use systemd-networkd instead of networkmanagger
   boot.kernelParams = [
+    "console=tty0"
     "console=ttyS1,115200n8"
     # https://github.com/ikawrakow/ik_llama.cpp/pull/278
     # https://pvk.ca/Blog/2014/02/18/how-bad-can-1gb-pages-be/
@@ -59,28 +60,17 @@
   time.timeZone = "Asia/Taipei";
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.kyaru = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "libvirtd" "adbusers" "wireshark" "podman" "i2c" "scanner" "lp" ]; # Enable ‘sudo’ for the user.
-    packages = with pkgs; [
-      firefox
-      tdesktop
-      nil
-    ];
-    shell = pkgs.nushell;
-    description = "百地 希留耶";
-  };
-  nix.settings.trusted-users = [ "kyaru" ];
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
-  environment.systemPackages = with pkgs; [ ];
+  environment.systemPackages = [ ];
 
   # List services that you want to enable:
   # Enable the OpenSSH daemon.
   # Remote access
   # RDP
   services.xrdp.enable = true;
+  services.openssh.ports = [ 22 5022 ];
 
   # Networking
   hardware.bluetooth.enable = true;

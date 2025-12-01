@@ -42,6 +42,10 @@ I use [guild names](https://princess-connect.fandom.com/wiki/Guilds) from the ga
   - Miami, United States
   - 1C 952M 18G, AMD EPYC 7742 @ 2.249GHz
   - 9.89 USD / year => 0.82 USD / month
+- **[拉比林斯](./labyrinth/default.nix)** - Onidel
+  - Singapore
+  - 2C 4G 40G + 2T, AMD Epyc Milan
+  - 47.52 + 36.00 USD / year => 7.0 USD / month
 
 ### Canceled
 

@@ -37,7 +37,7 @@
     erdtree # tree and du
     choose # cut and sometimes awk
     lurk # strace
-    aria
+    aria2
     lnav
     pciutils # lspci
 
