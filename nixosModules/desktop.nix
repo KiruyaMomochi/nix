@@ -146,7 +146,7 @@ in
         programs.localsend.enable = true;
 
         # Unified user configuration for desktop environment
-        users.users.kyaru = mkDefault {
+        users.users.kyaru = {
           isNormalUser = true;
           shell = pkgs.nushell;
           description = "百地 希留耶";
