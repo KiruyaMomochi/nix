@@ -1,7 +1,7 @@
 { self, super, root, ... }: { inputs, ... }:
 # TODO: support patching package with only .patch files?
 {
-  perSystem = { system, pkgs, deployPkgs, ... }: {
+  perSystem = { system, pkgs, ... }: {
     devShells.default = pkgs.mkShell {
       packages = with pkgs; [
         sops
@@ -10,8 +10,8 @@
         ssh-to-pgp
         jq
         yq
-        deployPkgs.deploy-rs.deploy-rs
         act
+        (inputs.colmena.packages.${system}.colmena)
         yaml-language-server
         nix-fast-build
         nix-eval-jobs

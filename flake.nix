@@ -8,8 +8,6 @@
 
     nixpkgs-master.url = "github:NixOS/nixpkgs";
 
-    deploy-rs.url = "github:serokell/deploy-rs";
-
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -44,9 +42,11 @@
     };
 
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
+
+    colmena.url = "github:zhaofengli/colmena";
   };
 
-  outputs = inputs@{ self, flake-parts, deploy-rs, systems, haumea, ... }:
+  outputs = inputs@{ self, flake-parts, systems, haumea, ... }:
     let
       inherit (inputs.nixpkgs.lib.attrsets) unionOfDisjoint;
     in
@@ -97,12 +97,14 @@
     extra-substituters = [
       "https://nix-community.cachix.org"
       "https://cuda-maintainers.cachix.org"
+      "https://colmena.cachix.org"
       "https://objects.kyaru.bond/nix-cache"
     ];
     extra-trusted-public-keys = [
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       "kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM="
       "cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E="
+      "colmena.cachix.org-1:7BzpDnjjH8ki2CT3f6GdOk7QAzPOl+1t3LvTLXqYcSg="
     ];
   };
 }

@@ -1,8 +1,6 @@
-{ buildGoModule
-, caddy
-}:
-caddy.override {
-  buildGo125Module = args: buildGoModule (args // {
+{ caddy }:
+let
+  caddy-naive = caddy.overrideAttrs (oldAttrs: {
     pname = "caddy-naive";
     vendorHash = "sha256-NLnPeGw1gsCYvP3e0yL8hMH3NE3084/+8Am6mv56MRo=";
 
@@ -12,9 +10,10 @@ caddy.override {
       cp ${./go.sum} go.sum
     '';
 
-    passthru = {
-      tests = caddy.passthru.tests;
+    passthru = oldAttrs.passthru // {
       updateScript = ./update.sh;
+      withPlugins = oldAttrs.passthru.withPlugins.override { caddy = caddy-naive; };
     };
   });
-}
+in
+caddy-naive

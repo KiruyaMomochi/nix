@@ -14,6 +14,10 @@
       ./services.nix
     ];
 
+  nixpkgs.config.cudaSupport = true;
+
+  boot.initrd.availableKernelModules = [ "xhci_pci" "ahci" "nvme" "usbhid" "usb_storage" "sd_mod" ];
+
   kyaru.enable = true;
   kyaru.desktop.enable = true;
 

@@ -1,42 +1,54 @@
-# KiruyaMomochi's Nix config
+# ❄️ Kyaru's NixOS Infrastructure
 
-For all my hosts see [hosts](hosts/README.md).
+Welcome to my NixOS configuration repository!
+This flake manages my fleet of devices, including laptops, desktops, and VPS instances, using the power of Nix.
 
-## Concept
+## 🏗️ Structure
 
-* Entrypoint: [flake.nix](./flake.nix).
-* Files are merged by [flake-parts](./flake-parts/default.nix).
-* Each part are loaded by haumea. 
+This project is built with:
+*   **[Nix Flakes](https://nixos.wiki/wiki/Flakes)**: Dependency management.
+*   **[Colmena](https://github.com/zhaofengli/colmena)**: Deployment tool.
+*   **[Flake-parts](https://flake.parts/)**: Flake module framework.
+*   **[Haumea](https://github.com/nix-community/haumea)**: File-based module loader.
 
-## TODO
+## 🖥️ Hosts
 
-- [ ] https://tailscale.com/kb/1320/performance-best-practices#ethtool-configuration
-- [ ] Monitor S3 usage.
-- [ ] Move Telegraf to a custom module.
-- [ ] Add Log monitoring.
-- [ ] Add `mapPackage` function that do not use `default.nix` as package name, but `package.nix` instead, following [Name-based package directories](https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/README.md#name-based-package-directories).
-- [ ] How to specify a package to dependend on another package under `packages/`?
+Currently active configurations:
 
-## References
+| Hostname | Type | Architecture | Description |
+| :--- | :--- | :--- | :--- |
+| **labyrinth** | Laptop/PC | `x86_64-linux` | Main workstation? |
+| **lucent-academy** | ARM Device | `aarch64-linux` | |
+| **caon** | VPS/Server | `x86_64-linux` | |
+| **carmina** | VPS/Server | `x86_64-linux` | |
+| **white-wings** | | `x86_64-linux` | |
+| *(and others...)* | | | |
 
-- [hlissner/dotfiles](https://github.com/hlissner/dotfiles)
-- [pedorich-n/home-server-nixos](https://github.com/pedorich-n/home-server-nixos)
+## 🚀 Usage
 
-## Old way to handle sops secrets in-place
+### Deployment (Colmena)
 
-Using a .gitattributes file with the following cotent
+This is the preferred method for deployment.
 
+```bash
+# Build all nodes
+colmena build --impure
+
+# Deploy to a specific node
+colmena apply --on <node-name> --impure
 ```
-hosts/**/secret.nix filter=git-sops diff=git-sops
+
+### Flake Evaluation
+
+```bash
+# Check outputs
+nix flake show
 ```
 
-And Git config
+## ⚠️ Notes for Maintainers
 
-```toml
-[filter "git-sops"]
-    required = true
-    smudge = sops --decrypt --path %f /dev/stdin
-    clean = scripts/git-sops-clean.sh %f
-```
+*   **Secrets**: Managed via `sops-nix`. Do not commit decrypted secrets!
+*   **Impure**: Some builds currently require `--impure` flag due to environment variable usage or path access.
 
-And a custom sops (`self.packages.${system}.sops`).
+---
+*Created with ❤️ by Kyaru*
