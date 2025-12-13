@@ -13,6 +13,7 @@ in
     # https://github.com/nix-community/lanzaboote/blob/master/docs/QUICK_START.md
     inputs.lanzaboote.nixosModules.lanzaboote
     inputs.nixos-wsl.nixosModules.wsl
+    ./no-cuda-apps.nix
     ./vps.nix
     ../container.nix
     ../dendrite.nix

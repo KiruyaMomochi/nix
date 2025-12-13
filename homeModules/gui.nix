@@ -49,7 +49,7 @@ in
 
     programs.vscode =
       {
-        package = inputs.nixpkgs-master.legacyPackages.${pkgs.system}.vscode.fhs;
+        package = inputs.nixpkgs-master.legacyPackages.${pkgs.stdenv.hostPlatform.system}.vscode.fhs;
         enable = true;
       };
   };
