@@ -1,4 +1,4 @@
-{ inputs, lib, ... }:
+{ inputs, lib, self, ... }:
 let
   inherit (lib.lists) foldl;
   inherit (lib.kyaru.modules) mapModules;
@@ -13,6 +13,10 @@ in
   mkPkgsWithConfig = pkgs: system: extraConfig: import pkgs {
     inherit system;
     config = (import ../nixpkgs-config.nix) // extraConfig;
+  };
+
+  mkPkgsNoCuda = pkgs: system: self.mkPkgsWithConfig pkgs system {
+    cudaSupport = false;
   };
 
   mapPackages = pkgs: overrides: foldl (a: b: a // b) { } [
