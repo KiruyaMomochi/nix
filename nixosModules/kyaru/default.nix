@@ -160,6 +160,9 @@ in
 
     i18n.defaultLocale = mkDefault "en_US.UTF-8";
 
+    nixpkgs.config.allowUnfree = true;
+    nixpkgs.config.permittedInsecurePackages = (import ../../nixpkgs-config.nix).permittedInsecurePackages;
+
     # Copy the NixOS configuration file and link it from the resulting system
     # (/run/current-system/configuration.nix). This is useful in case you
     # accidentally delete configuration.nix.

@@ -39,7 +39,7 @@ in
           # from https://nixos-and-flakes.thiscute.world/best-practices/nix-path-and-flake-registry
           # make `nix run nixpkgs#nixpkgs` use the same nixpkgs as the one used by this flake.
           nix.registry.nixpkgs.flake = mkDefault inputs.nixpkgs;
-          nixpkgs.config = mkDefault (import ../nixpkgs-config.nix);
+          nixpkgs.config = import ../nixpkgs-config.nix;
         }));
       } // builtins.removeAttrs args [ "modules" ]);
       patchedNixosSystem = args: patchedEvalConfig ({

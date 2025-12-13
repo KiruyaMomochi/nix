@@ -9,6 +9,11 @@ in
     config = import ../nixpkgs-config.nix;
     # overlays = [ inputs.self.overlays.default ];
   };
+  
+  mkPkgsWithConfig = pkgs: system: extraConfig: import pkgs {
+    inherit system;
+    config = (import ../nixpkgs-config.nix) // extraConfig;
+  };
 
   mapPackages = pkgs: overrides: foldl (a: b: a // b) { } [
     (mapModules ../packages (p: pkgs.callPackage p overrides))
