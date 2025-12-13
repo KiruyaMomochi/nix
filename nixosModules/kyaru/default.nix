@@ -21,7 +21,6 @@ in
     ../hysteria.nix
     ../naiveproxy.nix
     ../networking.nix
-    ../openobserve.nix
     ../vlmcsd.nix
     ../openobserve.nix
   ];
