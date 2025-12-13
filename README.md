@@ -1,9 +1,9 @@
-# ❄️ Kyaru's NixOS Infrastructure
+# Kyaru's NixOS Infrastructure
 
 Welcome to my NixOS configuration repository!
 This flake manages my fleet of devices, including laptops, desktops, and VPS instances, using the power of Nix.
 
-## 🏗️ Structure
+## Structure
 
 This project is built with:
 *   **[Nix Flakes](https://nixos.wiki/wiki/Flakes)**: Dependency management.
@@ -11,7 +11,7 @@ This project is built with:
 *   **[Flake-parts](https://flake.parts/)**: Flake module framework.
 *   **[Haumea](https://github.com/nix-community/haumea)**: File-based module loader.
 
-## 🖥️ Hosts
+## Hosts
 
 Currently active configurations:
 
@@ -24,7 +24,15 @@ Currently active configurations:
 | **white-wings** | | `x86_64-linux` | |
 | *(and others...)* | | | |
 
-## 🚀 Usage
+## Usage
+
+### Updating Flake Inputs
+
+When changes are made to local path inputs (like `nix-kyaru-secret`), or to refresh external dependencies, run:
+
+```bash
+nix flake update
+```
 
 ### Deployment (Colmena)
 
@@ -38,17 +46,15 @@ colmena build --impure
 colmena apply --on <node-name> --impure
 ```
 
-### Flake Evaluation
+## Continuous Integration (CI)
 
-```bash
-# Check outputs
-nix flake show
-```
+This flake utilizes GitHub Actions for continuous integration, defined in `.github/workflows/ci.yml`. The CI pipeline is designed to:
 
-## ⚠️ Notes for Maintainers
+-   **Validate Flake**: Automatically check the flake's health and consistency.
+-   **Build & Cache**: Build various flake outputs (packages, NixOS configurations, home configurations) and push them to a shared S3 cache. This significantly speeds up subsequent deployments and local builds.
+-   **Disk Space Management**: To address GitHub Runner's limited disk space, the build process is split into multiple independent jobs, each with aggressive disk cleanup. This allows large NixOS configurations to be built without `no space left` errors.
+
+## Notes for Maintainers
 
 *   **Secrets**: Managed via `sops-nix`. Do not commit decrypted secrets!
 *   **Impure**: Some builds currently require `--impure` flag due to environment variable usage or path access.
-
----
-*Created with ❤️ by Kyaru*
