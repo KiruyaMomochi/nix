@@ -29,7 +29,6 @@
           (
             name: value: value.extendModules {
               modules = [
-                # { nixpkgs.pkgs = mkPkgs nixpkgs value.pkgs.system; }
                 hosts.${name}
               ];
             }
@@ -40,7 +39,7 @@
         mapAttrs
           (
             name: value: value.override (super: {
-              pkgs = mkPkgs nixpkgs super.pkgs.system;
+              pkgs = mkPkgs nixpkgs super.pkgs.stdenv.hostPlatform.system;
               modules = super.modules ++ [
                 ./home.nix
               ];
@@ -54,7 +53,7 @@
           (
             builtins.mapAttrs
               (name: value:
-                let system = value.pkgs.system; in recursiveUpdateAll [
+                let system = value.pkgs.stdenv.hostPlatform.system; in recursiveUpdateAll [
                   # Override the previous nixos
                   { profiles.system.path = self.deployPkgs.${system}.deploy-rs.lib.activate.nixos value; }
                 ])
