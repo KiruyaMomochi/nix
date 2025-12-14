@@ -1,38 +1,18 @@
-{ self, super, root, ... }: { withSystem, inputs, ... }:
+{ self, super, root, flake, ... }: { withSystem, inputs, ... }:
 # TODO: support patching package with only .patch files?
 let
-  # Copy-paste from nixosConfigurations.nix
-  # TODO: Refactor this into a shared library
-  loader = inputs.haumea.lib.loaders.verbatim;
-  matcher = { inherit loader; matches = filename: filename == "default.nix"; };
-  transformer = cursor: module:
-    let
-      depth = builtins.length cursor;
-    in
-    if depth == 0 then module
-    else if depth == 1 then (module.default or null)
-    else null;
+  inherit (flake.lib.nixos) loadHosts systemOverride;
 
-  hosts = inputs.haumea.lib.load {
-    src = ../nixosConfigurations;
-    loader = [ matcher ];
-    transformer = [ transformer ];
-  };
+  hosts = loadHosts ../nixosConfigurations;
 
   pkgsOf = system: withSystem system ({ pkgs, ... }: pkgs);
-
-  systemOverride = hostname: {
-    "lucent-academy" = "aarch64-linux";
-  }.${hostname} or "x86_64-linux";
 in
 {
   flake = {
     colmenaHive = inputs.colmena.lib.makeHive ({
       meta = {
         nixpkgs = pkgsOf "x86_64-linux";
-        nodeNixpkgs = builtins.mapAttrs (_: pkgsOf) {
-          "lucent-academy" = "aarch64-linux";
-        };
+        nodeNixpkgs = builtins.mapAttrs (name: _: pkgsOf (systemOverride name)) hosts;
         specialArgs = { inherit inputs; };
       };
 
