@@ -19,20 +19,11 @@ jobs:
           large-packages: true
           docker-images: true
           swap-storage: true
-      - uses: cachix/install-nix-action@v27
+      - name: Setup Nix with Cache
+        uses: ./.github/actions/setup-nix
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
-          extra_nix_config: |
-            accept-flake-config = true
-            max-jobs = auto
-            substituters = https://nix-community.cachix.org https://cuda-maintainers.cachix.org https://cache.nixos.org s3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key=/tmp/nix_s3_secret_key
-            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM= cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E=
-      - name: Setup Nix S3 Secret Key
-        env:
-          NIX_SECRET_KEY: ${{ secrets.nix_secret_key }}
-        run: |
-          echo -n "$NIX_SECRET_KEY" > /tmp/nix_s3_secret_key
-          chmod 0600 /tmp/nix_s3_secret_key
+          nix_secret_key: ${{ secrets.nix_secret_key }}
       - name: Build and Push Packages and Home Configuration
         run: |
           nix run github:Mic92/nix-fast-build -- \
@@ -58,20 +49,11 @@ jobs:
           large-packages: true
           docker-images: true
           swap-storage: true
-      - uses: cachix/install-nix-action@v27
+      - name: Setup Nix with Cache
+        uses: ./.github/actions/setup-nix
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
-          extra_nix_config: |
-            accept-flake-config = true
-            max-jobs = auto
-            substituters = https://nix-community.cachix.org https://cuda-maintainers.cachix.org https://cache.nixos.org s3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key=/tmp/nix_s3_secret_key
-            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM= cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E=
-      - name: Setup Nix S3 Secret Key
-        env:
-          NIX_SECRET_KEY: ${{ secrets.nix_secret_key }}
-        run: |
-          echo -n "$NIX_SECRET_KEY" > /tmp/nix_s3_secret_key
-          chmod 0600 /tmp/nix_s3_secret_key
+          nix_secret_key: ${{ secrets.nix_secret_key }}
       - name: Build and Push Caon Configuration
         run: |
           nix run github:Mic92/nix-fast-build -- \
@@ -93,20 +75,11 @@ jobs:
           large-packages: true
           docker-images: true
           swap-storage: true
-      - uses: cachix/install-nix-action@v27
+      - name: Setup Nix with Cache
+        uses: ./.github/actions/setup-nix
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
-          extra_nix_config: |
-            accept-flake-config = true
-            max-jobs = auto
-            substituters = https://nix-community.cachix.org https://cuda-maintainers.cachix.org https://cache.nixos.org s3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key=/tmp/nix_s3_secret_key
-            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM= cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E=
-      - name: Setup Nix S3 Secret Key
-        env:
-          NIX_SECRET_KEY: ${{ secrets.nix_secret_key }}
-        run: |
-          echo -n "$NIX_SECRET_KEY" > /tmp/nix_s3_secret_key
-          chmod 0600 /tmp/nix_s3_secret_key
+          nix_secret_key: ${{ secrets.nix_secret_key }}
       - name: Build and Push Elizabeth Configuration
         run: |
           nix run github:Mic92/nix-fast-build -- \

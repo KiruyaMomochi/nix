@@ -1,0 +1,28 @@
+name: "Setup Nix & S3 Cache"
+description: "Installs Nix with custom config and sets up the S3 secret key."
+inputs:
+  github_access_token:
+    description: "GitHub Token for API requests"
+    required: true
+  nix_secret_key:
+    description: "Secret key for the S3 binary cache"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - uses: cachix/install-nix-action@v27
+      with:
+        github_access_token: ${{ inputs.github_access_token }}
+        extra_nix_config: |
+          accept-flake-config = true
+          max-jobs = auto
+          substituters = https://nix-community.cachix.org https://cuda-maintainers.cachix.org https://cache.nixos.org s3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key=/tmp/nix_s3_secret_key
+          trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM= cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E=
+
+    - name: Setup Nix S3 Secret Key
+      shell: bash
+      env:
+        NIX_SECRET_KEY: ${{ inputs.nix_secret_key }}
+      run: |
+        echo -n "$NIX_SECRET_KEY" > /tmp/nix_s3_secret_key
+        chmod 0600 /tmp/nix_s3_secret_key
