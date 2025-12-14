@@ -4,7 +4,6 @@ let
   inherit (flake.lib.nixos) loadHosts systemOverride;
 
   hosts = loadHosts ../nixosConfigurations;
-
   pkgsOf = system: withSystem system ({ pkgs, ... }: pkgs);
 in
 {
