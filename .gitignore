@@ -4,3 +4,4 @@ result
 .aider*
 /temp
 /.github/*/local.*.md
+.secrets
