@@ -4,17 +4,15 @@ let
   inherit (super.packages) mkPkgs;
 
   homeManagerConfiguration = inputs.home-manager.lib.homeManagerConfiguration;
-  defaultSystem = "x86_64-linux";
 in
 {
   makeOverridableHomeManagerConfig = config:
     (homeManagerConfiguration config) // {
       override = f: self.makeOverridableHomeManagerConfig (config // f config);
     };
-  # TODO: use flake-parts pkgs
-  mkHome = attrs @ { system ? defaultSystem, ... }:
+  mkHome = { pkgs, ... }@attrs:
     self.makeOverridableHomeManagerConfig {
-      pkgs = mkPkgs inputs.nixpkgs system;
+      inherit pkgs;
       extraSpecialArgs = {
         inherit inputs;
       };
@@ -24,7 +22,7 @@ in
         }
         inputs.vscode-server.nixosModules.home
         inputs.nix-index-database.homeModules.nix-index
-        (filterAttrs (name: value: name != "system") attrs)
+        (filterAttrs (name: value: name != "pkgs") attrs)
         ../home.nix
       ] ++ (inputs.nixpkgs.lib.attrValues inputs.self.homeModules);
     };
