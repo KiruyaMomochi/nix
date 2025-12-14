@@ -26,12 +26,16 @@ jobs:
           nix_secret_key: ${{ secrets.nix_secret_key }}
       - name: Build and Push Packages and Home Configuration
         run: |
-          nix run github:Mic92/nix-fast-build -- \
-            --skip-cached \
-            --flake ".#packages.x86_64-linux.naiveproxy" \
-            ".#packages.x86_64-linux.caddy-naive" \
-            ".#homeConfigurations.kyaru.activation-script" \
-            --copy-to "s3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key=/tmp/nix_s3_secret_key"
+          build_and_push() {
+            nix run github:Mic92/nix-fast-build -- \
+              --skip-cached \
+              --copy-to "s3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key=/tmp/nix_s3_secret_key" \
+              --flake "$1"
+          }
+          
+          build_and_push ".#packages.x86_64-linux.naiveproxy"
+          build_and_push ".#packages.x86_64-linux.caddy-naive"
+          build_and_push ".#homeConfigurations.kyaru.activation-script"
       - name: Check Flake
         run: nix flake check
           
