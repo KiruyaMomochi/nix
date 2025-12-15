@@ -17,6 +17,9 @@ runs:
       run: |
         echo -n "$NIX_SECRET_KEY" > /tmp/nix_s3_secret_key
         chmod 0600 /tmp/nix_s3_secret_key
+    - name: Fix Contabo S3 Checksum (AWS SDK)
+      shell: bash
+      run: echo "AWS_REQUEST_CHECKSUM_CALCULATION=when_required" >> $GITHUB_ENV
     - uses: cachix/install-nix-action@v27
       with:
         github_access_token: ${{ inputs.github_access_token }}
