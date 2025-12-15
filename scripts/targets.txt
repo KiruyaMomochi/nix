@@ -1,5 +1,0 @@
-.#packages.x86_64-linux.naiveproxy
-.#packages.x86_64-linux.caddy-naive
-.#nixosConfigurations.caon.config.system.build.toplevel
-.#nixosConfigurations.elizabeth.config.system.build.toplevel
-.#homeConfigurations.kyaru.activation-script

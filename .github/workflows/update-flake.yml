@@ -2,9 +2,8 @@ name: "Auto Update Flake"
 
 on:
   schedule:
-    # 每周一凌晨 0 点 (UTC) 运行
     - cron: '0 0 * * 1'
-  workflow_dispatch: # 允许手动触发
+  workflow_dispatch:
 
 jobs:
   update-flake:

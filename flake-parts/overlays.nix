@@ -8,6 +8,9 @@ in
     overlay = overlays.default;
     overlays.default = (final: prev: {
       kyaru = mkPackages final;
+      nix = prev.nix.overrideAttrs (old: {
+        buildInputs = (old.buildInputs or [ ]) ++ [ final.aws-sdk-cpp ];
+      });
       slirp4netns = prev.slirp4netns.overrideAttrs (oldAttrs: {
         patches = (oldAttrs.patches or [ ]) ++ [
           ../packages/slirp4netns.patch

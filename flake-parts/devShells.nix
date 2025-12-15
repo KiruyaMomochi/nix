@@ -13,6 +13,7 @@
         act
         (inputs.colmena.packages.${system}.colmena)
         yaml-language-server
+        nix
         nix-fast-build
         nix-eval-jobs
       ];
