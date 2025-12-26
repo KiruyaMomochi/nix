@@ -14,7 +14,7 @@
   time.timeZone = "Asia/Singapore";
 
   services.hedgedoc = {
-    # enable = true;
+    enable = true;
   };
 
   # This value determines the NixOS release from which the default
