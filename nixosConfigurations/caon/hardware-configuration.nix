@@ -38,7 +38,24 @@
     { device = "/dev/disk/by-uuid/ed85e2b6-eafc-4ae3-9d8d-7c151cb1dc57";
       fsType = "ext4";
       options = [
-        "defaults"
+        "nofail"
+        "x-systemd.device-timeout=30"
+      ];
+    };
+
+  fileSystems."/home/kyaru/Data/models/flagship" =
+    { device = "/dev/disk/by-uuid/d3c4b618-5710-48d6-8561-9646393ddbcd";
+      fsType = "ext4";
+      options = [
+        "nofail"
+        "x-systemd.device-timeout=30"
+      ];
+    };
+
+  fileSystems."/home/kyaru/Data/models/extra" =
+    { device = "/dev/disk/by-uuid/e72beaa7-460b-491b-8d56-e4dc02b04512";
+      fsType = "ext4";
+      options = [
         "nofail"
         "x-systemd.device-timeout=30"
       ];
