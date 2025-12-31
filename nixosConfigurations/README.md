@@ -47,6 +47,10 @@ I use [guild names](https://princess-connect.fandom.com/wiki/Guilds) from the ga
   - Singapore
   - 2C 4G 40G + 2T, AMD Epyc Milan
   - 47.52 + 36.00 USD / year => 7.0 USD / month
+- **[墨丘利財團](./mercurius-foundation)** - DMIT
+  - Los Angeles, United States
+  - 1C 1G 20G, AMD Epyc 9654 @ 2.00 GHz
+  - 39.90 USD / year => 3.32 USD / month
 
 ### Canceled
 
