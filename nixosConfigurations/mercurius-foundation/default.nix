@@ -1,16 +1,17 @@
-{ config, pkgs, lib, ... }:
+{ inputs, config, pkgs, lib, ... }:
 {
   imports = [
     ./hardware-configuration.nix
+    inputs.disko.nixosModules.disko
     ./disk-config.nix
   ];
 
   kyaru.enable = true;
   kyaru.vps.enable = true;
 
-  # Use the systemd-boot EFI boot loader.
-  boot.loader.grub.enable = false;
-  boot.loader.systemd-boot.enable = true;
+  # DMIT use BIOS boot
+  boot.loader.grub.enable = true;
+  boot.loader.systemd-boot.enable = false;
   boot.loader.efi.canTouchEfiVariables = true;
   time.timeZone = "America/Los_Angeles";
 
