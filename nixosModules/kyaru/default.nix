@@ -22,6 +22,7 @@ in
     ../networking.nix
     ../vlmcsd.nix
     ../openobserve.nix
+    ./opentelemetry.nix
   ];
 
   options = {
@@ -100,7 +101,7 @@ in
     };
 
     # OpenTelemetry Collector
-    services.opentelemetry-collector = {
+    kyaru.services.opentelemetry = {
       enable = true;
     };
 
