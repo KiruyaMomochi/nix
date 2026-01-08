@@ -127,7 +127,7 @@
   };
 
   programs.wireshark.enable = true;
-  services.telegraf.enable = true;
+  services.telegraf.enable = false;
 
   services.networkd-dispatcher.enable = true;
 

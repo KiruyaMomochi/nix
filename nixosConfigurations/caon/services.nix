@@ -5,7 +5,7 @@
   };
   services.opentelemetry-collector = {
     enable = true;
-    package = pkgs.opentelemetry-collector-contrib;
+    # package = pkgs.opentelemetry-collector-contrib;
     settings = {
       receivers = {
         journald = {
@@ -13,16 +13,16 @@
         };
       };
       exporters = {
-        "otlp/openobserve" = {
-          endpoint = "localhost:5081";
-          headers = {
-            organization = "default";
-            "stream-name" = "journal-logs";
-          };
-          tls = {
-            insecure = true;
-          };
-        };
+        # "otlp/openobserve" = {
+        #   endpoint = "localhost:5081";
+        #   headers = {
+        #     organization = "default";
+        #     "stream-name" = "journal-logs";
+        #   };
+        #   tls = {
+        #     insecure = true;
+        #   };
+        # };
       };
       processors = {
         batch = {
@@ -31,13 +31,13 @@
         };
       };
       service = {
-        pipelines = {
-          logs = {
-            receivers = [ "journald" ];
-            processors = [ "batch" ];
-            exporters = [ "otlp/openobserve" ];
-          };
-        };
+        # pipelines = {
+        #   logs = {
+        #     receivers = [ "journald" ];
+        #     processors = [ "batch" ];
+        #     exporters = [ "otlp/openobserve" ];
+        #   };
+        # };
       };
     };
   };

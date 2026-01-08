@@ -45,7 +45,7 @@ in
       nix.settings.auto-optimise-store = mkDefault true;
 
       # Telegraf
-      services.telegraf.enable = mkDefault true;
+      services.telegraf.enable = mkDefault false;
 
       # Open ports in the firewall.
       networking.firewall.allowedTCPPorts = [ 22 80 443 ];

@@ -4,7 +4,6 @@ let
   inherit (lib.lists) optional singleton;
   inherit (lib.attrsets) attrValues;
   inherit (lib.options) mkEnableOption;
-  nixos-version-file = pkgs.writeText "nixos-version.json" (builtins.toJSON config.system.nixos);
 in
 {
   imports = [
@@ -100,42 +99,9 @@ in
       # defaults.webroot = mkDefault "/var/lib/acme/acme-challenge";
     };
 
-    # Telegraf
-    services.telegraf = {
-      extraConfig = mkMerge [
-        (builtins.fromTOML (builtins.readFile ./telegraf.conf))
-        {
-          agent.interval = mkDefault "10s";
-          agent.flush_interval = mkDefault "1m";
-        }
-        {
-          inputs.net = mkDefault (singleton {
-            interfaces = [ "eth*" "enp0s[0-1]" "lo" ];
-          });
-        }
-        {
-          inputs.exec = [
-            {
-              commands = singleton "${pkgs.coreutils}/bin/cat ${nixos-version-file}";
-              data_format = "json_v2";
-              timeout = "5s";
-              flush_interval = "60s";
-              json_v2 = singleton {
-                measurement_name = "nixos";
-                object = singleton {
-                  # https://github.com/tidwall/gjson/blob/master/SYNTAX.md#modifiers
-                  path = "@this";
-                  disable_prepend_keys = true;
-                  included_keys = [ "codeName" "release" "revision" "tags" "variant_id" "version" "versionSuffix" ];
-                  fields = {
-                    release = "string";
-                  };
-                };
-              };
-            }
-          ];
-        }
-      ];
+    # OpenTelemetry Collector
+    services.opentelemetry-collector = {
+      enable = true;
     };
 
     services.tailscale = {

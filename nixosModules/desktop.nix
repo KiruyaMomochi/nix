@@ -134,8 +134,6 @@ in
           };
         };
 
-        programs.adb.enable = true;
-
         # DDC
         hardware.i2c.enable = true;
         # boot.extraModulePackages = [ config.boot.kernelPackages.ddcci-driver ];
@@ -156,8 +154,7 @@ in
             ++ optionals config.virtualisation.podman.enable [ "podman" ]
             ++ optionals config.virtualisation.libvirtd.enable [ "libvirtd" ]
             ++ optionals config.hardware.sane.enable [ "scanner" "lp" ]
-            ++ optionals config.hardware.i2c.enable [ "i2c" ]
-            ++ optionals config.programs.adb.enable [ "adbusers" ];
+            ++ optionals config.hardware.i2c.enable [ "i2c" ];
         };
 
         nix.settings.trusted-users = [ "kyaru" ];
