@@ -21,8 +21,8 @@ in
 
     endpoint = mkOption {
       type = types.str;
-      default = "http://127.0.0.1:4318";
-      description = "OTLP HTTP endpoint for monitoring";
+      default = "http://127.0.0.1:4317";
+      description = "OTLP gRPC endpoint for monitoring";
     };
 
     basicAuth = {
@@ -107,8 +107,6 @@ in
               }
               # 5. Move the actual log message back to the Body
               { type = "move"; from = "attributes.MESSAGE"; to = "body"; }
-              # 6. Cleanup redundant attributes
-              { type = "remove"; field = "attributes.MESSAGE"; }
             ];
           };
         };
@@ -132,11 +130,14 @@ in
           };
         };
         exporters = {
-          "otlphttp/monitor" = {
+          "otlp/monitor" = {
             endpoint = cfg.endpoint;
-            headers.stream-name = "default";
             auth = mkIf cfg.basicAuth.enable {
               authenticator = "basicauth/monitor";
+            };
+            headers = {
+              organization = "default";
+              stream-name = "default";
             };
           };
         };
@@ -146,12 +147,12 @@ in
             metrics = mkIf cfg.metrics {
               receivers = [ "hostmetrics" ];
               processors = [ "batch/monitor" "resourcedetection" "resource" ];
-              exporters = [ "otlphttp/monitor" ];
+              exporters = [ "otlp/monitor" ];
             };
             logs = mkIf cfg.logs {
               receivers = [ "journald" ];
               processors = [ "batch/monitor" "resourcedetection" "resource" ];
-              exporters = [ "otlphttp/monitor" ];
+              exporters = [ "otlp/monitor" ];
             };
           };
         };

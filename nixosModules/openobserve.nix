@@ -33,6 +33,16 @@ in
       default = null;
       description = "openobserve server listen HTTP ip address.";
     };
+    grpc_port = lib.mkOption {
+      type = types.port;
+      default = 5081;
+      description = "openobserve server listen gRPC port.";
+    };
+    grpc_host = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "openobserve server listen gRPC ip address.";
+    };
     ipv6 = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -74,10 +84,14 @@ in
         {
           ZO_HTTP_PORT = builtins.toString cfg.port;
           ZO_HTTP_IPV6_ENABLED = if cfg.ipv6 then "true" else "false";
+          ZO_GRPC_PORT = builtins.toString cfg.grpc_port;
           ZO_DATA_DIR = "/var/lib/${stateDir}";
         }
         (lib.mkIf (cfg.host != null) {
           ZO_HTTP_ADDR = cfg.host;
+        })
+        (lib.mkIf (cfg.grpc_host != null) {
+          ZO_GRPC_ADDR = cfg.grpc_host;
         })
         cfg.environment
       ];
