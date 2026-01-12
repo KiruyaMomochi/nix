@@ -26,27 +26,32 @@ in
     port = lib.mkOption {
       type = types.port;
       default = 5080;
-      description = "openobserve server listen HTTP port.";
+      description = "OpenObserve server listen HTTP port.";
     };
     host = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      description = "openobserve server listen HTTP ip address.";
+      description = "OpenObserve server listen HTTP ip address.";
     };
     grpc_port = lib.mkOption {
       type = types.port;
       default = 5081;
-      description = "openobserve server listen gRPC port.";
+      description = "OpenObserve server listen gRPC port.";
     };
     grpc_host = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      description = "openobserve server listen gRPC ip address.";
+      description = "OpenObserve server listen gRPC ip address.";
     };
     ipv6 = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "enable ipv6 support for HTTP";
+      description = "Enable ipv6 support for HTTP";
+    };
+    data_retention_days = lib.mkOption {
+      type = lib.types.int;
+      default = 3650;
+      description = "Data retention days, default is 10 years. Minimal 3. eg: 30, it means will auto delete the data older than 30 days. You also can set data retention for stream in the UI.";
     };
     environment = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
@@ -86,6 +91,7 @@ in
           ZO_HTTP_IPV6_ENABLED = if cfg.ipv6 then "true" else "false";
           ZO_GRPC_PORT = builtins.toString cfg.grpc_port;
           ZO_DATA_DIR = "/var/lib/${stateDir}";
+          ZO_COMPACT_DATA_RETENTION_DAYS = cfg.data_retention_days;
         }
         (lib.mkIf (cfg.host != null) {
           ZO_HTTP_ADDR = cfg.host;

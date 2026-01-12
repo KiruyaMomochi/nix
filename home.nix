@@ -169,6 +169,12 @@
     };
   };
 
+  services.ssh-agent = {
+    enable = true;
+    enableFishIntegration = true;
+    enableNushellIntegration = true;
+  };
+
   programs.gh = {
     enable = true;
     gitCredentialHelper.enable = true;
