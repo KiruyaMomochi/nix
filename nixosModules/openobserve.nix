@@ -91,7 +91,7 @@ in
           ZO_HTTP_IPV6_ENABLED = if cfg.ipv6 then "true" else "false";
           ZO_GRPC_PORT = builtins.toString cfg.grpc_port;
           ZO_DATA_DIR = "/var/lib/${stateDir}";
-          ZO_COMPACT_DATA_RETENTION_DAYS = cfg.data_retention_days;
+          ZO_COMPACT_DATA_RETENTION_DAYS = builtins.toString cfg.data_retention_days;
         }
         (lib.mkIf (cfg.host != null) {
           ZO_HTTP_ADDR = cfg.host;

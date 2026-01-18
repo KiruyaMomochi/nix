@@ -79,8 +79,11 @@ in
               network = { };
             };
           };
+          # https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/journaldreceiver/README.md
           journald = mkIf cfg.logs {
             units = mkIf (cfg.journaldUnits != [ ]) cfg.journaldUnits;
+            # A field that contains non-printable or non-UTF8 is serialized as a number array instead. This is necessary to handle binary data in a safe way without losing data, since JSON cannot embed binary data natively. Each byte of the binary field will be mapped to its numeric value in the range 0…255.
+            convert_message_bytes = true;
             # https://www.dash0.com/guides/opentelemetry-journald-receiver
             operators = [
               # 1. Move the whole body (map) to attributes["body"]
