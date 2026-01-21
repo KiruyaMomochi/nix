@@ -160,7 +160,7 @@ in
   ];
 
   services.cockpit = {
-    enable = true;
+    enable = false;
     openFirewall = true;
     port = 9090;
   };
