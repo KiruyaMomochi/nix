@@ -19,8 +19,9 @@ def --env hide-proxy [] {
 }
 
 def --wrapped nx [
-    --pkgs: list<string>
-    --python-pkgs: list<string>
+    --pkgs (-s): list<string>          # System packages
+    --python-pkgs (-p): list<string>   # Python packages
+    --quiet (-q)                       # Suppress output (for scripts)
     ...command
 ] {
     # Determine final command (default to SHELL if empty)
@@ -30,33 +31,50 @@ def --wrapped nx [
         $command
     }
 
-    if ($python_pkgs | is-empty) {
-        if ($pkgs | is-empty) {
-             # just enter shell with no extra packages (basically useless but valid)
-        }
-        
-        let nix_args = ($pkgs | each { |it| $"nixpkgs#($it)" })
-        print $"(ansi cyan)[nx] Entering System Environment...(ansi reset)"
-        nix shell --impure ...$nix_args --command ...$final_cmd
+    # Handle optional parameters
+    let pkgs = ($pkgs | default [])
+    let quiet = ($quiet | default false)
 
-    } else {
-        let py_deps = ($python_pkgs | each { |it| $"ps.($it)" } | str join " ")
-        let sys_deps = ($pkgs | each { |it| $"pkgs.($it)" } | str join "\n            ")
+    let python_pkgs = ($python_pkgs | default [])
+    let overrides = [
+        (if ($python_pkgs | is-not-empty) {
+            let py_pkgs_unique = ($python_pkgs | uniq)
+            let py_deps = ($py_pkgs_unique | each { |it| $"ps.($it)" } | str join " ")
+            $"  python3 = pkgs.python3.withPackages \(ps: [ ($py_deps) ]\);"
+        })
+    ] | compact
 
-        let expr = $"
+    # Build expression
+    let expr = $"
 let
   pkgs = import <nixpkgs> { config.allowUnfree = true; };
 in
-pkgs.mkShell {
-  buildInputs = [
-    ($sys_deps)
-    \(pkgs.python3.withPackages \(ps: [ ($py_deps) ]\)\)
-  ];
+pkgs // {
+($overrides | str join "\n")
 }
 "
-        print $"(ansi green)[nx] Entering Python+System Environment...(ansi reset)"
-        nix shell --impure --expr $expr --command ...$final_cmd
+
+    # Build package list
+    let pkgs = $pkgs | append (if ($python_pkgs | is-not-empty) {["python3"]}) | compact | uniq
+
+    if ($pkgs | is-empty) {
+        error make {
+            msg: "Please use -s/--pkgs or -p/--python-pkgs"
+        }
     }
+
+    # Print info (unless quiet)
+    if not $quiet {
+        if not ($python_pkgs | is-empty) {
+            print $"(ansi green)[nx] Python packages: ($python_pkgs | uniq | str join ', ')(ansi reset)"
+        }
+        print $"(ansi cyan)[nx] Packages: ($pkgs | str join ', ')(ansi reset)"
+        print $"(ansi yellow)[nx] Expression:(ansi reset)"
+        print $expr
+    }
+    
+    # Run!
+    nix shell --impure --expr $expr ...$pkgs --command ...$final_cmd
 }
 
 use std/dirs shells-aliases *
