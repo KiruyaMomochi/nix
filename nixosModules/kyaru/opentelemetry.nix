@@ -131,6 +131,18 @@ in
               { key = "process.start_time"; action = "delete"; }
             ];
           };
+          transform = {
+            log_statements = [
+              {
+                context = "log";
+                statements = [
+                  # Try to parse body as JSON if it looks like JSON
+                  # We merge the parsed json into attributes
+                  "merge_maps(attributes, ParseJSON(body), \"insert\") where IsMatch(body, \"^\\\\{.*\\\\}$\")"
+                ];
+              }
+            ];
+          };
         };
         exporters = {
           "otlp/monitor" = {
@@ -154,7 +166,7 @@ in
             };
             logs = mkIf cfg.logs {
               receivers = [ "journald" ];
-              processors = [ "batch/monitor" "resourcedetection" "resource" ];
+              processors = [ "batch/monitor" "resourcedetection" "resource" "transform" ];
               exporters = [ "otlp/monitor" ];
             };
           };

@@ -229,6 +229,7 @@
         "scp"
         "rsync" # fish implementation is much better
       ]);
+      OPENCODE_EXPERIMENTAL = 1;
     };
 
     extraConfig = lib.strings.concatStringsSep "\n" [
