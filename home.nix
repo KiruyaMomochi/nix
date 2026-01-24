@@ -216,6 +216,10 @@
       rsync = "fish";
     };
 
+  home.sessionVariables = {
+    OPENCODE_EXPERIMENTAL = 1;
+  };
+
   programs.nushell = {
     enable = true;
     # # https://github.com/nushell/nushell/blob/main/crates/nu-utils/src/default_files/default_config.nu
@@ -229,7 +233,6 @@
         "scp"
         "rsync" # fish implementation is much better
       ]);
-      OPENCODE_EXPERIMENTAL = 1;
     };
 
     extraConfig = lib.strings.concatStringsSep "\n" [
