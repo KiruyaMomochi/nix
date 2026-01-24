@@ -81,18 +81,6 @@ in
           }
         )
       ];
-      aider-chat-with-help =
-        final.python312Packages.toPythonApplication (
-          (final.aider-chat.withOptional { withHelp = true; }).overridePythonAttrs (
-            old: {
-              disabledTests = (old.disabledTests or [ ]) ++ [ "test_cmd_tokens_output" ];
-              disabledTestPaths = (old.disabledTestPaths or [ ]) ++ [
-                # Tests require network access
-                "tests/basic/test_repomap.py"
-              ];
-            }
-          )
-        );
     });
   };
 }

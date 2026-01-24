@@ -75,14 +75,6 @@
     awscli2
 
     # ai
-    (open-interpreter.overridePythonAttrs (old: {
-      makeWrapperArgs = (old.makeWrapperArgs or [ ]) ++ [
-        "--set"
-        "SHELL"
-        "/bin/sh"
-      ];
-    }))
-    aider-chat-with-help
     mods
   ]) ++ (with pkgs.nushellPlugins; [
     polars
