@@ -209,7 +209,7 @@
     };
 
   home.sessionVariables = {
-    OPENCODE_EXPERIMENTAL = 1;
+    OPENCODE_EXPERIMENTAL = "1";
   };
 
   programs.nushell = {

@@ -8,10 +8,6 @@ I use [guild names](https://princess-connect.fandom.com/wiki/Guilds) from the ga
   - Custom ITX
 - **[伊莉莎白牧場](./elizabeth/default.nix)** - Laptop:
   - Lenovo XiaoXin 13 Air 2020 (82DM)
-- **[慈樂之音](./carmina/default.nix)** - School (offline)
-  - OptiPlex 5000
-- **[美食殿堂](./gourmet/default.nix)** - Home
-  - Surface Book 2
 
 ### Removed
 
@@ -52,7 +48,12 @@ I use [guild names](https://princess-connect.fandom.com/wiki/Guilds) from the ga
   - 1C 1G 20G, AMD Epyc 9654 @ 2.00 GHz
   - 39.90 USD / year => 3.32 USD / month
 
-### Canceled
+### Removed
+
+- **[慈樂之音](./carmina/default.nix)** - School (offline)
+  - OptiPlex 5000
+- **[美食殿堂](./gourmet/default.nix)** - Home
+  - Surface Book 2
 
 - **[王宮騎士團](./nightmare/default.nix)** - Linode
   - 1C 1G 25G, AMD EPYC 7601 @ 2.199GHz
