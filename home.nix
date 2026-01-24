@@ -218,7 +218,7 @@
     configFile.source = ./homeModules/nushell/config.nu;
     # # https://github.com/nushell/nushell/blob/main/crates/nu-utils/src/default_files/default_env.nu
     envFile.source = ./homeModules/nushell/env.nu;
-    environmentVariables = {
+    environmentVariables = (builtins.mapAttrs (name: value: "${builtins.toString value}") config.home.sessionVariables) // {
       CARAPACE_BRIDGES = (lib.strings.concatStringsSep "," [ "fish" "bash" "inshellisense" ]);
       CARAPACE_EXCLUDES = (lib.strings.concatStringsSep "," [
         "nix" # just use the one from fish/bash
