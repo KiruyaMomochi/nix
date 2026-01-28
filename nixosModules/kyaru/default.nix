@@ -35,7 +35,7 @@ in
     # Enable flakes
     nix.settings = {
       experimental-features = [ "nix-command" "flakes" ];
-      substituters = [ "https://objects.kyaru.bond/nix-cache" ];
+      substituters = [ ];
       trusted-public-keys = [ "kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM=" ];
     };
 

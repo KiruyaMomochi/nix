@@ -2,6 +2,7 @@
 {
   imports = [
     ./hardware-configuration.nix
+    ./attic.nix
   ];
 
   kyaru.enable = true;

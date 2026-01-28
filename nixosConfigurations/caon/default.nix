@@ -79,7 +79,6 @@
   # Networking
   hardware.bluetooth.enable = true;
   services.tailscale.enable = true;
-  services.cloudflared.enable = true;
   networking = {
     firewall = {
       enable = true;
@@ -127,7 +126,6 @@
   };
 
   programs.wireshark.enable = true;
-  services.telegraf.enable = false;
 
   services.networkd-dispatcher.enable = true;
 
