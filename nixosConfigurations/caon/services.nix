@@ -20,20 +20,23 @@
         api_bind_addr = "127.0.0.1:3900";
         s3_region = "garage";
       };
-      s3_web.bind_addr = "127.0.0.1:3902";
+      s3_web.bind_addr = "100.82.238.137:3902";
       admin.api_bind_addr = "127.0.0.1:3903";
     };
   };
 
   services.postgresql = {
     enable = true;
-    # LobeChat 需要通过 TCP 连接 (Host 网络模式下连接 127.0.0.1)
+    package = pkgs.postgresql_18;
     enableTCPIP = true; 
+    extensions = ps: with ps; [ pgvector ];
     ensureDatabases = [ "lobechat" ];
     ensureUsers = [
       {
         name = "lobechat";
         ensureDBOwnership = true;
+        # \password lobechat
+        # CREATE EXTENSION vector
       }
     ];
   };

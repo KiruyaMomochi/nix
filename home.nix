@@ -210,6 +210,8 @@
 
   home.sessionVariables = {
     OPENCODE_EXPERIMENTAL = "1";
+    OPENCODE_ENABLE_EXA = "1";
+    OPENCODE_EXPERIMENTAL_MODELS = "1";
   };
 
   programs.nushell = {
