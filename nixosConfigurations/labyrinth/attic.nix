@@ -1,7 +1,12 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 {
   # https://github.com/zhaofengli/attic/blob/main/integration-tests/basic/default.nix
-  
+
   services.atticd = {
     enable = true;
     settings = {
@@ -11,10 +16,11 @@
     };
   };
 
-  # Ensure storage directory exists with correct permissions
-  systemd.tmpfiles.rules = [
-    "d /mnt/data/nix 0750 atticd atticd -"
-  ];
+  users.groups.atticd = {};
+  users.users.atticd = {
+    isSystemUser = true;
+    group = "atticd";
+  };
 
   services.postgresql = {
     enable = true;
