@@ -16,6 +16,7 @@
         nix
         nix-fast-build
         nix-eval-jobs
+        attic-client
         just
       ];
     };

@@ -110,6 +110,8 @@ in
       useRoutingFeatures = "both";
     };
 
+    i18n.defaultLocale = mkDefault "en_US.UTF-8";
+
     nix.channel.enable = false; # remove nix-channel related tools & configs, we use flakes instead.
     nix.package = pkgs.nixVersions.latest;
 
@@ -118,15 +120,8 @@ in
       from.type = "indirect";
       to = builtins.parseFlakeRef "github:NixOS/nixpkgs/nixos-unstable";
     };
-
-    # but NIX_PATH is still used by many useful tools, so we set it to the same value as the one used by this flake.
-    # Make `nix repl '<nixpkgs>'` use the same nixpkgs as the one used by this flake.
-    environment.etc."nix/inputs/nixpkgs".source = "${inputs.nixpkgs}";
-    # https://github.com/NixOS/nix/issues/9574
-    nix.settings.nix-path = lib.mkForce "nixpkgs=/etc/nix/inputs/nixpkgs";
-
-    i18n.defaultLocale = mkDefault "en_US.UTF-8";
-
+    nixpkgs.flake.setFlakeRegistry = true;
+    nixpkgs.flake.setNixPath = true;
     nixpkgs.config.allowUnfree = true;
     nixpkgs.config.permittedInsecurePackages = (import ../../nixpkgs-config.nix).permittedInsecurePackages;
 

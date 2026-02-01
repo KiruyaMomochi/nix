@@ -52,7 +52,8 @@
 
     # nix related
     nil
-    nixpkgs-fmt
+    nixd
+    nixfmt
     nixpkgs-review
     cachix
     nix-output-monitor
@@ -270,7 +271,7 @@
       languages.language = [
         {
           name = "nix";
-          formatter = { command = "${pkgs.nixpkgs-fmt}/bin/nixpkgs-fmt"; };
+          formatter = { command = "${pkgs.nixfmt}/bin/nixfmt"; };
         }
         {
           name = "sshclientconfig";

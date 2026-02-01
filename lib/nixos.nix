@@ -38,6 +38,7 @@ in
         modules = args.modules ++ (mkModulesConfig (config: {
           # from https://nixos-and-flakes.thiscute.world/best-practices/nix-path-and-flake-registry
           # make `nix run nixpkgs#nixpkgs` use the same nixpkgs as the one used by this flake.
+          # nixpkgs.flake.source is set automatically when generating with nixpkgs.lib.nixosSystem
           nix.registry.nixpkgs.flake = mkDefault inputs.nixpkgs;
           nixpkgs.config = import ../nixpkgs-config.nix;
         }));
