@@ -109,6 +109,7 @@
       "kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM="
       "cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E="
       "colmena.cachix.org-1:7BzpDnjjH8ki2CT3f6GdOk7QAzPOl+1t3LvTLXqYcSg="
+      "nix-cache.kyaru.bond:J0etzH0FG42erzDPaPzET4x0R8VAzeB8N/Swn4iPXXA="
     ];
   };
 }

@@ -23,13 +23,14 @@ jobs:
         uses: ./.github/actions/setup-nix
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
-          nix_secret_key: ${{ secrets.nix_secret_key }}
+          attic_token: ${{ secrets.ATTIC_TOKEN }}
+          attic_endpoint: ${{ secrets.ATTIC_ENDPOINT }}
       - name: Build and Push Packages and Home Configuration
         run: |
           build_and_push() {
             nix run github:Mic92/nix-fast-build -- \
               --skip-cached \
-              --copy-to "s3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key=/tmp/nix_s3_secret_key" \
+              --attic-cache public \
               --flake "$1"
           }
           
@@ -57,13 +58,14 @@ jobs:
         uses: ./.github/actions/setup-nix
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
-          nix_secret_key: ${{ secrets.nix_secret_key }}
+          attic_token: ${{ secrets.ATTIC_TOKEN }}
+          attic_endpoint: ${{ secrets.ATTIC_ENDPOINT }}
       - name: Build and Push Caon Configuration
         run: |
           nix run github:Mic92/nix-fast-build -- \
             --skip-cached \
             --flake ".#nixosConfigurations.caon.config.system.build.toplevel" \
-            --copy-to "s3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key=/tmp/nix_s3_secret_key"
+            --attic-cache public
 
   build-elizabeth:
     runs-on: ubuntu-latest
@@ -83,10 +85,11 @@ jobs:
         uses: ./.github/actions/setup-nix
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
-          nix_secret_key: ${{ secrets.nix_secret_key }}
+          attic_token: ${{ secrets.ATTIC_TOKEN }}
+          attic_endpoint: ${{ secrets.ATTIC_ENDPOINT }}
       - name: Build and Push Elizabeth Configuration
         run: |
           nix run github:Mic92/nix-fast-build -- \
             --skip-cached \
             --flake ".#nixosConfigurations.elizabeth.config.system.build.toplevel" \
-            --copy-to "s3://nix-cache?scheme=https&endpoint=usc1.contabostorage.com&secret-key=/tmp/nix_s3_secret_key"
+            --attic-cache public
