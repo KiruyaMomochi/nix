@@ -1,4 +1,10 @@
-{ inputs, config, pkgs, lib, ... }:
+{
+  inputs,
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
   imports = [
@@ -17,72 +23,76 @@
   nixpkgs.config = lib.mkDefault (import ./nixpkgs-config.nix);
   xdg.configFile."nixpkgs/config.nix".source = lib.mkDefault ./nixpkgs-config.nix;
   nix.settings = {
-    experimental-features = [ "nix-command" "flakes" ];
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
   };
   nix.package = pkgs.nixVersions.latest;
 
-
   # Packages that should be installed to the user profile.
-  home.packages = (with pkgs; [
-    # utils
-    bat # cat
-    fd # find
-    procs # ps
-    sd # sed
-    (btop.override {
-      cudaSupport = true;
-    }) # htop
-    delta # diff
-    ripgrep # grep
-    erdtree # tree and du
-    choose # cut and sometimes awk
-    lurk # strace
-    aria2
-    lnav
-    pciutils # lspci
+  home.packages =
+    (with pkgs; [
+      # utils
+      bat # cat
+      fd # find
+      procs # ps
+      sd # sed
+      (btop.override {
+        cudaSupport = true;
+      }) # htop
+      delta # diff
+      ripgrep # grep
+      erdtree # tree and du
+      choose # cut and sometimes awk
+      lurk # strace
+      aria2
+      lnav
+      pciutils # lspci
 
-    # common commands
-    file
-    unzip
-    ldns
-    tldr
-    p7zip
-    jq
-    yq
+      # common commands
+      file
+      unzip
+      ldns
+      tldr
+      p7zip
+      jq
+      yq
 
-    # nix related
-    nil
-    nixd
-    nixfmt
-    nixpkgs-review
-    cachix
-    nix-output-monitor
-    expect
-    nh
+      # nix related
+      nil
+      nixd
+      nixfmt
+      nixpkgs-review
+      cachix
+      nix-output-monitor
+      expect
+      nh
 
-    # for developing
-    gh
-    glab
-    gitui
-    shellcheck
-    shfmt
+      # for developing
+      gh
+      glab
+      gitui
+      shellcheck
+      shfmt
 
-    # others
-    dconf # fix dconf error
-    typst
-    # typst-lsp # not working
-    rclone
+      # others
+      dconf # fix dconf error
+      typst
+      # typst-lsp # not working
+      rclone
 
-    awscli2
+      awscli2
 
-    # ai
-    mods
-  ]) ++ (with pkgs.nushellPlugins; [
-    polars
-    formats
-    gstat
-    query
-  ]);
+      # ai
+      mods
+    ])
+    ++ (with pkgs.nushellPlugins; [
+      polars
+      formats
+      gstat
+      query
+    ]);
 
   home.shellAliases = {
     "ip" = "ip -c";
@@ -201,19 +211,28 @@
     enableFishIntegration = false;
     enableNushellIntegration = true;
   };
-  xdg.configFile."carapace/bridges.yaml".source =
-    (pkgs.formats.yaml { }).generate "bridges.yaml" {
-      nix = "fish";
-      ssh = "fish";
-      scp = "fish";
-      rsync = "fish";
-    };
+  xdg.configFile."carapace/bridges.yaml".source = (pkgs.formats.yaml { }).generate "bridges.yaml" {
+    nix = "fish";
+    ssh = "fish";
+    scp = "fish";
+    rsync = "fish";
+  };
 
   home.sessionVariables = {
+    # https://github.com/anomalyco/opencode/blob/dev/packages/opencode/src/flag/flag.ts
+    OPENCODE_ENABLE_EXPERIMENTAL_MODELS = "1";
     OPENCODE_EXPERIMENTAL = "1";
+    OPENCODE_EXPERIMENTAL_ICON_DISCOVERY = "1";
+    OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT = "1";
+    OPENCODE_EXPERIMENTAL_FILEWATCHER = "1";
+    OPENCODE_EXPERIMENTAL_OXFMT = "1";
+    OPENCODE_EXPERIMENTAL_LSP_TOOL = "1";
+    OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER = "1";
     OPENCODE_ENABLE_EXA = "0";
     OPENCODE_EXPERIMENTAL_EXA = "0";
-    OPENCODE_EXPERIMENTAL_MODELS = "1";
+    OPENCODE_EXPERIMENTAL_LSP_TY = "1";
+    OPENCODE_EXPERIMENTAL_MARKDOWN = "1";
+    OPENCODE_EXPERIMENTAL_PLAN_MODE = "1";
   };
 
   programs.nushell = {
@@ -222,14 +241,24 @@
     configFile.source = ./homeModules/nushell/config.nu;
     # # https://github.com/nushell/nushell/blob/main/crates/nu-utils/src/default_files/default_env.nu
     envFile.source = ./homeModules/nushell/env.nu;
-    environmentVariables = (builtins.mapAttrs (name: value: "${builtins.toString value}") config.home.sessionVariables) // {
-      CARAPACE_BRIDGES = (lib.strings.concatStringsSep "," [ "fish" "bash" "inshellisense" ]);
-      CARAPACE_EXCLUDES = (lib.strings.concatStringsSep "," [
-        "nix" # just use the one from fish/bash
-        "scp"
-        "rsync" # fish implementation is much better
-      ]);
-    };
+    environmentVariables =
+      (builtins.mapAttrs (name: value: "${builtins.toString value}") config.home.sessionVariables)
+      // {
+        CARAPACE_BRIDGES = (
+          lib.strings.concatStringsSep "," [
+            "fish"
+            "bash"
+            "inshellisense"
+          ]
+        );
+        CARAPACE_EXCLUDES = (
+          lib.strings.concatStringsSep "," [
+            "nix" # just use the one from fish/bash
+            "scp"
+            "rsync" # fish implementation is much better
+          ]
+        );
+      };
 
     extraConfig = lib.strings.concatStringsSep "\n" [
       # Make home.sessionVariables work with nushell
@@ -263,28 +292,29 @@
   };
 
   # editor
-  programs.helix =
-    {
-      enable = true;
-      settings = {
-        editor.soft-wrap.enable = true;
-      };
-      languages.language = [
-        {
-          name = "nix";
-          formatter = { command = "${pkgs.nixfmt}/bin/nixfmt"; };
-        }
-        {
-          name = "sshclientconfig";
-          file-types = [
-            { glob = ".ssh/config"; }
-            { glob = ".ssh/config.d/*"; }
-            { glob = "/etc/ssh/ssh_config"; }
-            { glob = "/etc/ssh/ssh_config.d/*"; }
-          ];
-        }
-      ];
+  programs.helix = {
+    enable = true;
+    settings = {
+      editor.soft-wrap.enable = true;
     };
+    languages.language = [
+      {
+        name = "nix";
+        formatter = {
+          command = "${pkgs.nixfmt}/bin/nixfmt";
+        };
+      }
+      {
+        name = "sshclientconfig";
+        file-types = [
+          { glob = ".ssh/config"; }
+          { glob = ".ssh/config.d/*"; }
+          { glob = "/etc/ssh/ssh_config"; }
+          { glob = "/etc/ssh/ssh_config.d/*"; }
+        ];
+      }
+    ];
+  };
 
   programs.starship = {
     enable = true;
@@ -311,8 +341,11 @@
     settings = {
       default_shell = "${pkgs.nushell}/bin/nu";
       pane_frames = false;
-      keybinds =
-        { normal = { unbind = "Alt f"; }; };
+      keybinds = {
+        normal = {
+          unbind = "Alt f";
+        };
+      };
       # Windows terminal, https://github.com/zellij-org/zellij/pull/4150
       support_kitty_keyboard_protocol = false;
     };
@@ -321,15 +354,17 @@
   programs.nix-index-database.comma.enable = true;
   programs.nix-index.enable = true;
 
-  xdg.dataFile."fcitx5/rime/default.custom.yaml".source = (pkgs.formats.yaml { }).generate "default.custom.yaml" {
-    patch = {
-      schema_list = [
-        {
-          "schema" = "double_pinyin_flypy";
-        }
-      ];
-    };
-  };
+  xdg.dataFile."fcitx5/rime/default.custom.yaml".source =
+    (pkgs.formats.yaml { }).generate "default.custom.yaml"
+      {
+        patch = {
+          schema_list = [
+            {
+              "schema" = "double_pinyin_flypy";
+            }
+          ];
+        };
+      };
 
   services.vscode-server.enable = true;
 
