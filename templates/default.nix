@@ -9,6 +9,7 @@ builtins.listToAttrs (builtins.filter
             name = name;
             value = {
               path = ./. + "/${name}";
+              description = (import ./${name}/flake.nix).description;
             };
           }
         else null

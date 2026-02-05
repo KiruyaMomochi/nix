@@ -8,7 +8,6 @@
   # https://github.com/zhaofengli/attic/blob/main/integration-tests/basic/default.nix
 
   services.atticd = {
-    enable = true;
     settings = {
       storage.type = "local";
       storage.path = "/mnt/data/nix";
