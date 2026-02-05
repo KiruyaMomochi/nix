@@ -103,6 +103,7 @@
       "https://nix-community.cachix.org"
       "https://cuda-maintainers.cachix.org"
       "https://colmena.cachix.org"
+      "https://nix-cache.kyaru.bond/public"
     ];
     extra-trusted-public-keys = [
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
