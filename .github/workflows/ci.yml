@@ -29,6 +29,7 @@ jobs:
         run: |
           build_and_push() {
             nix run github:Mic92/nix-fast-build -- \
+              --no-nom \
               --skip-cached \
               --attic-cache public \
               --flake "$1"
@@ -63,6 +64,7 @@ jobs:
       - name: Build and Push Caon Configuration
         run: |
           nix run github:Mic92/nix-fast-build -- \
+            --no-nom \
             --skip-cached \
             --flake ".#nixosConfigurations.caon.config.system.build.toplevel" \
             --attic-cache public
@@ -90,6 +92,7 @@ jobs:
       - name: Build and Push Elizabeth Configuration
         run: |
           nix run github:Mic92/nix-fast-build -- \
+            --no-nom \
             --skip-cached \
             --flake ".#nixosConfigurations.elizabeth.config.system.build.toplevel" \
             --attic-cache public
