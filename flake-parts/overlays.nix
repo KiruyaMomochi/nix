@@ -30,12 +30,12 @@ in
         # https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/op/openobserve/package.nix
         openobserve = prev.openobserve.overrideAttrs (
           finalAttrs: oldAttrs: {
-            version = "0.60.0-rc2";
+            version = "0.60.3";
             src = final.fetchFromGitHub {
               owner = "openobserve";
               repo = "openobserve";
               tag = "v${finalAttrs.version}";
-              hash = "sha256-aLmekzkxytT9VVeJY6S3ERB7yU6NPA7jlg3EHUPTSNo=";
+              hash = "sha256-r9n2E0jIWLWwW5MRGgqAtow+fbZgXXiHwFAcKFHBq9A=";
             };
             preBuild =
               let
@@ -72,7 +72,7 @@ in
             cargoDeps = oldAttrs.cargoDeps.overrideAttrs (previousAttrs: {
               vendorStaging = previousAttrs.vendorStaging.overrideAttrs {
                 inherit (finalAttrs) src;
-                outputHash = "sha256-dNnyFvOJ/IDtCNu/jXgqqrsuPuPQ5hOoK72PiaQ2bGA=";
+                outputHash = "sha256-KyY5Lljvq18fHeUnKHTIKwI4JPCogT5E6N6NKqhv09Q=";
               };
             });
             checkFlags = (oldAttrs.checkFlags or [ ]) ++ [

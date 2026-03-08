@@ -68,6 +68,7 @@
       nix-output-monitor
       expect
       nh
+      (writeScriptBin "nx" (builtins.readFile ./scripts/nx.nu))
 
       # for developing
       gh
@@ -81,6 +82,7 @@
       typst
       # typst-lsp # not working
       rclone
+      vscode-json-language-server
 
       awscli2
 
@@ -374,6 +376,6 @@
   # You can update Home Manager without changing this value. See
   # the Home Manager release notes for a list of state version
   # changes in each release.
-  home.stateVersion = "25.05";
+  home.stateVersion = "26.05";
   home.enableNixpkgsReleaseCheck = false;
 }

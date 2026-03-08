@@ -40,6 +40,7 @@
     # https://pvk.ca/Blog/2014/02/18/how-bad-can-1gb-pages-be/
     "default_hugepagesz=2M"
   ];
+  # https://github.com/NixOS/nixpkgs/issues/492422
   boot.kernelPackages = pkgs.linuxPackages_latest;
   boot.loader.systemd-boot.edk2-uefi-shell.enable = true;
 

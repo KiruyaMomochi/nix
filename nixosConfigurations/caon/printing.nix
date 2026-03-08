@@ -18,7 +18,7 @@
   services.printing.drivers = with pkgs; [
     gutenprint
     gutenprintBin
-    hplipWithPlugin
+    # hplipWithPlugin
     kyaru.ptouch-driver-ppds
   ];
   # services.printing.extraConf = ''
@@ -53,8 +53,8 @@
   };
 
   # Scan
-  hardware.sane.enable = true;
-  hardware.sane.extraBackends = [ pkgs.sane-airscan pkgs.hplipWithPlugin ];
+  # hardware.sane.enable = true;
+  # hardware.sane.extraBackends = [ pkgs.sane-airscan pkgs.hplipWithPlugin ];
   services.ipp-usb.enable = true;
 
   # Samba and wsdd

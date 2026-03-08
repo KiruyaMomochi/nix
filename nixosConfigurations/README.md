@@ -14,12 +14,6 @@ I use [guild names](https://princess-connect.fandom.com/wiki/Guilds) from the ga
 - **[美食殿堂](./gourmet/default.nix)** - School
   - The old one. I don't know.
 
-- **[純白之翼（蘭德索爾分部）](./white-wings/default.nix)** - Contabo
-  > 原文為德語 (Weiß Flügel)，此處用英文意譯。
-  - Seattle, United States
-  - 4C 8G 200G, AMD EPYC 7282 @ 2.794GHz
-  - 4.5 EUR / month
-
 ## VPS
 
 - **[破曉之星](./twinkle-wish/default.nix)**: VirMach
@@ -27,10 +21,6 @@ I use [guild names](https://princess-connect.fandom.com/wiki/Guilds) from the ga
   - 1C 725M 20G, AMD Ryzen 9 5900X @ 3.693GHz
   - 24.34 USD / 2 years
   - Next due: 04/07/2026
-- **[小小甜心](./little-lyrical/default.nix)** - LiteServer
-  - Dronten, Flevoland, Netherlands
-  - 4C 4G 80G, AMD EPYC 7452 @ 2.349GHz
-  - 4.80 EUR / month
 - **[森林守衛](./forester/default.nix)** - GreenCloud
   - Tokyo, Japan
   - 4C 8G 50G, AMD Ryzen 9 7950X @ 4.491GHz
@@ -63,3 +53,12 @@ I use [guild names](https://princess-connect.fandom.com/wiki/Guilds) from the ga
   - Osaka, Japan
   - 2C 1G 20G, Intel Xeon E5-2678 v3 @ 2.499GHz
   - 6.95 EUR / month
+- **[小小甜心](./little-lyrical/default.nix)** - LiteServer
+  - Dronten, Flevoland, Netherlands
+  - 4C 4G 80G, AMD EPYC 7452 @ 2.349GHz
+  - 4.80 EUR / month
+- **[純白之翼（蘭德索爾分部）](./white-wings/default.nix)** - Contabo
+  > 原文為德語 (Weiß Flügel)，此處用英文意譯。
+  - Seattle, United States
+  - 4C 8G 200G, AMD EPYC 7282 @ 2.794GHz
+  - 4.5 EUR / month

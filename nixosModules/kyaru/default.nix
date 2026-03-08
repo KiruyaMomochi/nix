@@ -112,6 +112,8 @@ in
 
     i18n.defaultLocale = mkDefault "en_US.UTF-8";
 
+    virtualisation.oci-containers.backend = "podman";
+
     nix.channel.enable = false; # remove nix-channel related tools & configs, we use flakes instead.
     nix.package = pkgs.nixVersions.latest;
 

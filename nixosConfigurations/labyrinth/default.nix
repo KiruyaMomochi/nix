@@ -1,4 +1,9 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 {
   imports = [
     ./hardware-configuration.nix
@@ -16,6 +21,46 @@
 
   services.hedgedoc = {
     enable = true;
+  };
+
+  zramSwap.enable = true;
+  virtualisation.oci-containers.containers = {
+    grist = {
+      image = "gristlabs/grist:latest";
+      pull = "newer";
+      ports = [ "127.0.0.1:8484:8484" ];
+      volumes = [ "grist:/persist" ];
+      environment = {
+        TZ = "Asia/Shanghai";
+      };
+    };
+  };
+  services.sftpgo = {
+    enable = true;
+    extraReadWriteDirs = [
+      "/mnt/data/share"
+      "/mnt/data/users"
+    ];
+    settings = {
+      httpd.bindings = [
+        {
+          port = 9443;
+          address = "127.0.0.1";
+          enable_web_admin = true;
+          enable_web_client = true;
+          oidc = {
+            scopes = [
+              "openid"
+              "profile"
+              "email"
+            ];
+            username_field = "upn";
+            role_field = "sftpgo_role";
+            implicit_roles = true;
+          };
+        }
+      ];
+    };
   };
 
   # This value determines the NixOS release from which the default

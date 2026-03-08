@@ -2,7 +2,7 @@
 let
   caddy-naive = caddy.overrideAttrs (oldAttrs: {
     pname = "caddy-naive";
-    vendorHash = "sha256-NLnPeGw1gsCYvP3e0yL8hMH3NE3084/+8Am6mv56MRo=";
+    vendorHash = "sha256-zjVy3+sd4z9Jcq7kusLIF8opC7/hBR5q0alZdrwZCHg=";
 
     prePatch = ''
       sed -i -e '\!// plug in Caddy modules here!a _ "github.com/caddyserver/forwardproxy"' ./cmd/caddy/main.go

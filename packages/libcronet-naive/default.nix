@@ -7,8 +7,8 @@ let
   naiveproxy-src = fetchFromGitHub {
     owner = "SagerNet";
     repo = "naiveproxy";
-    rev = "cronet-go";
-    hash = "sha256-7VscpFg//oDFDY07oUMDvrOleOXylDMTGvBGH9MlzuI=";
+    rev = "2be061b6c2e9b316f75ec1e329e345406cd4c62d";
+    hash = "sha256-eK3t8YmXnmPptQMSuKTne+Ro+G+u5BWXHrX/Nh4VYvo=";
   };
 in
 
