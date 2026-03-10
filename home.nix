@@ -82,7 +82,7 @@
       typst
       # typst-lsp # not working
       rclone
-      vscode-json-language-server
+      vscode-json-languageserver
 
       awscli2
 
