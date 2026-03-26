@@ -27,6 +27,9 @@ in
         singularity = prev.singularity.override ({
           nvidia-docker = final.libnvidia-container;
         });
+        dragonflydb = prev.dragonflydb.override ({
+          abseil-cpp = final.abseil-cpp_202505;
+        });
         # https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/op/openobserve/package.nix
         openobserve = prev.openobserve.overrideAttrs (
           finalAttrs: oldAttrs: {
