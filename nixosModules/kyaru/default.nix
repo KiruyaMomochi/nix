@@ -1,4 +1,10 @@
-{ inputs, config, pkgs, lib, ... }:
+{
+  inputs,
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
   inherit (lib.modules) mkDefault mkMerge mkIf;
   inherit (lib.lists) optional singleton;
@@ -34,7 +40,10 @@ in
 
     # Enable flakes
     nix.settings = {
-      experimental-features = [ "nix-command" "flakes" ];
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
       substituters = [ ];
       trusted-public-keys = [ "kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM=" ];
     };
@@ -50,20 +59,23 @@ in
     # NixOS is now using iptables-nftables-compat even when using iptables, therefore Networkmanager now uses the nftables backend unconditionally.
     # networking.networkmanager.firewallBackend = "nftables";
 
-    environment.systemPackages = with pkgs; [
-      helix # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-      bat
-      fish
-      git
-      tmux
-      htop
-      wget
-      curl
-      nftables
-    ] ++ (
-      # For debugging and troubleshooting Secure Boot.
-      optional config.boot.lanzaboote.enable pkgs.sbctl
-    );
+    environment.systemPackages =
+      with pkgs;
+      [
+        helix # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
+        bat
+        fish
+        git
+        tmux
+        htop
+        wget
+        curl
+        nftables
+      ]
+      ++ (
+        # For debugging and troubleshooting Secure Boot.
+        optional config.boot.lanzaboote.enable pkgs.sbctl
+      );
 
     # Some programs need SUID wrappers, can be configured further or are
     # started in user sessions.
@@ -74,6 +86,9 @@ in
     #   enableSSHSupport = true;
     # };
 
+    # Run prebuilt binaries on NixOS with ease
+    programs.nix-ld.enable = true;
+
     programs.fish.enable = true;
 
     # List services that you want to enable:
@@ -81,6 +96,8 @@ in
     # Enable the OpenSSH daemon.
     services.openssh.enable = true;
     services.fail2ban.enable = true;
+    # Pretend /usr/bin and /bin have every binary available via PATH
+    services.envfs.enable = true;
 
     # Nspawn
     systemd.services."container-getty@" = {
@@ -91,7 +108,10 @@ in
 
     # NetworkManager hangs
     systemd.services.NetworkManager-wait-online = {
-      serviceConfig.ExecStart = [ "" "${pkgs.networkmanager}/bin/nm-online -q" ];
+      serviceConfig.ExecStart = [
+        ""
+        "${pkgs.networkmanager}/bin/nm-online -q"
+      ];
     };
 
     # ACME
@@ -125,7 +145,8 @@ in
     nixpkgs.flake.setFlakeRegistry = true;
     nixpkgs.flake.setNixPath = true;
     nixpkgs.config.allowUnfree = true;
-    nixpkgs.config.permittedInsecurePackages = (import ../../nixpkgs-config.nix).permittedInsecurePackages;
+    nixpkgs.config.permittedInsecurePackages =
+      (import ../../nixpkgs-config.nix).permittedInsecurePackages;
 
     # Copy the NixOS configuration file and link it from the resulting system
     # (/run/current-system/configuration.nix). This is useful in case you
