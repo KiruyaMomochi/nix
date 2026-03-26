@@ -1,6 +1,7 @@
-{ lib
-, chromium
-, fetchFromGitHub
+{
+  lib,
+  chromium,
+  fetchFromGitHub,
 }:
 
 let
@@ -83,22 +84,22 @@ chromium.mkDerivation (base: rec {
     # Maybe we don't need this?
     # Let's run it anyway to avoid include errors if defaults pick system libs.
     # python3 build/linux/unbundle/replace_gn_files.py --system-libraries flac libjpeg libpng libxml libxslt
-    
+
     echo "Running gn gen..."
     gn gen --args="$gnFlags" out/Release
-    
+
     runHook postConfigure
   '';
 
   # Install Phase
   installPhase = ''
     runHook preInstall
-    
+
     mkdir -p $out/lib $out/include
-    
+
     echo "Installing libcronet.so..."
     SO_FILE=$(find out/Release -name "libcronet.so" -o -name "libcronet.*.so" | head -n 1)
-    
+
     if [ -n "$SO_FILE" ]; then
       echo "Found library at: $SO_FILE"
       cp "$SO_FILE" $out/lib/
@@ -117,16 +118,16 @@ chromium.mkDerivation (base: rec {
       echo "Error: libcronet.so not found!"
       exit 1
     fi
-    
+
     echo "Installing headers..."
     if [ -d "components/cronet/native/include" ]; then
-      cp -r components/cronet/native/include/* $out/include/
+      find components/cronet/native/include -name "*.h" -exec cp {} $out/include/ \;
     fi
-    if [ -d "components/cronet/native/include" ]; then
-      cp -r components/cronet/native/generated/* $out/include/
+    if [ -d "components/cronet/native/generated" ]; then
+      find components/cronet/native/generated -name "*.h" -exec cp {} $out/include/ \;
     fi
     if [ -d "components/grpc_support/include" ]; then
-      cp -r components/grpc_support/include/* $out/include/
+      find components/grpc_support/include -name "*.h" -exec cp {} $out/include/ \;
     fi
       
     runHook postInstall
