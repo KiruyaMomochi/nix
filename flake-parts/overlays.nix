@@ -33,12 +33,12 @@ in
         # https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/op/openobserve/package.nix
         openobserve = prev.openobserve.overrideAttrs (
           finalAttrs: oldAttrs: {
-            version = "0.60.3";
+            version = "0.70.1";
             src = final.fetchFromGitHub {
               owner = "openobserve";
               repo = "openobserve";
               tag = "v${finalAttrs.version}";
-              hash = "sha256-r9n2E0jIWLWwW5MRGgqAtow+fbZgXXiHwFAcKFHBq9A=";
+              hash = "sha256-0244MECaGMkT1i9qcVWp6OKBcMNlTmZqUMCJqNQjE7Y=";
             };
             preBuild =
               let
@@ -46,7 +46,7 @@ in
                   inherit (finalAttrs) src version;
                   pname = "openobserve-ui";
                   sourceRoot = "${src.name}/web";
-                  npmDepsHash = "sha256-vZ6KuQsocIEftD1wYrwRRATN1JivASjNEO5fLUMwz90=";
+                  npmDepsHash = "sha256-bfGafT7ahAVT67ypNz6+KqLz9iYzfwSCkoC78MGeWg4=";
 
                   preBuild = ''
                     # Patch vite config to not open the browser to visualize plugin composition
@@ -75,7 +75,7 @@ in
             cargoDeps = oldAttrs.cargoDeps.overrideAttrs (previousAttrs: {
               vendorStaging = previousAttrs.vendorStaging.overrideAttrs {
                 inherit (finalAttrs) src;
-                outputHash = "sha256-KyY5Lljvq18fHeUnKHTIKwI4JPCogT5E6N6NKqhv09Q=";
+                outputHash = "sha256-ZV/4XBv04etedyD+e+tOAtGxiuw0sFUicn/IJvzIInU=";
               };
             });
             checkFlags = (oldAttrs.checkFlags or [ ]) ++ [
