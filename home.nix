@@ -213,13 +213,12 @@
     enableFishIntegration = false;
     enableNushellIntegration = true;
   };
-  xdg.configFile."carapace/bridges.yaml".source = (pkgs.formats.yaml { }).generate "bridges.yaml" {
+  programs.kyaru.carapace.bridges = {
     nix = "fish";
     ssh = "fish";
     scp = "fish";
     rsync = "fish";
   };
-
   home.sessionVariables = {
     # https://github.com/anomalyco/opencode/blob/dev/packages/opencode/src/flag/flag.ts
     OPENCODE_ENABLE_EXPERIMENTAL_MODELS = "1";
@@ -241,13 +240,6 @@
             "fish"
             "bash"
             "inshellisense"
-          ]
-        );
-        CARAPACE_EXCLUDES = (
-          lib.strings.concatStringsSep "," [
-            "nix" # just use the one from fish/bash
-            "scp"
-            "rsync" # fish implementation is much better
           ]
         );
       };
