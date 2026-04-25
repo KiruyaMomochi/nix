@@ -176,8 +176,6 @@
 
   services.ssh-agent = {
     enable = true;
-    enableFishIntegration = true;
-    enableNushellIntegration = true;
   };
 
   programs.gh = {
@@ -328,6 +326,9 @@
       keybinds = {
         normal = {
           unbind = "Alt f";
+        };
+        pane = {
+          unbind = "x";
         };
       };
       # Windows terminal, https://github.com/zellij-org/zellij/pull/4150

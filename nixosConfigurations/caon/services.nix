@@ -29,7 +29,7 @@
     enable = true;
     package = pkgs.postgresql_18;
     enableTCPIP = true; 
-    extensions = ps: with ps; [ pgvector ];
+    extensions = ps: with ps; [ pgvector pg_search ];
     ensureDatabases = [ "lobechat" ];
     ensureUsers = [
       {
