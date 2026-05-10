@@ -1,14 +1,18 @@
-{ config, pkgs, lib, ... }:
+{ inputs, config, pkgs, lib, ... }:
 {
   imports = [
     ./hardware-configuration.nix
+    inputs.disko.nixosModules.disko
+    ./disk-config.nix
   ];
 
   kyaru.enable = true;
   kyaru.vps.enable = true;
 
-  # Define on which hard drive you want to install Grub.
-  boot.loader.grub.device = "/dev/vda"; # or "nodev" for efi only
+  # UEFI boot
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.grub.enable = false;
+  boot.loader.efi.canTouchEfiVariables = true;
 
   # Set your time zone.
   time.timeZone = "US/Pacific";

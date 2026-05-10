@@ -13,21 +13,7 @@
   boot.kernelModules = [ "kvm-amd" ];
   boot.extraModulePackages = [ ];
 
-  fileSystems."/" =
-    { device = "/dev/disk/by-uuid/9de45e18-29e7-4330-b5ab-8a272f87aa36";
-      fsType = "ext4";
-    };
-
-  swapDevices =
-    [ { device = "/dev/disk/by-uuid/f53e26e0-eaef-46c6-a4b1-456ee2112afd"; }
-    ];
-
-  # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
-  # (the default) this is the recommended approach. When using systemd-networkd it's
-  # still possible to use this option, but it's recommended to use it in conjunction
-  # with explicit per-interface declarations with `networking.interfaces.<interface>.useDHCP`.
-  networking.useDHCP = lib.mkDefault true;
-  # networking.interfaces.eth0.useDHCP = lib.mkDefault true;
+  # Disk partitions managed by disko (disk-config.nix)
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 }
