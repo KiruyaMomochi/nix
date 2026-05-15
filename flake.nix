@@ -49,6 +49,11 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
     colmena.url = "github:zhaofengli/colmena";
+
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs@{ self, flake-parts, systems, haumea, ... }:

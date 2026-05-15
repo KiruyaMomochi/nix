@@ -10,12 +10,12 @@ sing-box.overrideAttrs (
   final: old: {
     pname = "sing-box-naive";
 
-    version = "1.13.8";
+    version = "1.13.11";
     src = fetchFromGitHub {
       owner = "SagerNet";
       repo = "sing-box";
       rev = "refs/tags/v${final.version}";
-      hash = "sha256-gZGNzlT4laHlTHRWfy3SMqPqFvHr+6LzH2sA44YEtEU=";
+      hash = "sha256-kyte9o+w240o6Q+X97m4QQ6nQjuLthoh6O9ksUtgmZU=";
     };
 
     tags = (old.tags or [ ]) ++ [
@@ -25,7 +25,7 @@ sing-box.overrideAttrs (
 
     # New tags might change dependencies, so we need a new vendorHash.
     # Set to fake hash to trigger mismatch error and get the correct one.
-    vendorHash = "sha256-ytJJVsWXTnSqI9tNQA8JM03cNveFzhCuBw02s7u1gtw=";
+    vendorHash = "sha256-Sql7OlTtLeqpiEJ6jsrykBITHUZtZ7wG2o3+SKesI0Y=";
 
     buildInputs = (old.buildInputs or [ ]) ++ [ kyaru.libcronet-naive ];
 

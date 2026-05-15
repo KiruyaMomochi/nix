@@ -17,13 +17,6 @@
   # Set your time zone.
   time.timeZone = "US/Pacific";
 
-  # OpenObserve
-  services.openobserve = {
-    enable = true;
-    port = 5080;
-    host = "127.0.0.1";
-  };
-
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
   # on your system were taken. It's perfectly fine and recommended to leave

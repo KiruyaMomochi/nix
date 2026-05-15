@@ -59,7 +59,7 @@
   boot.loader.efi.canTouchEfiVariables = true;
 
   system.autoUpgrade.enable = true;
-  hardware.cpu.intel.updateMicrocode = true;
+  hardware.cpu.amd.updateMicrocode = true;
 
   # Set your time zone.
   time.timeZone = "Asia/Taipei";

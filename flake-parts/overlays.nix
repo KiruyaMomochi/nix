@@ -14,7 +14,13 @@ in
   flake = rec {
     overlay = overlays.default;
     overlays.default = (
-      final: prev: {
+      final: prev:
+      let
+        fenixOverlay = inputs.fenix.overlays.default;
+        fenixApplied = fenixOverlay final prev;
+      in
+      {
+        inherit (fenixApplied) fenix;
         kyaru = mkPackages final;
         # nix = prev.nix.overrideAttrs (old: {
         #   buildInputs = (old.buildInputs or [ ]) ++ [ final.aws-sdk-cpp ];
@@ -30,59 +36,6 @@ in
         dragonflydb = prev.dragonflydb.override ({
           abseil-cpp = final.abseil-cpp_202505;
         });
-        # https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/op/openobserve/package.nix
-        openobserve = prev.openobserve.overrideAttrs (
-          finalAttrs: oldAttrs: {
-            version = "0.70.1";
-            src = final.fetchFromGitHub {
-              owner = "openobserve";
-              repo = "openobserve";
-              tag = "v${finalAttrs.version}";
-              hash = "sha256-0244MECaGMkT1i9qcVWp6OKBcMNlTmZqUMCJqNQjE7Y=";
-            };
-            preBuild =
-              let
-                web = final.buildNpmPackage rec {
-                  inherit (finalAttrs) src version;
-                  pname = "openobserve-ui";
-                  sourceRoot = "${src.name}/web";
-                  npmDepsHash = "sha256-bfGafT7ahAVT67ypNz6+KqLz9iYzfwSCkoC78MGeWg4=";
-
-                  preBuild = ''
-                    # Patch vite config to not open the browser to visualize plugin composition
-                    substituteInPlace vite.config.ts \
-                      --replace "open: true" "open: false";
-                  '';
-
-                  env = {
-                    NODE_OPTIONS = "--max-old-space-size=8192";
-                    # cypress tries to download binaries otherwise
-                    CYPRESS_INSTALL_BINARY = 0;
-                  };
-
-                  installPhase = ''
-                    runHook preInstall
-                    mkdir -p $out/share
-                    mv dist $out/share/openobserve-ui
-                    runHook postInstall
-                  '';
-                };
-              in
-              ''
-                cp -r ${web}/share/openobserve-ui web/dist
-              '';
-            # https://discourse.nixos.org/t/is-it-possible-to-override-cargosha256-in-buildrustpackage/4393/24
-            cargoDeps = oldAttrs.cargoDeps.overrideAttrs (previousAttrs: {
-              vendorStaging = previousAttrs.vendorStaging.overrideAttrs {
-                inherit (finalAttrs) src;
-                outputHash = "sha256-ZV/4XBv04etedyD+e+tOAtGxiuw0sFUicn/IJvzIInU=";
-              };
-            });
-            checkFlags = (oldAttrs.checkFlags or [ ]) ++ [
-              "--skip=service::db::enrichment_table::get_enrichment_data_from_db"
-            ];
-          }
-        );
         pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
           (python-final: python-prev: {
             open-interpreter = python-prev.open-interpreter.overridePythonAttrs (old: {

@@ -27,8 +27,8 @@ in
     ../naiveproxy.nix
     ../networking.nix
     ../vlmcsd.nix
-    ../openobserve.nix
     ./opentelemetry.nix
+    ./greptimedb.nix
   ];
 
   options = {

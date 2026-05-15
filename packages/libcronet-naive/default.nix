@@ -8,8 +8,8 @@ let
   naiveproxy-src = fetchFromGitHub {
     owner = "SagerNet";
     repo = "naiveproxy";
-    rev = "2be061b6c2e9b316f75ec1e329e345406cd4c62d";
-    hash = "sha256-eK3t8YmXnmPptQMSuKTne+Ro+G+u5BWXHrX/Nh4VYvo=";
+    rev = "888e114241c89b05fac4e4ee01482d7bd89ca15a";
+    hash = "sha256-lSy5f2vUsP7sjJ6UJ2jU56cuMibnMilHKVV7whNkGls=";
   };
 in
 
@@ -64,14 +64,39 @@ chromium.mkDerivation (base: rec {
     # Note: We do NOT set use_platform_icu_alternatives (Let it default)
   };
 
-  # Overlay NaiveProxy source
-  postPatch = (base.postPatch or "") + ''
+  # Overlay NaiveProxy source BEFORE patches are applied.
+  # The chromium base provides LLVM compatibility patches (e.g. chromium-147-llvm-22.patch,
+  # chromium-148-revert-build-Add--fsanitizer=return-config.patch) that fix
+  # `unknown argument: -fno-lifetime-dse`, `-fsanitize-ignore-for-ubsan-feature=*` errors
+  # against LLVM 21. If we overlay naive's src *after* patches, those fixes get reverted
+  # and the build breaks on those unknown clang flags. Apply via prePatch so the chromium
+  # patches land on naive's tree.
+  prePatch = ''
     echo "Overlaying NaiveProxy source..."
     cp -rf ${naiveproxy-src}/src/* .
     if [ -f "${naiveproxy-src}/src/.gn" ]; then
       cp -f "${naiveproxy-src}/src/.gn" .
     fi
+    # fetchFromGitHub stores files read-only; chromium's postPatch (and our own)
+    # needs to overwrite them. Restore write permission on the overlay.
+    chmod -R u+w .
     echo "Overlay complete."
+  '';
+
+  # Drop chromium-147-llvm-22.patch because naive's build/config/compiler/BUILD.gn
+  # carries an extra `&& !is_apple` clause around the `-fno-lifetime-dse` block,
+  # so the hunk context doesn't match. We strip the flag ourselves in postPatch instead.
+  patches = lib.filter (
+    p: !(lib.hasSuffix "chromium-147-llvm-22.patch" (p.name or (toString p)))
+  ) base.patches;
+
+  # Inherit chromium's enormous postPatch (LASTCHANGE, sandbox paths, system-libs filtering,
+  # node/java symlinks, gperf shim, etc.) and tack on naive-specific tweaks:
+  #   * Drop the `cflags += [ "-fno-lifetime-dse" ]` line (replaces chromium-147-llvm-22.patch).
+  postPatch = (base.postPatch or "") + ''
+    echo "Stripping -fno-lifetime-dse for LLVM 21 compatibility (naive-adapted)..."
+    substituteInPlace build/config/compiler/BUILD.gn \
+      --replace-fail 'cflags += [ "-fno-lifetime-dse" ]' '# -fno-lifetime-dse stripped for LLVM 21'
   '';
 
   # Configure Phase: Just run GN.
@@ -86,7 +111,27 @@ chromium.mkDerivation (base: rec {
     # python3 build/linux/unbundle/replace_gn_files.py --system-libraries flac libjpeg libpng libxml libxslt
 
     echo "Running gn gen..."
-    gn gen --args="$gnFlags" out/Release
+    # naive ships a chromium *subset* — many BUILD.gn declarations (perfetto
+    # unittests, base/test:test_support, etc.) survive but their implementation
+    # files were stripped, so `gn gen` from the default root fails with
+    # "Unresolved dependencies." We work around this with two flags:
+    #
+    #   --root-target=//components/cronet
+    #     Override the initial BUILD.gn loaded for graph population, skipping
+    #     the //BUILD.gn `gn_all` group which references things like
+    #     `optimize_gn_gen` that pull in chromium-only targets.
+    #     (See `gn help --root-target`.)
+    #
+    #   --root-pattern='//components/cronet:*'
+    #     Even with a custom root, GN by default loads every reachable BUILD.gn;
+    #     this pattern caps the default-toolchain target set to cronet and its
+    #     transitive deps only. `:*` matches targets *in* that file (incl. the
+    #     `shared_library("cronet")` we want); `/*` only matches subdirs.
+    #     (See `gn help --root-pattern` and `gn help label_pattern`.)
+    gn gen --args="$gnFlags" \
+      --root-target=//components/cronet \
+      --root-pattern='//components/cronet:*' \
+      out/Release
 
     runHook postConfigure
   '';
