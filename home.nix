@@ -222,6 +222,7 @@
     OPENCODE_ENABLE_EXPERIMENTAL_MODELS = "1";
     OPENCODE_EXPERIMENTAL = "1";
     OPENCODE_ENABLE_EXA = "1";
+    PI_CACHE_RETENTION = "long";
   };
 
   programs.nushell = {
