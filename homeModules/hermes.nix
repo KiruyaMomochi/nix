@@ -12,43 +12,34 @@ let
   # agent.i18n to fall back to bare key strings (e.g. "gateway.reset.header_default")
   # in Telegram messages.
   #
-  # Fix: override hermesVenv (via overrideAttrs postInstall) to copy locales/
-  # into site-packages/ while $out is still writable, then substitute the
-  # patched venv into hermes-agent's installPhase via override so makeWrapper
-  # picks up the right venv path.
+  # Root cause: agent/i18n.py uses Path(__file__).resolve().parent.parent / "locales".
+  # In nix, .resolve() follows hardlinks back to the *original* hermes-agent wheel
+  # derivation's site-packages/, where locales/ doesn't exist.  The venv's
+  # site-packages/ has its own copy but .resolve() bypasses it.
   #
-  # agent/i18n.py._locales_dir():
-  #   Path(__file__).resolve().parent.parent / "locales"
-  #   .resolve() follows nix symlinks back to the *original* derivation where
-  #   locales/ doesn't exist.  We patch out .resolve() and copy locales/ into
-  #   the venv's site-packages/ so the un-resolved path finds them.
+  # Fix: copy locales/ into the venv's site-packages/, then install a .pth file
+  # that monkey-patches agent.i18n._locales_dir() at Python startup to point at
+  # the venv-local copy instead of following .resolve() into the sealed wheel drv.
+  # .pth files starting with "import" are exec'd by site.py on every interpreter
+  # start, so this works for both `hermes gateway run` and manual `hermes` CLI.
   patchLocales = pkg:
     let
-      locales = lib.cleanSource (inputs.hermes-agent + "/locales");
+      localesSrc = lib.cleanSource (inputs.hermes-agent + "/locales");
       sitePackages = pkgs.python312.sitePackages;
-      # Build a new hermesVenv derivation that includes locales/
+
+      # .pth files starting with "import" are exec()'d by site.py at startup.
+      # Monkey-patches _locales_dir to use the venv-local locales/ dir,
+      # bypassing .resolve() which follows hardlinks into the sealed wheel drv.
+      localesPth = pkgs.writeText "hermes-locales.pth"
+        ''import importlib as _il, pathlib as _pl, os as _os; _m = _il.import_module("agent.i18n"); _m._locales_dir = lambda: _pl.Path(_os.path.join(_os.path.dirname(_os.path.abspath(_m.__file__)), "..", "locales"))'';
+
       patchedVenv = pkg.passthru.hermesVenv.overrideAttrs (old: {
         postInstall = (old.postInstall or "") + ''
-          cp -r ${locales} $out/${sitePackages}/locales
-
-          # agent/i18n.py uses Path(__file__).resolve().parent.parent / "locales"
-          # which follows nix symlinks back to the original (un-patched) derivation.
-          # Drop the .resolve() so it stays within *this* venv where locales/ lives.
-          # The agent/ dir inside the venv is read-only (hardlinked from the original
-          # derivation), so we replace the entire dir with a writable copy first.
-          local agent_dir=$out/${sitePackages}/agent
-          local tmp=$(mktemp -d)
-          cp -a "$agent_dir" "$tmp/agent"
-          rm -rf "$agent_dir"
-          mv "$tmp/agent" "$agent_dir"
-          chmod -R u+w "$agent_dir"
-          ${pkgs.gnused}/bin/sed -i 's/Path(__file__).resolve().parent.parent/Path(__file__).parent.parent/' \
-            "$agent_dir/i18n.py"
+          cp -r ${localesSrc} $out/${sitePackages}/locales
+          cp ${localesPth} $out/${sitePackages}/hermes-locales.pth
         '';
       });
     in
-    # Substitute patchedVenv wherever the original hermesVenv store path appears
-    # in the installPhase (makeWrapper calls, HERMES_PYTHON, collision check).
     pkg.overrideAttrs (old: {
       installPhase = builtins.replaceStrings
         [ (builtins.unsafeDiscardStringContext "${pkg.passthru.hermesVenv}") ]
