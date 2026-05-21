@@ -34,13 +34,16 @@ let
           # agent/i18n.py uses Path(__file__).resolve().parent.parent / "locales"
           # which follows nix symlinks back to the original (un-patched) derivation.
           # Drop the .resolve() so it stays within *this* venv where locales/ lives.
-          # The file may be a hardlink to the read-only original derivation, so
-          # remove first then copy the content to get a fresh writable inode.
-          local f=$out/${sitePackages}/agent/i18n.py
-          local src=$(readlink -f "$f")
-          rm "$f"
-          cp "$src" "$f"
-          ${pkgs.gnused}/bin/sed -i 's/Path(__file__).resolve().parent.parent/Path(__file__).parent.parent/' "$f"
+          # The agent/ dir inside the venv is read-only (hardlinked from the original
+          # derivation), so we replace the entire dir with a writable copy first.
+          local agent_dir=$out/${sitePackages}/agent
+          local tmp=$(mktemp -d)
+          cp -a "$agent_dir" "$tmp/agent"
+          rm -rf "$agent_dir"
+          mv "$tmp/agent" "$agent_dir"
+          chmod -R u+w "$agent_dir"
+          ${pkgs.gnused}/bin/sed -i 's/Path(__file__).resolve().parent.parent/Path(__file__).parent.parent/' \
+            "$agent_dir/i18n.py"
         '';
       });
     in
