@@ -13,36 +13,51 @@ let
   # in Telegram messages.
   #
   # Root cause: agent/i18n.py uses Path(__file__).resolve().parent.parent / "locales".
-  # In nix, .resolve() follows hardlinks back to the *original* hermes-agent wheel
-  # derivation's site-packages/, where locales/ doesn't exist.  The venv's
-  # site-packages/ has its own copy but .resolve() bypasses it.
+  # In nix, .resolve() (and even os.path.join with "..") follows hardlinks in the
+  # venv back to the *original* hermes-agent wheel derivation's site-packages/,
+  # where locales/ doesn't exist.
   #
-  # Fix: copy locales/ into the venv's site-packages/, then install a .pth file
-  # that monkey-patches agent.i18n._locales_dir() at Python startup to point at
-  # the venv-local copy instead of following .resolve() into the sealed wheel drv.
-  # .pth files starting with "import" are exec'd by site.py on every interpreter
-  # start, so this works for both `hermes gateway run` and manual `hermes` CLI.
+  # Fix: override the hermes-agent wheel derivation to add locales/ into its
+  # site-packages/, then substitute it into hermesVenv's NIX_PYPROJECT_DEPS so
+  # pyprojectMakeVenv hardlinks the patched wheel instead.  Since .resolve() / ".."
+  # traversal both land in the wheel derivation, locales/ will be found there.
   patchLocales = pkg:
     let
       localesSrc = lib.cleanSource (inputs.hermes-agent + "/locales");
       sitePackages = pkgs.python312.sitePackages;
 
-      # .pth files starting with "import" are exec()'d by site.py at startup.
-      # Monkey-patches _locales_dir to use the venv-local locales/ dir,
-      # bypassing .resolve() which follows hardlinks into the sealed wheel drv.
-      localesPth = pkgs.writeText "hermes-locales.pth"
-        ''import importlib as _il, pathlib as _pl, os as _os; _m = _il.import_module("agent.i18n"); _m._locales_dir = lambda: _pl.Path(_os.path.join(_os.path.dirname(_os.path.abspath(_m.__file__)), "..", "locales"))'';
+      origVenv = pkg.passthru.hermesVenv;
 
-      patchedVenv = pkg.passthru.hermesVenv.overrideAttrs (old: {
-        postInstall = (old.postInstall or "") + ''
+      # The hermes-agent wheel derivation is the first entry in NIX_PYPROJECT_DEPS.
+      # We override it to add locales/ into its site-packages/.
+      origWheel = builtins.head (
+        builtins.filter
+          (drv: lib.hasPrefix "/nix/store" drv && lib.hasSuffix "hermes-agent-0.14.0" drv)
+          (lib.splitString ":" origVenv.NIX_PYPROJECT_DEPS)
+      );
+
+      patchedWheel = (pkgs.callPackage ({ stdenv }: stdenv.mkDerivation {
+        name = "hermes-agent-0.14.0";
+        # Just copy origWheel and add locales
+        src = origWheel;
+        dontUnpack = true;
+        installPhase = ''
+          cp -a $src $out
+          chmod -R u+w $out
           cp -r ${localesSrc} $out/${sitePackages}/locales
-          cp ${localesPth} $out/${sitePackages}/hermes-locales.pth
         '';
+      }) {});
+
+      patchedVenv = origVenv.overrideAttrs (old: {
+        NIX_PYPROJECT_DEPS = builtins.replaceStrings
+          [ origWheel ]
+          [ "${patchedWheel}" ]
+          old.NIX_PYPROJECT_DEPS;
       });
     in
     pkg.overrideAttrs (old: {
       installPhase = builtins.replaceStrings
-        [ (builtins.unsafeDiscardStringContext "${pkg.passthru.hermesVenv}") ]
+        [ (builtins.unsafeDiscardStringContext "${origVenv}") ]
         [ "${patchedVenv}" ]
         old.installPhase;
       passthru = old.passthru // { hermesVenv = patchedVenv; };
@@ -122,9 +137,6 @@ in
         ExecStart = "${effectivePackage}/bin/hermes gateway run";
         WorkingDirectory = cfg.workingDirectory;
 
-        # Prepend bash to PATH so hermes terminal tool can find it via
-        # shutil.which("bash") -- otherwise nushell users get a broken terminal tool.
-        # Also include extraPaths (e.g. ~/.local/bin for scripts the agent can call).
         Environment = [
           "PATH=${lib.concatStringsSep ":" (cfg.extraPaths ++ ["${pkgs.bash}/bin" "${effectivePackage}/bin" "/run/current-system/sw/bin"])}"
           "HERMES_HOME=${cfg.hermesHome}"
