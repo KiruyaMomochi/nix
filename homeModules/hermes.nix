@@ -18,10 +18,10 @@ let
   # picks up the right venv path.
   #
   # agent/i18n.py._locales_dir():
-  #   Path(__file__).parent.parent / "locales"
-  #   = site-packages/agent/../../locales ... wait, parent.parent of
-  #   site-packages/agent/i18n.py is site-packages/, so this resolves to
-  #   site-packages/locales/  ✓
+  #   Path(__file__).resolve().parent.parent / "locales"
+  #   .resolve() follows nix symlinks back to the *original* derivation where
+  #   locales/ doesn't exist.  We patch out .resolve() and copy locales/ into
+  #   the venv's site-packages/ so the un-resolved path finds them.
   patchLocales = pkg:
     let
       locales = lib.cleanSource (inputs.hermes-agent + "/locales");
@@ -30,6 +30,12 @@ let
       patchedVenv = pkg.passthru.hermesVenv.overrideAttrs (old: {
         postInstall = (old.postInstall or "") + ''
           cp -r ${locales} $out/${sitePackages}/locales
+
+          # agent/i18n.py uses Path(__file__).resolve().parent.parent / "locales"
+          # which follows nix symlinks back to the original (un-patched) derivation.
+          # Drop the .resolve() so it stays within *this* venv where locales/ lives.
+          ${pkgs.gnused}/bin/sed -i 's/Path(__file__).resolve().parent.parent/Path(__file__).parent.parent/' \
+            $out/${sitePackages}/agent/i18n.py
         '';
       });
     in
