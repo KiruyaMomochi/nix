@@ -34,8 +34,11 @@ let
           # agent/i18n.py uses Path(__file__).resolve().parent.parent / "locales"
           # which follows nix symlinks back to the original (un-patched) derivation.
           # Drop the .resolve() so it stays within *this* venv where locales/ lives.
-          ${pkgs.gnused}/bin/sed -i 's/Path(__file__).resolve().parent.parent/Path(__file__).parent.parent/' \
-            $out/${sitePackages}/agent/i18n.py
+          # The file may be a symlink into the read-only original derivation, so
+          # copy-then-replace to ensure we have a writable real file.
+          local f=$out/${sitePackages}/agent/i18n.py
+          cp --remove-destination "$(readlink -f "$f")" "$f"
+          ${pkgs.gnused}/bin/sed -i 's/Path(__file__).resolve().parent.parent/Path(__file__).parent.parent/' "$f"
         '';
       });
     in
