@@ -2,15 +2,55 @@
   config,
   pkgs,
   lib,
+  inputs,
   ...
 }:
 let
   cfg = config.services.hermes-gateway;
 
+  # The upstream nix/hermes-agent.nix installPhase omits locales/, causing
+  # agent.i18n to fall back to bare key strings (e.g. "gateway.reset.header_default")
+  # in Telegram messages.
+  #
+  # Fix: override hermesVenv (via overrideAttrs postInstall) to copy locales/
+  # into site-packages/ while $out is still writable, then substitute the
+  # patched venv into hermes-agent's installPhase via override so makeWrapper
+  # picks up the right venv path.
+  #
+  # agent/i18n.py._locales_dir():
+  #   Path(__file__).parent.parent / "locales"
+  #   = site-packages/agent/../../locales ... wait, parent.parent of
+  #   site-packages/agent/i18n.py is site-packages/, so this resolves to
+  #   site-packages/locales/  ✓
+  patchLocales = pkg:
+    let
+      locales = lib.cleanSource (inputs.hermes-agent + "/locales");
+      sitePackages = pkgs.python312.sitePackages;
+      # Build a new hermesVenv derivation that includes locales/
+      patchedVenv = pkg.passthru.hermesVenv.overrideAttrs (old: {
+        postInstall = (old.postInstall or "") + ''
+          cp -r ${locales} $out/${sitePackages}/locales
+        '';
+      });
+    in
+    # Substitute patchedVenv wherever the original hermesVenv store path appears
+    # in the installPhase (makeWrapper calls, HERMES_PYTHON, collision check).
+    pkg.overrideAttrs (old: {
+      installPhase = builtins.replaceStrings
+        [ (builtins.unsafeDiscardStringContext "${pkg.passthru.hermesVenv}") ]
+        [ "${patchedVenv}" ]
+        old.installPhase;
+      passthru = old.passthru // { hermesVenv = patchedVenv; };
+    });
+
   effectivePackage =
-    if cfg.extraDependencyGroups == []
-    then cfg.package
-    else cfg.package.override { extraDependencyGroups = cfg.extraDependencyGroups; };
+    let
+      base =
+        if cfg.extraDependencyGroups == []
+        then cfg.package
+        else cfg.package.override { extraDependencyGroups = cfg.extraDependencyGroups; };
+    in
+    patchLocales base;
 in
 {
   options.services.hermes-gateway = with lib; {
