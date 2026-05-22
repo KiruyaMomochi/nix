@@ -21,6 +21,58 @@ let
   # site-packages/, then substitute it into hermesVenv's NIX_PYPROJECT_DEPS so
   # pyprojectMakeVenv hardlinks the patched wheel instead.  Since .resolve() / ".."
   # traversal both land in the wheel derivation, locales/ will be found there.
+  # Patch gateway/run.py to convert OpenAI image_url parts to Anthropic
+  # source format when api_mode=anthropic_messages.  The Anthropic SDK does
+  # not auto-convert image_url → source, so native vision on custom Anthropic
+  # endpoints (e.g. 4router) fails with HTTP 500 without this fix.
+  #
+  # Patch agent/chat_completion_helpers.py so runtime fallback preserves
+  # api_mode/transport from fallback_providers entries or named custom_providers.
+  # Without this, custom Anthropic-compatible providers used only as fallback
+  # can be activated with api_mode=chat_completions and return empty responses.
+  patchVisionAnthropicFormat = pkg:
+    let
+      sitePackages = pkgs.python312.sitePackages;
+      origVenv = pkg.passthru.hermesVenv;
+      origWheel = builtins.head (
+        builtins.filter
+          (drv: lib.hasPrefix "/nix/store" drv && lib.hasSuffix "hermes-agent-0.14.0" drv)
+          (lib.splitString ":" origVenv.NIX_PYPROJECT_DEPS)
+      );
+      patchedWheel = (pkgs.callPackage ({ stdenv, patch }: stdenv.mkDerivation {
+        name = "hermes-agent-0.14.0";
+        src = origWheel;
+        dontUnpack = true;
+        nativeBuildInputs = [ patch ];
+        installPhase = ''
+          cp -a $src $out
+          chmod -R u+w $out
+          patch -p1 -d $out/${sitePackages} < ${./hermes-vision-anthropic.patch}
+          patch -p1 -d $out/${sitePackages} < ${./hermes-fallback-custom-api-mode.patch}
+        '';
+      }) {});
+      patchedVenv = origVenv.overrideAttrs (old: {
+        NIX_PYPROJECT_DEPS = builtins.replaceStrings
+          [ origWheel ]
+          [ "${patchedWheel}" ]
+          old.NIX_PYPROJECT_DEPS;
+      });
+    in
+    pkg.overrideAttrs (old: {
+      installPhase = builtins.replaceStrings
+        [ (builtins.unsafeDiscardStringContext "${origVenv}") ]
+        [ "${patchedVenv}" ]
+        old.installPhase;
+      postInstall = (old.postInstall or "") + ''
+        for wrapper in $out/bin/hermes $out/bin/hermes-agent $out/bin/hermes-acp; do
+          if grep -q ${origVenv} "$wrapper"; then
+            substituteInPlace "$wrapper" --replace-fail ${origVenv} ${patchedVenv}
+          fi
+        done
+      '';
+      passthru = old.passthru // { hermesVenv = patchedVenv; };
+    });
+
   patchLocales = pkg:
     let
       localesSrc = lib.cleanSource (inputs.hermes-agent + "/locales");
@@ -60,6 +112,13 @@ let
         [ (builtins.unsafeDiscardStringContext "${origVenv}") ]
         [ "${patchedVenv}" ]
         old.installPhase;
+      postInstall = (old.postInstall or "") + ''
+        for wrapper in $out/bin/hermes $out/bin/hermes-agent $out/bin/hermes-acp; do
+          if grep -q ${origVenv} "$wrapper"; then
+            substituteInPlace "$wrapper" --replace-fail ${origVenv} ${patchedVenv}
+          fi
+        done
+      '';
       passthru = old.passthru // { hermesVenv = patchedVenv; };
     });
 
@@ -70,7 +129,7 @@ let
         then cfg.package
         else cfg.package.override { extraDependencyGroups = cfg.extraDependencyGroups; };
     in
-    patchLocales base;
+    patchLocales (patchVisionAnthropicFormat base);
 in
 {
   options.services.hermes-gateway = with lib; {

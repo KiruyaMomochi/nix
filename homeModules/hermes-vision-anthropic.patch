@@ -1,0 +1,27 @@
+--- a/gateway/run.py
++++ b/gateway/run.py
+@@ -16725,7 +16725,23 @@
+                                 "Native image attachment: skipped %d unreadable path(s): %s",
+                                 len(_skipped), _skipped,
+                             )
+-                        if any(p.get("type") == "image_url" for p in _parts):
++                        # Convert OpenAI image_url parts to Anthropic source
++                        # format when api_mode=anthropic_messages.
++                        if getattr(agent, "api_mode", None) == "anthropic_messages":
++                            _converted = []
++                            for _p in _parts:
++                                if _p.get("type") == "image_url":
++                                    _url = (_p.get("image_url") or {}).get("url", "")
++                                    if _url.startswith("data:"):
++                                        _hdr, _b64 = _url.split(",", 1)
++                                        _mt = _hdr.split(":")[1].split(";")[0]
++                                        _converted.append({"type": "image", "source": {"type": "base64", "media_type": _mt, "data": _b64}})
++                                    else:
++                                        _converted.append({"type": "image", "source": {"type": "url", "url": _url}})
++                                else:
++                                    _converted.append(_p)
++                            _parts = _converted
++                        if any(p.get("type") in {"image_url", "image"} for p in _parts):
+                             _run_message: Any = _parts
+                         else:
+                             # All images failed to read — fall back to plain text.
