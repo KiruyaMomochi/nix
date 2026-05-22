@@ -176,8 +176,19 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Make hermes CLI available in interactive shells
-    home.packages = [ effectivePackage ];
+    # Make hermes CLI available in interactive shells, with HERMES_HOME defaulting
+    # to cfg.hermesHome so the CLI and gateway service stay in sync without
+    # requiring the user to set a session variable.  --set-default is used so an
+    # explicit HERMES_HOME= in the environment still takes precedence.
+    home.packages = [
+      (effectivePackage.overrideAttrs (old: {
+        postInstall = (old.postInstall or "") + ''
+          for wrapper in $out/bin/hermes $out/bin/hermes-agent $out/bin/hermes-acp; do
+            wrapProgram "$wrapper" --set-default HERMES_HOME ${lib.escapeShellArg cfg.hermesHome}
+          done
+        '';
+      }))
+    ];
 
     systemd.user.services.hermes-gateway = {
       Unit = {
