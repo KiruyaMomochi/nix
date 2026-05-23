@@ -77,13 +77,13 @@ def --wrapped main [
         } else if $arg == "--" {
             $parsing_cmd = true
         } else {
-            $sys_list = ($sys_list | append ($arg | split words))
+            $sys_list = ($sys_list | append ($arg | split row ' ' | where { |it| ($it | str trim) != '' }))
         }
     }
 
     # Parse Python String to List
     let py_list = if ($python | is-empty) { [] } else {
-        $python | split words | each { |it| $it | str trim }
+        $python | split row ' ' | each { |it| $it | str trim } | where { |it| $it != '' }
     }
 
     # Delegate to core logic
