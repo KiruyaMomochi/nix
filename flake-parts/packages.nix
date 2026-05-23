@@ -10,6 +10,8 @@ in
       overlays = [ inputs.self.overlays.default ];
       config = import ../nixpkgs-config.nix;
     };
-    packages = mkPackages pkgs;
+    packages = (mkPackages pkgs) // {
+      hermes-agent = pkgs.callPackage ../packages/hermes-agent { inherit inputs; };
+    };
   };
 }
