@@ -68,12 +68,28 @@
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
-  environment.systemPackages = [ ];
+  environment.systemPackages = with pkgs; [
+    # RDP — KDE Plasma 6 native Wayland RDP server
+    kdePackages.krdp
+    # Waydroid clipboard sharing
+    wl-clipboard
+  ];
+
+  # Waydroid (Android in Linux container)
+  # NVIDIA GPUs need software rendering — after `waydroid init`, add to
+  # /var/lib/waydroid/waydroid_base.prop:
+  #   ro.hardware.gralloc=default
+  #   ro.hardware.egl=swiftshader
+  virtualisation.waydroid.enable = true;
+  # networking.nftables.enable is already true → default package is waydroid-nftables
 
   # List services that you want to enable:
   # Enable the OpenSSH daemon.
   # Remote access
-  # RDP
+  # RDP — krdp (Wayland native) broken on NixOS: WITH_PLASMA_SESSION not compiled in,
+  # portal path fails with "App info not found for 'org.kde.krdp-server'".
+  # TODO: fix nixpkgs krdp packaging (add PlasmaWaylandProtocols dep), then switch back.
+  # krdp stays in systemPackages for future use.
   services.xrdp.enable = true;
   services.openssh.ports = [ 22 5022 ];
 

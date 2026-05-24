@@ -99,6 +99,8 @@ in
     # Pretend /usr/bin and /bin have every binary available via PATH
     services.envfs.enable = true;
 
+    security.sudo-rs.enable = true;
+
     # Nspawn
     systemd.services."container-getty@" = {
       environment = {

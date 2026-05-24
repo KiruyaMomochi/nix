@@ -37,6 +37,18 @@ in
           dragonflydb = prev.dragonflydb.override ({
             abseil-cpp = final.abseil-cpp_202505;
           });
+          # krdp: nixpkgs missing plasma-wayland-protocols → WITH_PLASMA_SESSION not built
+          # --plasma flag is a no-op without this, falls back to broken PortalSession
+          # upstream CMakeLists: find_package(PlasmaWaylandProtocols REQUIRED) when BUILD_PLASMA_SESSION=ON
+          kdePackages = prev.kdePackages.overrideScope (
+            kfinal: kprev: {
+              krdp = kprev.krdp.overrideAttrs (old: {
+                buildInputs = (old.buildInputs or [ ]) ++ [
+                  kfinal.plasma-wayland-protocols
+                ];
+              });
+            }
+          );
           pythonPackagesExtensions = prev.pythonPackagesExtensions ++ [
             (python-final: python-prev: {
               open-interpreter = python-prev.open-interpreter.overridePythonAttrs (old: {
