@@ -88,6 +88,8 @@
 
       # ai
       mods
+      (writeShellScriptBin "opencode" (builtins.readFile ./scripts/opencode-wrapper.sh))
+      (writeShellScriptBin "pi" (builtins.readFile ./scripts/pi-wrapper.sh))
     ])
     ++ (with pkgs.nushellPlugins; [
       polars
@@ -175,6 +177,10 @@
   };
 
   services.ssh-agent = {
+    enable = true;
+  };
+
+  programs.uv = {
     enable = true;
   };
 
