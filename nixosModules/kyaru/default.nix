@@ -96,8 +96,8 @@ in
     # Enable the OpenSSH daemon.
     services.openssh.enable = true;
     services.fail2ban.enable = true;
-    # Pretend /usr/bin and /bin have every binary available via PATH
-    services.envfs.enable = true;
+    # envfs crash will lead to lots of unexpected crash like broken xkbcomp
+    services.envfs.enable = false;
 
     security.sudo-rs.enable = true;
 
