@@ -144,6 +144,15 @@
 
   programs.wireshark.enable = true;
 
+  # wheel group gets passwordless polkit
+  security.polkit.extraConfig = ''
+    polkit.addRule(function(action, subject) {
+      if (subject.isInGroup("wheel")) {
+        return polkit.Result.YES;
+      }
+    });
+  '';
+
   services.networkd-dispatcher.enable = true;
 
   services.vlmcsd = {
