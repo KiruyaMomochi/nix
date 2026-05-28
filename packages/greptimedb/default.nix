@@ -1,6 +1,7 @@
 { lib
 , stdenv
 , fetchFromGitHub
+, fetchurl
 , makeRustPlatform
 , fenix
 , pkg-config
@@ -22,6 +23,8 @@ let
   rustToolchainChannel = "nightly-2026-03-21";
   toolchainHash = "sha256-rboGKQLH4eDuiY01SINOqmXUFUNr9F4awoFZGzib17o=";
 
+  # Downloads the official pre-built nightly toolchain via fenix.
+  # Equivalent to `rustup toolchain install nightly-2026-03-21`.
   rustToolchain = fenix.fromToolchainName {
     name = rustToolchainChannel;
     sha256 = toolchainHash;
@@ -30,23 +33,37 @@ let
   toolchainWithComponents = (rustToolchain.withComponents [
     "cargo"
     "rustc"
-    "rust-src"
-    "rustfmt"
+    "rust-src"      # needed by proc-macro / build.rs
+    "rustfmt"       # some build.rs invoke rustfmt on generated code
     "clippy"
-    "llvm-tools"
+    "llvm-tools"    # coverage / profiling; harmless to include
   ]);
 
+  # Construct a full rustPlatform (buildRustPackage, fetchCargoVendor, etc.)
+  # using our pinned nightly toolchain.
   rustPlatform = makeRustPlatform {
     cargo = toolchainWithComponents;
     rustc = toolchainWithComponents;
   };
 
+  # otel-arrow is a git dependency in Cargo.lock pointing to GitHub.
+  # Pre-fetch the source and redirect via [patch] in postPatch since
+  # the nix sandbox has no network access.
   otelArrowSrc = fetchFromGitHub {
     owner = "GreptimeTeam";
     repo = "otel-arrow";
     rev = "5da284414e9b14f678344b51e5292229e4b5f8d2";
     fetchSubmodules = true;
     hash = "sha256-rUf1jE/StIwWPaqiXyzU4rM7fXu4t5VgKNfIaq3M0V0=";
+  };
+
+  # Pre-built dashboard frontend assets. The build.rs fetches these from
+  # GitHub when the "dashboard" feature is enabled, but the sandbox has
+  # no network. We pre-fetch and extract in postPatch instead.
+  dashboardVersion = "v0.12.0";
+  dashboardAssets = fetchurl {
+    url = "https://github.com/GreptimeTeam/dashboard/releases/download/${dashboardVersion}/build.tar.gz";
+    hash = "sha256-rmN3zoreYMtwISzq7dxtKLV2H0L2jPItifF9mY4fMWw=";
   };
 in
 rustPlatform.buildRustPackage rec {
@@ -57,53 +74,42 @@ rustPlatform.buildRustPackage rec {
     owner = "GreptimeTeam";
     repo = "greptimedb";
     rev = "v${version}";
-    # nix-prefetch-url --unpack https://github.com/GreptimeTeam/greptimedb/archive/v1.0.2.tar.gz
     hash = "sha256-LMow1zgC2gr568XBrkliPaNrsw9ayoGf3JktQKkiG2I=";
   };
 
-  cargoLock = {
-    lockFile = "${src}/Cargo.lock";
-    # Hashes for git+https dependencies; obtained by setting to fakeHash and
-    # letting nix tell us the correct value on first build.
-    outputHashes = {
-      "datafusion-52.1.0" = "sha256-JdEsP6swxG0lq2q6/YEWsImFBs8dfveGghlMw/QT6xU=";
-      "greptime-proto-0.1.0" = "sha256-DRBUPazYDWxkf8mDbjbsGD5CpcqkaDcR2avd/5onU4w=";
-      "loki-proto-0.1.0" = "sha256-/gmWsSllSe+CLppEIy1wdF6sB7a0TxjssZY3yyP+3SM=";
-      "meter-core-0.1.0" = "sha256-E2lvqsfY5nEKgXcHAubzNKcZveX8VI0GMT9OSRvIFgs=";
-      "opensrv-mysql-0.8.0" = "sha256-6Zq58c2tFFdMP8ZNYelXde53RGATrCex7Pj0ZCqulAc=";
-      # Required even though we redirect via [patch] in postPatch — buildRustPackage
-      # still parses Cargo.lock and demands a hash for every git source listed there.
-      "otel-arrow-rust-0.1.0" = "sha256-rUf1jE/StIwWPaqiXyzU4rM7fXu4t5VgKNfIaq3M0V0=";
-      "rskafka-0.6.0" = "sha256-RU4DN7BASu0VrUVWsfDrBqW6YXm0iuLzr7yUR/xSq7Y=";
-      "sqlness-0.6.1" = "sha256-jRMBA/5T/Yh8TtTfTu36hmisdQIT7A5Ujabnd3CQTng=";
-      "sqlparser-0.61.0" = "sha256-688CTiC+isSqm+EQRuFemaXxS/5QaB4/jIG539oOMds=";
-      "uddsketch-0.1.0" = "sha256-VEub0vUF3w7U5LZsmBueegHNiuAE6jSgyo+x5r1C4h8=";
-      "influxdb_line_protocol-0.1.0" = "sha256-RvPS4erQDrMxzPbZu8gT4g5q9UHMaq9DS5P0kb0UhD4=";
-      "memcomparable-0.2.0" = "sha256-qZ+6pytEsg4m5SYzAcQAu1HMFzdkH7rQwEI+Cxzd8K8=";
-    };
-  };
+  # Single-FOD vendor of all dependencies (including git deps) via
+  # fetchCargoVendor. To update: set to lib.fakeHash, build once,
+  # nix reports the correct hash, paste it back.
+  cargoHash = "sha256-+hu7LRbXk4eBFgawJ6rVKRwNz9LRNOD3uby8zOk+jPE=";
 
   nativeBuildInputs = [
-    pkg-config
-    protobuf
-    cmake
-    clang
-    mold
-    perl
-    # build.rs in common-version reads git metadata; provide a clean fallback.
-    rustfmt
+    pkg-config   # lets *-sys crates find C library .pc files
+    protobuf     # protoc for tonic-build / prost-build
+    cmake        # build system for some C deps (e.g. zstd-sys)
+    clang        # libclang for bindgen
+    mold         # fast linker, replaces ld
+    perl         # openssl-sys Configure script needs perl
+    rustfmt      # some build.rs format generated code with rustfmt
   ];
 
   buildInputs = [
-    openssl
-    zlib
-    zstd
-    libgit2
+    openssl      # TLS (some crates still depend on openssl besides rustls)
+    zlib         # compression
+    zstd         # compression (zstd-sys)
+    libgit2      # common-version build.rs reads git metadata
   ];
 
-  # Build only the main greptime binary to keep build time/memory in check.
+  # Only build the main binary; skip other bin targets (benchmarks, etc.)
   cargoBuildFlags = [ "--bin" "greptime" ];
 
+  # Cargo features:
+  #   servers/dashboard — embedded web dashboard (rust-embed bundles static assets)
+  #   cmd/vector_index  — ANN vector index for semantic search on time-series data
+  buildFeatures = [ "servers/dashboard" "cmd/vector_index" ];
+
+  # 1. Redirect otel-arrow git dep to pre-fetched local source via [patch].
+  # 2. Extract pre-downloaded dashboard assets to the path rust-embed expects
+  #    (src/servers/dashboard/dist/) and patch out the network fetch in build.rs.
   postPatch = ''
     cat >> Cargo.toml <<'EOF'
 
@@ -112,24 +118,27 @@ rustPlatform.buildRustPackage rec {
     otlp-derive = { path = "${otelArrowSrc}/rust/otel-arrow-rust/src/pdata/otlp/derive" }
     otlp-model = { path = "${otelArrowSrc}/rust/otel-arrow-rust/src/pdata/otlp/model" }
     EOF
+
+    # Inject pre-fetched dashboard assets and disable the network fetch.
+    tar -xzf ${dashboardAssets} -C src/servers/dashboard/
+    substituteInPlace src/servers/build.rs \
+      --replace-fail 'fetch_dashboard_assets();' '{}; /* dashboard assets injected by nix */'
   '';
 
-  # Tests require network/external services (kafka, etc.) — skip during build.
+  # Tests require kafka, network, etc. — cannot run in sandbox.
   doCheck = false;
 
-  # jemalloc's mremap probe trips fortify hardening on Nix; upstream also
-  # disables it. See https://github.com/tikv/jemallocator/issues/108
+  # jemalloc's mremap probe trips nix fortify hardening.
+  # Upstream tikv-jemallocator also recommends disabling it.
   hardeningDisable = [ "fortify" ];
 
   env = {
-    # protoc location for tonic-build / prost-build.
     PROTOC = "${protobuf}/bin/protoc";
-    # zstd-sys uses pkg-config when available.
     ZSTD_SYS_USE_PKG_CONFIG = "1";
-    # Speed up link step on this large workspace.
+    # mold linker: cuts link phase from ~2min to ~15s on this 71-crate workspace.
     RUSTFLAGS = "-C link-arg=-fuse-ld=mold";
-    # Inject reproducible build metadata so common-version's build.rs
-    # does not try to invoke git inside the sandbox.
+    # Inject build metadata so common-version's build.rs doesn't panic
+    # when it can't find git inside the sandbox.
     GREPTIMEDB_BUILD_INFO_VERSION = version;
     GREPTIMEDB_BUILD_INFO_BRANCH = "main";
     GREPTIMEDB_BUILD_INFO_COMMIT = "unknown";
@@ -137,13 +146,9 @@ rustPlatform.buildRustPackage rec {
     GREPTIMEDB_BUILD_INFO_DIRTY = "false";
   };
 
-  # The build script for `common-version` shells out to `git`; without one
-  # available in PATH it falls back to env vars above (see crate's build.rs).
   preBuild = ''
-    # Avoid noisy panics if a build.rs tries to invoke `git rev-parse` etc.
     export HOME=$TMPDIR
-    # `common-version`'s build.rs links against system libgit2; make the
-    # shared library findable when the build script runs inside the sandbox.
+    # Make shared libraries findable when build.rs runs inside the sandbox.
     export LD_LIBRARY_PATH="${lib.makeLibraryPath [ libgit2 zlib zstd openssl stdenv.cc.cc.lib ]}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
   '';
 
@@ -153,6 +158,5 @@ rustPlatform.buildRustPackage rec {
     license = licenses.asl20;
     platforms = [ "x86_64-linux" "aarch64-linux" ];
     mainProgram = "greptime";
-    # Heavy 71-crate workspace; needs ~30+ min to build from scratch.
   };
 }
