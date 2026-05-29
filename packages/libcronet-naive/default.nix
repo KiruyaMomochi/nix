@@ -8,6 +8,7 @@ let
   naiveproxy-src = fetchFromGitHub {
     owner = "SagerNet";
     repo = "naiveproxy";
+    # From https://github.com/SagerNet/cronet-go
     rev = "888e114241c89b05fac4e4ee01482d7bd89ca15a";
     hash = "sha256-lSy5f2vUsP7sjJ6UJ2jU56cuMibnMilHKVV7whNkGls=";
   };
