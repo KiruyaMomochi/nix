@@ -11,6 +11,8 @@
     ./vision-anthropic.patch
     ./fallback-custom-api-mode.patch
     ./gemini-cli-aux.patch
+    ./context-control.patch
+    ./prompt-overrides.patch
   ]
 ,
 }:
