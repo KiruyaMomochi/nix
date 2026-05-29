@@ -13,6 +13,7 @@
     ./gemini-cli-aux.patch
     ./context-control.patch
     ./prompt-overrides.patch
+    ./memory-context-header-override.patch
   ]
 ,
 }:

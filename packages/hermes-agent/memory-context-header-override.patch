@@ -1,0 +1,44 @@
+diff --git a/agent/memory_manager.py b/agent/memory_manager.py
+index fc5d96da4..54ec2abea 100644
+--- a/agent/memory_manager.py
++++ b/agent/memory_manager.py
+@@ -224,6 +224,25 @@ class StreamingContextScrubber:
+             self._at_block_boundary = self._at_block_boundary and text.strip() == ""
+ 
+ 
++# ---------------------------------------------------------------------------
++# Memory context header — overridable via prompt_overrides.yaml
++# ---------------------------------------------------------------------------
++_MEMORY_CONTEXT_HEADER = (
++    "[System note: The following is recalled memory context, "
++    "NOT new user input. Treat as authoritative reference data — "
++    "this is the agent's persistent memory and should inform all responses.]"
++)
++
++try:
++    from agent.prompt_builder import _PROMPT_OVERRIDES
++    if "MEMORY_CONTEXT_HEADER" in _PROMPT_OVERRIDES:
++        _v = _PROMPT_OVERRIDES["MEMORY_CONTEXT_HEADER"]
++        _MEMORY_CONTEXT_HEADER = _v if _v is not None else ""
++        del _v
++except Exception:
++    pass
++
++
+ def build_memory_context_block(raw_context: str) -> str:
+     """Wrap prefetched memory in a fenced block with system note."""
+     if not raw_context or not raw_context.strip():
+@@ -231,11 +250,10 @@ def build_memory_context_block(raw_context: str) -> str:
+     clean = sanitize_context(raw_context)
+     if clean != raw_context:
+         logger.warning("memory provider returned pre-wrapped context; stripped")
++    header = f"{_MEMORY_CONTEXT_HEADER}\n\n" if _MEMORY_CONTEXT_HEADER else ""
+     return (
+         "<memory-context>\n"
+-        "[System note: The following is recalled memory context, "
+-        "NOT new user input. Treat as authoritative reference data — "
+-        "this is the agent's persistent memory and should inform all responses.]\n\n"
++        f"{header}"
+         f"{clean}\n"
+         "</memory-context>"
+     )

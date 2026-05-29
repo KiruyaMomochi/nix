@@ -1,0 +1,22 @@
+--- a/plugins/memory/openviking/__init__.py
++++ b/plugins/memory/openviking/__init__.py
+@@ -526,13 +526,16 @@
+                 }))
+                 result = resp.get("result", {})
+                 parts = []
++                import os
++                min_score = float(os.environ.get("OPENVIKING_MIN_SCORE", "0.55"))
+                 for ctx_type in ("memories", "resources"):
+                     items = result.get(ctx_type, [])
+-                    for item in items[:3]:
++                    for item in items[:5]:
+                         uri = item.get("uri", "")
+                         abstract = item.get("abstract", "")
+                         score = item.get("score", 0)
+-                        if abstract:
++                        if abstract and score >= min_score:
+                             parts.append(f"- [{score:.2f}] {abstract} ({uri})")
+                 if parts:
++                    parts.insert(0, "## OpenViking Context")
+                     with self._prefetch_lock:
+                         self._prefetch_result = "\n".join(parts)
