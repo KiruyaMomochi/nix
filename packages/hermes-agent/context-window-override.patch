@@ -1,0 +1,45 @@
+Allow HERMES_STANDARD_CTX and HERMES_DEFAULT_CTX env vars to override the
+hardcoded 200000 token fallback, so relay API users can tune the limit
+without rebuilding.
+
+--- a/agent/models_dev.py
++++ b/agent/models_dev.py
+@@ -19,6 +19,7 @@
+ """
+ 
+ import json
++import os
+ import logging
+ import time
+ from dataclasses import dataclass
+@@ -491,7 +492,8 @@
+         limit = {}
+ 
+     ctx = limit.get("context")
+-    context_window = int(ctx) if isinstance(ctx, (int, float)) and ctx > 0 else 200000
++    _default_ctx = int(os.environ.get("HERMES_DEFAULT_CTX", 200000))
++    context_window = int(ctx) if isinstance(ctx, (int, float)) and ctx > 0 else _default_ctx
+ 
+     out = limit.get("output")
+     max_output_tokens = int(out) if isinstance(out, (int, float)) and out > 0 else 8192
+--- a/agent/conversation_loop.py
++++ b/agent/conversation_loop.py
+@@ -2206,7 +2206,8 @@
+ 
+                 # ── Classify the error for structured recovery decisions ──
+                 _compressor = getattr(agent, "context_compressor", None)
+-                _ctx_len = getattr(_compressor, "context_length", 200000) if _compressor else 200000
++                _std_ctx = int(os.environ.get("HERMES_STANDARD_CTX", 200000))
++                _ctx_len = getattr(_compressor, "context_length", _std_ctx) if _compressor else _std_ctx
+                 classified = classify_api_error(
+                     api_error,
+                     provider=getattr(agent, "provider", "") or "",
+@@ -2611,7 +2612,7 @@
+                 # credentials won't help.  Reduce context to 200k (the
+                 # standard tier) and compress.
+                 if classified.reason == FailoverReason.long_context_tier:
+-                    _reduced_ctx = 200000
++                    _reduced_ctx = int(os.environ.get("HERMES_STANDARD_CTX", 200000))
+                     compressor = agent.context_compressor
+                     old_ctx = compressor.context_length
+                     if old_ctx > _reduced_ctx:

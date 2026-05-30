@@ -53,6 +53,27 @@ in
       default = [ ];
       description = "Extra directories to prepend to PATH in the service.";
     };
+
+    standardContextTokens = mkOption {
+      type = types.nullOr types.int;
+      default = null;
+      description = ''
+        Override the hardcoded 200 000-token "standard tier" fallback used when
+        the relay API does not return long-context responses.  Sets
+        HERMES_STANDARD_CTX in the service environment.  Leave null to keep the
+        upstream default (200 000).
+      '';
+    };
+
+    defaultContextTokens = mkOption {
+      type = types.nullOr types.int;
+      default = null;
+      description = ''
+        Override the hardcoded 200 000-token fallback used when models.dev
+        returns no context-window data for a model.  Sets HERMES_DEFAULT_CTX.
+        Leave null to keep the upstream default (200 000).
+      '';
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -90,7 +111,10 @@ in
         Environment = [
           "PATH=${lib.concatStringsSep ":" (cfg.extraPaths ++ ["${pkgs.bash}/bin" "${effectivePackage}/bin" "/run/current-system/sw/bin"])}"
           "HERMES_HOME=${cfg.hermesHome}"
-        ];
+        ] ++ lib.optional (cfg.standardContextTokens != null)
+              "HERMES_STANDARD_CTX=${toString cfg.standardContextTokens}"
+          ++ lib.optional (cfg.defaultContextTokens != null)
+              "HERMES_DEFAULT_CTX=${toString cfg.defaultContextTokens}";
 
         EnvironmentFile = lib.mkIf (cfg.environmentFile != null) cfg.environmentFile;
 

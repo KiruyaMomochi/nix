@@ -14,6 +14,7 @@
     ./context-control.patch
     ./prompt-overrides.patch
     ./memory-context-header-override.patch
+    ./context-window-override.patch
   ]
 ,
 }:
