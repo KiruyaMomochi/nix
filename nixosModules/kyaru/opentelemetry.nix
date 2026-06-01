@@ -206,9 +206,14 @@ in
               {
                 context = "log";
                 statements = [
+                  # Strip ANSI escape codes (color, cursor, etc.) from log body
+                  "replace_pattern(body, \"\\\\x1b\\\\[[0-9;]*[a-zA-Z]\", \"\")"
                   # Try to parse body as JSON if it looks like JSON
                   # We merge the parsed json into attributes
                   "merge_maps(attributes, ParseJSON(body), \"insert\") where IsMatch(body, \"^\\\\{.*\\\\}$\")"
+                  # Parse sing-box structured log prefix into attributes
+                  # Format: [timezone] [date] [time] LEVEL [connID age] module: message
+                  "merge_maps(attributes, ExtractPatterns(body, \"^(?:(?P<sb_timestamp>[+-]\\\\d{4} \\\\d{4}-\\\\d{2}-\\\\d{2} \\\\d{2}:\\\\d{2}:\\\\d{2}) )?(?P<sb_level>TRACE|DEBUG|INFO|WARN|ERROR|FATAL|PANIC)(?:\\\\[(?P<sb_elapsed>\\\\d{4,})\\\\])? (?:(?:\\\\[(?P<sb_conn_id>\\\\d+) (?P<sb_conn_age>[^\\\\]]+)\\\\] )?(?:(?P<sb_module>[^:]+): )?(?P<sb_message>.*))$\"), \"insert\") where IsMatch(body, \"^[+-]?\\\\d{4}[ ]|^(?:TRACE|DEBUG|INFO|WARN|ERROR|FATAL|PANIC)\")"
                 ];
               }
             ];

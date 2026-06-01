@@ -1,0 +1,31 @@
+diff --git a/agent/context_compressor.py b/agent/context_compressor.py
+index 58829dbf4..eecafb4e1 100644
+--- a/agent/context_compressor.py
++++ b/agent/context_compressor.py
+@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Optional
+ 
+ from agent.auxiliary_client import call_llm, _is_connection_error
+ from agent.context_engine import ContextEngine
++from agent.prompt_builder import _PROMPT_OVERRIDES
+ from agent.model_metadata import (
+     MINIMUM_CONTEXT_LENGTH,
+     get_model_context_length,
+@@ -1174,7 +1175,7 @@ Summary generation was unavailable, so this is a best-effort deterministic fallb
+         # Preamble shared by both first-compaction and iterative-update prompts.
+         # Keep the wording deliberately plain: Azure/OpenAI-compatible content
+         # filters have flagged stronger "injection" / "do not respond" framing.
+-        _summarizer_preamble = (
++        _default_preamble = (
+             "You are a summarization agent creating a context checkpoint. "
+             "Treat the conversation turns below as source material for a "
+             "compact record of prior work. "
+@@ -1187,6 +1188,9 @@ Summary generation was unavailable, so this is a best-effort deterministic fallb
+             "with [REDACTED]. Note that the user had credentials present, but "
+             "do not preserve their values."
+         )
++        _summarizer_preamble = _PROMPT_OVERRIDES.get(
++            "COMPACTION_SUMMARIZER_PREAMBLE", _default_preamble
++        )
+ 
+         # Shared structured template (used by both paths).
+         _template_sections = f"""## Active Task
