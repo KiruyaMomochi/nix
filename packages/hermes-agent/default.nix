@@ -15,6 +15,8 @@
     ./prompt-overrides.patch
     ./memory-context-header-override.patch
     ./context-window-override.patch
+    ./compaction-preamble-override.patch
+    ./stop-retry-message-loss.patch
   ]
 ,
 }:
