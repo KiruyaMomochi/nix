@@ -27,6 +27,8 @@ sing-box.overrideAttrs (
     # Set to fake hash to trigger mismatch error and get the correct one.
     vendorHash = "sha256-o5dWiyyjwv0oeYsVSH8/Prt7Gbo0O47kgiLbyEfVkns=";
 
+    patches = (old.patches or [ ]) ++ [ ./json-log-format.patch ];
+
     buildInputs = (old.buildInputs or [ ]) ++ [ kyaru.libcronet-naive ];
 
     env = (old.env or { }) // {

@@ -1,0 +1,125 @@
+diff --git a/log/format.go b/log/format.go
+index 6f4347b..9f7189f 100644
+--- a/log/format.go
++++ b/log/format.go
+@@ -2,6 +2,7 @@ package log
+ 
+ import (
+ 	"context"
++	"encoding/json"
+ 	"strconv"
+ 	"strings"
+ 	"time"
+@@ -18,9 +19,27 @@ type Formatter struct {
+ 	FullTimestamp    bool
+ 	TimestampFormat  string
+ 	DisableLineBreak bool
++	OutputFormat     string
++}
++
++type jsonEntry struct {
++	Time           string `json:"time"`
++	Level          string `json:"level"`
++	ElapsedSeconds int64  `json:"elapsed_seconds"`
++	Tag            string `json:"tag,omitempty"`
++	ConnectionID   uint32 `json:"connection_id,omitempty"`
++	ConnectionAge  string `json:"connection_age,omitempty"`
++	Message        string `json:"message"`
+ }
+ 
+ func (f Formatter) Format(ctx context.Context, level Level, tag string, message string, timestamp time.Time) string {
++	if f.OutputFormat == FormatJSON {
++		return f.formatJSON(ctx, level, tag, message, timestamp)
++	}
++	return f.formatText(ctx, level, tag, message, timestamp)
++}
++
++func (f Formatter) formatText(ctx context.Context, level Level, tag string, message string, timestamp time.Time) string {
+ 	levelString := strings.ToUpper(FormatLevel(level))
+ 	if !f.DisableColors {
+ 		switch level {
+@@ -89,7 +108,34 @@ func (f Formatter) Format(ctx context.Context, level Level, tag string, message
+ 	return message
+ }
+ 
++func (f Formatter) formatJSON(ctx context.Context, level Level, tag string, message string, timestamp time.Time) string {
++	entry := jsonEntry{
++		Time:           timestamp.Format(time.RFC3339Nano),
++		Level:          FormatLevel(level),
++		ElapsedSeconds: int64(timestamp.Sub(f.BaseTime) / time.Second),
++		Tag:            tag,
++		Message:        message,
++	}
++	if ctx != nil {
++		if id, hasId := IDFromContext(ctx); hasId {
++			entry.ConnectionID = id.ID
++			entry.ConnectionAge = FormatDuration(time.Since(id.CreatedAt))
++		}
++	}
++	line, err := json.Marshal(entry)
++	if err != nil {
++		line = []byte(`{"message":"failed to marshal log entry"}`)
++	}
++	if f.DisableLineBreak {
++		return string(line)
++	}
++	return string(line) + "\n"
++}
++
+ func (f Formatter) FormatWithSimple(ctx context.Context, level Level, tag string, message string, timestamp time.Time) (string, string) {
++	if f.OutputFormat == FormatJSON {
++		return f.formatJSON(ctx, level, tag, message, timestamp), message
++	}
+ 	levelString := strings.ToUpper(FormatLevel(level))
+ 	if !f.DisableColors {
+ 		switch level {
+diff --git a/log/log.go b/log/log.go
+index 3a1c653..024f653 100644
+--- a/log/log.go
++++ b/log/log.go
+@@ -19,6 +19,11 @@ type Options struct {
+ 	PlatformWriter PlatformWriter
+ }
+ 
++const (
++	FormatText = "text"
++	FormatJSON = "json"
++)
++
+ func New(options Options) (Factory, error) {
+ 	logOptions := options.Options
+ 
+@@ -43,12 +48,21 @@ func New(options Options) (Factory, error) {
+ 		logWriter = io.Discard
+ 		logFilePath = logOptions.Output
+ 	}
++	logFormat := logOptions.Format
++	switch logFormat {
++	case "", FormatText:
++		logFormat = FormatText
++	case FormatJSON:
++	default:
++		return nil, E.New("unknown log format: ", logFormat)
++	}
+ 	logFormatter := Formatter{
+ 		BaseTime:         options.BaseTime,
+ 		DisableColors:    logOptions.DisableColor || logFilePath != "",
+ 		DisableTimestamp: !logOptions.Timestamp && logFilePath != "",
+ 		FullTimestamp:    logOptions.Timestamp,
+ 		TimestampFormat:  "-0700 2006-01-02 15:04:05",
++		OutputFormat:     logFormat,
+ 	}
+ 	factory := NewDefaultFactory(
+ 		options.Context,
+diff --git a/option/options.go b/option/options.go
+index 8bebd48..c96187c 100644
+--- a/option/options.go
++++ b/option/options.go
+@@ -41,6 +41,7 @@ type LogOptions struct {
+ 	Disabled     bool   `json:"disabled,omitempty"`
+ 	Level        string `json:"level,omitempty"`
+ 	Output       string `json:"output,omitempty"`
++	Format       string `json:"format,omitempty"`
+ 	Timestamp    bool   `json:"timestamp,omitempty"`
+ 	DisableColor bool   `json:"-"`
+ }
