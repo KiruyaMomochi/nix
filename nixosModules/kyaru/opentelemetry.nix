@@ -18,11 +18,15 @@ let
     x-greptime-trace-table-name = cfg.traces.tableName;
   };
 
-  logsHeaders = optionalAttrs (cfg.logs.tableName != null) {
+  logsHeaders = {
+    x-greptime-log-extract-keys = "host.name";
+  } // optionalAttrs (cfg.logs.tableName != null) {
     x-greptime-log-table-name = cfg.logs.tableName;
   };
 
-  metricsHeaders = { };
+  metricsHeaders = {
+    x-greptime-otlp-metric-promote-resource-attrs = "host.name";
+  };
 
   mkExporter = headers: {
     endpoint = cfg.endpoint;
@@ -211,6 +215,8 @@ in
                   # Try to parse body as JSON if it looks like JSON
                   # We merge the parsed json into attributes
                   "merge_maps(attributes, ParseJSON(body), \"insert\") where IsMatch(body, \"^\\\\{.*\\\\}$\")"
+                  # For JSON logs (e.g. sing-box json format), put the human-readable message back in body
+                  "set(body, attributes[\"message\"]) where attributes[\"message\"] != nil"
                   # Parse sing-box structured log prefix into attributes
                   # Format: [timezone] [date] [time] LEVEL [connID age] module: message
                   "merge_maps(attributes, ExtractPatterns(body, \"^(?:(?P<sb_timestamp>[+-]\\\\d{4} \\\\d{4}-\\\\d{2}-\\\\d{2} \\\\d{2}:\\\\d{2}:\\\\d{2}) )?(?P<sb_level>TRACE|DEBUG|INFO|WARN|ERROR|FATAL|PANIC)(?:\\\\[(?P<sb_elapsed>\\\\d{4,})\\\\])? (?:(?:\\\\[(?P<sb_conn_id>\\\\d+) (?P<sb_conn_age>[^\\\\]]+)\\\\] )?(?:(?P<sb_module>[^:]+): )?(?P<sb_message>.*))$\"), \"insert\") where IsMatch(body, \"^[+-]?\\\\d{4}[ ]|^(?:TRACE|DEBUG|INFO|WARN|ERROR|FATAL|PANIC)\")"
