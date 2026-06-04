@@ -179,8 +179,8 @@ in
               { type = "move"; from = "attributes.MESSAGE"; to = "body"; }
             ];
           };
-          # OTLP receiver for application-pushed traces (and other signals if needed).
-          otlp = mkIf cfg.traces.enable {
+          # OTLP receiver for locally-pushed telemetry (traces, metrics from scripts, etc.)
+          otlp = mkIf (cfg.traces.enable || cfg.metrics.enable) {
             protocols = {
               grpc.endpoint = "127.0.0.1:4317";
               http.endpoint = "127.0.0.1:4318";
@@ -237,10 +237,9 @@ in
           extensions = optionals cfg.basicAuth.enable [ "basicauth/monitor" ];
           pipelines = {
             metrics = mkIf cfg.metrics.enable {
-              # When traces.enable is on, the otlp receiver is also wired in
-              # so remote clients can push metrics over OTLP (gRPC/HTTP), not
-              # just hostmetrics from this host.
-              receivers = [ "hostmetrics" ] ++ optionals cfg.traces.enable [ "otlp" ];
+              # OTLP receiver is always wired in when metrics.enable is on,
+              # so local scripts (e.g. redfish poller) can push metrics via OTLP.
+              receivers = [ "hostmetrics" "otlp" ];
               processors = [ "batch/monitor" "resourcedetection" "resource" ];
               exporters = [ "otlphttp/metrics" ];
             };
