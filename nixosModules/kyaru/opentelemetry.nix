@@ -244,7 +244,7 @@ in
               exporters = [ "otlphttp/metrics" ];
             };
             logs = mkIf cfg.logs.enable {
-              receivers = [ "journald" ] ++ optionals cfg.traces.enable [ "otlp" ];
+              receivers = [ "journald" "otlp" ];
               processors = [ "batch/monitor" "resourcedetection" "resource" "transform" ];
               exporters = [ "otlphttp/logs" ];
             };

@@ -12,10 +12,12 @@ import argparse
 import json
 import logging
 import os
+import re
 import socket
 import sys
 import time
 import warnings
+from datetime import datetime, timezone
 
 warnings.filterwarnings("ignore", message="Unverified HTTPS request")
 
@@ -270,10 +272,26 @@ def poll_event_log(session: requests.Session, cfg: dict, last_id: int) -> int:
         created = entry.get("Created", "")
         message_id = entry.get("MessageId", "")
 
+        # Parse BMC timestamp to nanoseconds since epoch
+        timestamp_ns = None
+        if created:
+            try:
+                dt = datetime.fromisoformat(created)
+                timestamp_ns = int(dt.timestamp() * 1_000_000_000)
+            except (ValueError, OSError):
+                pass
+
+        # Extract category from message prefix like [SA-0003], [LAN-0006], [IPMI-1009]
+        category = ""
+        cat_match = re.match(r"\[([A-Z]+-\d+)\]", message)
+        if cat_match:
+            category = cat_match.group(1).rsplit("-", 1)[0]  # "SA", "LAN", "IPMI"
+
         logger.emit(LogRecord(
             body=message,
             severity_text=severity_text,
             severity_number=severity_number,
+            timestamp=timestamp_ns,
             span_id=0,
             trace_id=0,
             trace_flags=0,
@@ -281,6 +299,7 @@ def poll_event_log(session: requests.Session, cfg: dict, last_id: int) -> int:
                 "event.id": str(entry_id),
                 "event.created": created,
                 "event.message_id": message_id,
+                "event.category": category,
                 "event.source": "redfish.bmc",
                 "chassis.id": cfg["chassis_id"],
             },
