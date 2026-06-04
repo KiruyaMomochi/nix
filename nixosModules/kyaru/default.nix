@@ -29,6 +29,7 @@ in
     ../vlmcsd.nix
     ./opentelemetry.nix
     ./greptimedb.nix
+    ./redfish-poller.nix
   ];
 
   options = {
