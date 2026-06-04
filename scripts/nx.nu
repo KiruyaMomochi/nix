@@ -5,7 +5,7 @@
 def --wrapped nx [
     --pkgs (-s): list<string>          # System packages
     --python-pkgs (-p): list<string>   # Python packages
-    --quiet (-q)                       # Suppress output (for scripts)
+    --verbose (-v)                     # Verbose output
     ...command
 ] {
     # Determine final command (default to SHELL if empty)
@@ -17,7 +17,7 @@ def --wrapped nx [
 
     # Handle optional parameters
     let pkgs = ($pkgs | default [])
-    let quiet = ($quiet | default false)
+    let verbose = ($verbose | default false)
 
     let python_pkgs = ($python_pkgs | default [])
     let overrides = [
@@ -47,14 +47,14 @@ pkgs // {
         }
     }
 
-    # Print info (unless quiet)
-    if not $quiet {
+    # Print info to stderr if verbose
+    if $verbose {
         if not ($python_pkgs | is-empty) {
-            print $"(ansi green)[nx] Python packages: ($python_pkgs | uniq | str join ', ')(ansi reset)"
+            print -e $"(ansi green)[nx] Python packages: ($python_pkgs | uniq | str join ', ')(ansi reset)"
         }
-        print $"(ansi cyan)[nx] Packages: ($pkgs | str join ', ')(ansi reset)"
-        print $"(ansi yellow)[nx] Expression:(ansi reset)"
-        print $expr
+        print -e $"(ansi cyan)[nx] Packages: ($pkgs | str join ', ')(ansi reset)"
+        print -e $"(ansi yellow)[nx] Expression:(ansi reset)"
+        print -e $expr
     }
 
     # Run!
