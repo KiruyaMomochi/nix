@@ -80,7 +80,8 @@ in
   config = mkIf cfg.enable {
     systemd.services.redfish-poller = {
       description = "Redfish BMC sensor poller → OTLP metrics";
-      after = [ "network.target" "opentelemetry-collector.service" ];
+      after = [ "network-online.target" "opentelemetry-collector.service" ];
+      wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
