@@ -18,6 +18,7 @@
     ./compaction-preamble-override.patch
     ./stop-retry-message-loss.patch
     ./background-review-file-tools.patch
+    ./nixos-path-fill.patch
   ]
 ,
 }:
