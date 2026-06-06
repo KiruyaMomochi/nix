@@ -1,5 +1,5 @@
 diff --git a/tools/environments/local.py b/tools/environments/local.py
-index 68ff25774..85185c6cf 100644
+index 68ff25774..f03cf6d6b 100644
 --- a/tools/environments/local.py
 +++ b/tools/environments/local.py
 @@ -4,6 +4,7 @@ import logging
@@ -10,7 +10,7 @@ index 68ff25774..85185c6cf 100644
  import shutil
  import signal
  import subprocess
-@@ -293,11 +294,96 @@ def _find_bash() -> str:
+@@ -293,11 +294,118 @@ def _find_bash() -> str:
  _find_shell = _find_bash
  
  
@@ -83,18 +83,40 @@ index 68ff25774..85185c6cf 100644
 +    return ":".join(entries)
 +
 +
++def _path_repair_entries(env: dict) -> list[str]:
++    """PATH entries to re-apply after a login shell has sourced profiles.
++
++    Start with the exact PATH inherited by the Hermes process (after normal
++    secret sanitization), then append the conservative fill-in candidates for
++    sparse service environments.  This is intentionally not limited to a small
++    built-in allowlist: on NixOS, user profiles and the Hermes package itself
++    often live under ``~/.nix-profile/bin`` and ``/nix/store/.../bin``.  Those
++    entries are already present in the trusted parent gateway process env, and
++    losing them in ``bash -l`` is the bug this repair exists to prevent.
++    """
++    entries: list[str] = []
++    for entry in (env.get("PATH") or "").split(":"):
++        if entry and entry not in entries:
++            entries.append(entry)
++    for entry in _path_fill_candidates(env):
++        if entry and entry not in entries:
++            entries.append(entry)
++    return entries
++
++
 +def _path_fill_shell_prelude(env: dict) -> str:
-+    """Shell snippet that re-applies PATH fill after login profiles run.
++    """Shell snippet that re-applies parent PATH after login profiles run.
 +
 +    NixOS' /etc/profile sources a generated set-environment script that can
 +    replace PATH inside ``bash -l``.  Since that happens after Popen receives
 +    our env, Python-side PATH repair alone can be lost during the snapshot.
 +    This prelude runs inside the login shell, after system/user profiles, and
-+    only appends entries still missing at that point.
++    appends any trusted parent-process PATH entries still missing at that
++    point (plus conservative standard/user fill-ins for sparse service envs).
 +    """
 +    if _IS_WINDOWS:
 +        return ""
-+    quoted = " ".join(shlex.quote(entry) for entry in _path_fill_candidates(env) if entry)
++    quoted = " ".join(shlex.quote(entry) for entry in _path_repair_entries(env))
 +    if not quoted:
 +        return ""
 +    return (
@@ -111,7 +133,7 @@ index 68ff25774..85185c6cf 100644
  
  
  def _make_run_env(env: dict) -> dict:
-@@ -315,18 +401,6 @@ def _make_run_env(env: dict) -> dict:
+@@ -315,18 +423,6 @@ def _make_run_env(env: dict) -> dict:
              run_env[real_key] = v
          elif k not in _HERMES_PROVIDER_ENV_BLOCKLIST or _is_passthrough(k):
              run_env[k] = v
@@ -130,7 +152,7 @@ index 68ff25774..85185c6cf 100644
      _inject_context_hermes_home(run_env)
  
      # Per-profile HOME isolation: redirect system tool configs (git, ssh, gh,
-@@ -337,6 +411,18 @@ def _make_run_env(env: dict) -> dict:
+@@ -337,6 +433,18 @@ def _make_run_env(env: dict) -> dict:
      if _profile_home:
          run_env["HOME"] = _profile_home
  
@@ -149,7 +171,7 @@ index 68ff25774..85185c6cf 100644
      # Inject ContextVar-based session vars into subprocess env.
      # ContextVars don't propagate to child processes, so we bridge them here.
      try:
-@@ -506,12 +592,15 @@ class LocalEnvironment(BaseEnvironment):
+@@ -506,12 +614,15 @@ class LocalEnvironment(BaseEnvironment):
          # (nvm, asdf, pyenv, …) end up on PATH in the captured snapshot.
          # Non-login invocations are already sourcing the snapshot and
          # don't need this.
