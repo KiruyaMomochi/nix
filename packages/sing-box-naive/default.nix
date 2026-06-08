@@ -25,11 +25,11 @@ sing-box.overrideAttrs (
 
     # New tags might change dependencies, so we need a new vendorHash.
     # Set to fake hash to trigger mismatch error and get the correct one.
-    vendorHash = "sha256-BZrGw1/9QL4aj+bMV/kZq+iTCQdgf4A4GZ922vbW27Y=";
+    vendorHash = "sha256-RxXmhpj+fvpLBHqLnCv7hrH1Bot6FnzjTkxvXKuafSE=";
 
     # cronet-go commit was force-pushed on GitHub; the old pseudo-version
-    # is unresolvable. Use Go module proxy for vendoring (required for FOD
-    # network access) and replace the dead pseudo-version with current HEAD.
+    # is unresolvable via direct git fetch but still cached on Go module proxy.
+    # Use overrideModAttrs to inject GOPROXY fix into the go-modules FOD.
     proxyVendor = true;
     env = (old.env or { }) // {
       CGO_CFLAGS = "-I${kyaru.libcronet-naive}/include";
@@ -39,42 +39,44 @@ sing-box.overrideAttrs (
 
     patches = (old.patches or [ ]) ++ [ ./json-log-format.patch ];
 
-    # The old cronet-go pseudo-version (2faf34666c2c) was force-pushed away.
-    # Replace it with current HEAD and strip platform-specific lib submodules
-    # we don't need (we build libcronet-naive ourselves as a shared library).
-    prePatch = (old.prePatch or "") + ''
-      echo "Fixing cronet-go pseudo-version (force-pushed commit)..."
-      # Replace dead pseudo-version with current resolvable HEAD
-      sed -i 's|github.com/sagernet/cronet-go v0.0.0-20260513071958-2faf34666c2c|github.com/sagernet/cronet-go v0.0.0-20260516034104-ec86c1492fc8|g' go.mod
-      # Strip cronet-go/all and platform lib submodules (static .a we don't use)
-      sed -i '/github\.com\/sagernet\/cronet-go\/all/d' go.mod go.sum
-      sed -i '/github\.com\/sagernet\/cronet-go\/lib\//d' go.mod go.sum
-      # Remove stale go.sum entries for old cronet-go version
-      sed -i '/github\.com\/sagernet\/cronet-go v0.0.0-20260513071958/d' go.sum
+    # preBuild runs in BOTH the go-modules FOD and the main build.
+    # - FOD phase: strip ",direct" from GOPROXY for force-pushed module resolution
+    # - Main build phase: patch cronet-go cgo directives to use our dynamic lib
+    preBuild = ''
+      export GOPROXY="''${GOPROXY:-https://proxy.golang.org}"
+      GOPROXY="$(echo "$GOPROXY" | sed 's/,direct//g')"
+      case "$GOPROXY" in
+        *proxy.golang.org*) ;;
+        *) GOPROXY="$GOPROXY,https://proxy.golang.org" ;;
+      esac
+      export GOPROXY
+      echo "sing-box-naive: GOPROXY=$GOPROXY"
+
+      # Patch cronet-go cgo directives in mod cache (proxyVendor uses mod cache, not vendor/)
+      # go build unpacks modules from $goModules into $GOPATH/pkg/mod/ during build,
+      # so we pre-populate and patch them here (after configurePhase sets GOPATH).
+      echo "Pre-populating mod cache from $goModules..."
+      go mod download 2>/dev/null || true
+      cronet_base="$GOPATH/pkg/mod/github.com/sagernet"
+      if [ -d "$cronet_base" ]; then
+        chmod -R u+w "$cronet_base"
+        find "$cronet_base" -path "*cronet-go*" -name "*.a" -delete
+        find "$cronet_base" -path "*cronet-go*" -name "*.go" -type f -print0 | xargs -0 sed -i \
+          -e 's/-l:libcronet.a/-lcronet/g' \
+          -e 's|-L\''${SRCDIR}/lib/[^ ]* ||g'
+        echo "Patched cronet-go cgo directives in mod cache"
+      else
+        echo "WARNING: $cronet_base not found after go mod download"
+      fi
     '';
 
     buildInputs = (old.buildInputs or [ ]) ++ [ kyaru.libcronet-naive ];
 
     nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ makeWrapper ];
 
-    modPostBuild = ''
-      echo "Patching vendored cronet-go..."
-      # Make vendor directory writable
-      chmod -R u+w vendor
-
-      if [ -d vendor/github.com/sagernet/cronet-go ]; then
-        # Remove incompatible vendored static libraries (optional, but cleaner)
-        find vendor/github.com/sagernet/cronet-go -name "*.a" -delete
-
-        # Patch CGO directives in vendored files to use dynamic linking (-lcronet)
-        # and remove hardcoded search paths so it uses our CGO_LDFLAGS
-        find vendor/github.com/sagernet/cronet-go -name "*.go" -type f -print0 | xargs -0 sed -i \
-          -e 's/-l:libcronet.a/-lcronet/g' \
-          -e 's|-L\''${SRCDIR}/lib/[^ ]* ||g'
-      else
-        echo "cronet-go not in vendor (stripped from go.mod), skipping patches"
-      fi
-    '';
+    # modPostBuild: with proxyVendor=true there's no vendor/ dir in the FOD,
+    # mod cache patching is handled in preBuild above.
+    modPostBuild = "";
 
     # Use wrapper instead of patchelf to avoid binary corruption
     postFixup = (old.postFixup or "") + ''
