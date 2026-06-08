@@ -149,6 +149,8 @@ index a6c975be3..cdc43748e 100644
  from agent.error_classifier import FailoverReason, classify_api_error
  from agent.iteration_budget import IterationBudget
 +from agent.context_control import load_settings as _load_context_control
+ from agent.turn_context import build_turn_context
+ from agent.turn_retry_state import TurnRetryState
  from agent.memory_manager import build_memory_context_block
  from agent.message_sanitization import (
      _repair_tool_call_arguments,

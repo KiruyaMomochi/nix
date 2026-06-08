@@ -49,10 +49,12 @@ Attrs that propagate from `overrideAttrs` into the go-modules FOD:
 
 ## modPostBuild vs preBuild (proxyVendor caveat)
 
-With `proxyVendor = true`, there is NO `vendor/` directory. Source lives in `$GOPATH/pkg/mod/`.
+With `proxyVendor = true`, there is NO `vendor/` directory. Modules live in `$GOPATH/pkg/mod/`.
 - `modPostBuild` targets `vendor/` — useless under proxyVendor, set to `""`
-- Cgo directive patching (delete `.a`, rewrite `-l:libcronet.a` → `-lcronet`) must happen in `preBuild`, targeting `$GOPATH/pkg/mod/github.com/sagernet/cronet-go`
-- `preBuild` runs in both FOD and main build — guard mod-cache patching with `if [ -d "$cronet_mod" ]`
+- Cgo directive patching must happen in `preBuild` (main build phase)
+- **Critical**: modules aren't unpacked into `$GOPATH/pkg/mod/` until `go build` runs. Must call `go mod download` first to force-populate the cache before patching.
+- Mod cache paths include version suffixes (e.g. `cronet-go@v0.0.0-...`, `cronet-go/lib/linux_amd64@v0.0.0-...`). Use `find -path "*cronet-go*"` from a parent dir, not exact path match.
+- `preBuild` runs in both FOD and main build — guard with `if [ -d ... ]`
 
 ## vendorHash update flow
 
