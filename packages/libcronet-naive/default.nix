@@ -9,8 +9,8 @@ let
     owner = "SagerNet";
     repo = "naiveproxy";
     # From https://github.com/SagerNet/cronet-go
-    rev = "888e114241c89b05fac4e4ee01482d7bd89ca15a";
-    hash = "sha256-lSy5f2vUsP7sjJ6UJ2jU56cuMibnMilHKVV7whNkGls=";
+    rev = "2be061b6c2e9b316f75ec1e329e345406cd4c62d";
+    hash = "sha256-eK3t8YmXnmPptQMSuKTne+Ro+G+u5BWXHrX/Nh4VYvo=";
   };
 in
 
@@ -88,7 +88,7 @@ chromium.mkDerivation (base: rec {
   # carries an extra `&& !is_apple` clause around the `-fno-lifetime-dse` block,
   # so the hunk context doesn't match. We strip the flag ourselves in postPatch instead.
   patches = lib.filter (
-    p: !(lib.hasSuffix "chromium-147-llvm-22.patch" (p.name or (toString p)))
+    p: !(lib.hasSuffix "llvm-22.patch" (p.name or (toString p)))
   ) base.patches;
 
   # Inherit chromium's enormous postPatch (LASTCHANGE, sandbox paths, system-libs filtering,
@@ -97,7 +97,7 @@ chromium.mkDerivation (base: rec {
   postPatch = (base.postPatch or "") + ''
     echo "Stripping -fno-lifetime-dse for LLVM 21 compatibility (naive-adapted)..."
     substituteInPlace build/config/compiler/BUILD.gn \
-      --replace-fail 'cflags += [ "-fno-lifetime-dse" ]' '# -fno-lifetime-dse stripped for LLVM 21'
+      --replace-warn 'cflags += [ "-fno-lifetime-dse" ]' '# -fno-lifetime-dse stripped for LLVM 21'
   '';
 
   # Configure Phase: Just run GN.
