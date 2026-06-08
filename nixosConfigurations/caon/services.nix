@@ -23,16 +23,11 @@
   services.postgresql = {
     enable = true;
     package = pkgs.postgresql_18;
-    enableTCPIP = true; 
-    extensions = ps: with ps; [ pgvector pg_search ];
-    ensureDatabases = [ "lobechat" ];
+    enableTCPIP = true;
+    extensions = ps: with ps; [ pgvector pg_search pgroonga ];
+    ensureDatabases = [ "priconne" ];
     ensureUsers = [
-      {
-        name = "lobechat";
-        ensureDBOwnership = true;
-        # \password lobechat
-        # CREATE EXTENSION vector
-      }
+      { name = "kyaru"; }
     ];
   };
 }

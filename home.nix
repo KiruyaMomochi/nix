@@ -68,6 +68,7 @@
       nix-output-monitor
       expect
       nh
+      manix
       (writeScriptBin "nx" (builtins.readFile ./scripts/nx.nu))
 
       # for developing
@@ -90,6 +91,7 @@
       mods
       (writeShellScriptBin "opencode" (builtins.readFile ./scripts/opencode-wrapper.sh))
       (writeShellScriptBin "pi" (builtins.readFile ./scripts/pi-wrapper.sh))
+      agent-browser
     ])
     ++ (with pkgs.nushellPlugins; [
       polars
