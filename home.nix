@@ -30,6 +30,9 @@
   };
   nix.package = pkgs.nixVersions.latest;
 
+  # manix hm_options cache needs this
+  nix.channels.home-manager = inputs.home-manager;
+
   # Packages that should be installed to the user profile.
   home.packages =
     (with pkgs; [
