@@ -29,6 +29,7 @@
     ];
   };
   nix.package = pkgs.nixVersions.latest;
+  nix.channels.home-manager = inputs.home-manager;
 
   # Packages that should be installed to the user profile.
   home.packages =
