@@ -30,9 +30,6 @@
   };
   nix.package = pkgs.nixVersions.latest;
 
-  # manix hm_options cache needs this
-  nix.channels.home-manager = inputs.home-manager;
-
   # Packages that should be installed to the user profile.
   home.packages =
     (with pkgs; [
@@ -71,7 +68,10 @@
       nix-output-monitor
       expect
       nh
-      manix
+      (pkgs.writeShellScriptBin "manix" ''
+        export NIX_PATH="/home/${config.home.username}/.nix-defexpr/50-home-manager''${NIX_PATH:+:$NIX_PATH}"
+        exec ${lib.getExe pkgs.manix} "$@"
+      ''))
       (writeScriptBin "nx" (builtins.readFile ./scripts/nx.nu))
 
       # for developing
