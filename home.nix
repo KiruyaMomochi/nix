@@ -169,7 +169,7 @@
     enable = lib.mkDefault false;
     enableDefaultConfig = false;
     includes = [ "~/.ssh/config.d/*" ];
-    matchBlocks = {
+    settings = {
       "github.com" = {
         hostname = "ssh.github.com";
         port = 443;
