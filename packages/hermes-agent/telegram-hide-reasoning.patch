@@ -1,0 +1,66 @@
+diff --git a/gateway/run.py b/gateway/run.py
+index 4380d0b..4e8cc90 100644
+--- a/gateway/run.py
++++ b/gateway/run.py
+@@ -303,6 +303,13 @@ def _sanitize_gateway_final_response(platform: Any, text: str) -> str:
+     return redacted
+ 
+ 
++def _allows_gateway_reasoning_display(platform: Any) -> bool:
++    """Return True when gateway replies may include model reasoning text."""
++    # Telegram is a personal/mobile delivery surface.  Reasoning metadata is
++    # internal there even if a stale/global config toggle says to show it.
++    return _gateway_platform_value(platform) != "telegram"
++
++
+ def _prepare_gateway_status_message(platform: Any, event_type: str, message: str) -> Optional[str]:
+     """Filter/sanitize agent status callbacks before platform delivery."""
+     text = str(message or "").strip()
+@@ -8450,7 +8457,11 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
+                 )
+             except Exception:
+                 _show_reasoning_effective = getattr(self, "_show_reasoning", False)
+-            if _show_reasoning_effective and response:
++            if (
++                _show_reasoning_effective
++                and response
++                and _allows_gateway_reasoning_display(source.platform)
++            ):
+                 last_reasoning = agent_result.get("last_reasoning")
+                 if last_reasoning:
+                     # Collapse long reasoning to keep messages readable
+diff --git a/gateway/stream_consumer.py b/gateway/stream_consumer.py
+index 33910c7..228be23 100644
+--- a/gateway/stream_consumer.py
++++ b/gateway/stream_consumer.py
+@@ -675,9 +675,14 @@ class GatewayStreamConsumer:
+     # treated identically whichever path delivered the text.
+     _MEDIA_RE = MEDIA_TAG_CLEANUP_RE
+ 
++    _FORMATTED_REASONING_RE = re.compile(
++        r'^\s*💭\s*\*\*Reasoning:\*\*\s*\n```\s*\n.*?\n```\s*\n*',
++        re.DOTALL,
++    )
++
+     @staticmethod
+     def _clean_for_display(text: str) -> str:
+-        """Strip MEDIA: directives and internal markers from text before display.
++        """Strip MEDIA directives and internal markers from text before display.
+ 
+         The streaming path delivers raw text chunks that may include
+         ``MEDIA:<path>`` tags and ``[[audio_as_voice]]`` directives meant for
+@@ -686,9 +691,12 @@ class GatewayStreamConsumer:
+         stream finishes — we just need to hide the raw directives from the
+         user.
+         """
+-        if "MEDIA:" not in text and "[[audio_as_voice]]" not in text:
++        if not text:
+             return text
+-        cleaned = text.replace("[[audio_as_voice]]", "")
++        cleaned = GatewayStreamConsumer._FORMATTED_REASONING_RE.sub("", text)
++        if "MEDIA:" not in cleaned and "[[audio_as_voice]]" not in cleaned:
++            return cleaned
++        cleaned = cleaned.replace("[[audio_as_voice]]", "")
+         cleaned = GatewayStreamConsumer._MEDIA_RE.sub("", cleaned)
+         # Collapse excessive blank lines left behind by removed tags
+         cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)

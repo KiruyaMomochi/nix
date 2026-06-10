@@ -1,0 +1,44 @@
+diff --git a/agent/context_compressor.py b/agent/context_compressor.py
+index 98d226b..331abb1 100644
+--- a/agent/context_compressor.py
++++ b/agent/context_compressor.py
+@@ -969,7 +969,21 @@ class ContextCompressor(ContextEngine):
+         All content is redacted before serialization to prevent secrets
+         (API keys, tokens, passwords) from leaking into the summary that
+         gets sent to the auxiliary model and persisted across compactions.
++
++        Role labels default to ``[USER]:``, ``[ASSISTANT]:`` etc.  They can be
++        overridden via ``prompt_overrides.yaml``::
++
++            COMPACTION_ROLE_LABELS:
++              user: "33"
++              assistant: "螢"
+         """
++
++        try:
++            from agent.prompt_builder import _PROMPT_OVERRIDES
++            _role_labels = _PROMPT_OVERRIDES.get("COMPACTION_ROLE_LABELS") or {}
++        except Exception:
++            _role_labels = {}
++
+         parts = []
+         for msg in turns:
+             role = msg.get("role", "unknown")
+@@ -1004,13 +1018,15 @@ class ContextCompressor(ContextEngine):
+                             name = getattr(fn, "name", "?") if fn else "?"
+                             tc_parts.append(f"  {name}(...)")
+                     content += "\n[Tool calls:\n" + "\n".join(tc_parts) + "\n]"
+-                parts.append(f"[ASSISTANT]: {content}")
++                _alabel = _role_labels.get("assistant", "ASSISTANT")
++                parts.append(f"[{_alabel}]: {content}")
+                 continue
+ 
+             # User and other roles
+             if len(content) > self._CONTENT_MAX:
+                 content = content[:self._CONTENT_HEAD] + "\n...[truncated]...\n" + content[-self._CONTENT_TAIL:]
+-            parts.append(f"[{role.upper()}]: {content}")
++            _rlabel = _role_labels.get(role, role.upper())
++            parts.append(f"[{_rlabel}]: {content}")
+ 
+         return "\n\n".join(parts)
+ 
