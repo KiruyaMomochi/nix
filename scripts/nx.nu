@@ -31,7 +31,7 @@ def --wrapped nx [
     # Build expression
     let expr = $"
 let
-  pkgs = import <nixpkgs> { config.allowUnfree = true; };
+  pkgs = import \(builtins.getFlake \"nixpkgs\"\).outPath { config.allowUnfree = true; };
 in
 pkgs // {
 ($overrides | str join "\n")
