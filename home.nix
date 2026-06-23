@@ -29,7 +29,6 @@
     ];
   };
   nix.package = pkgs.nixVersions.latest;
-  nix.channels.home-manager = inputs.home-manager;
 
   # Packages that should be installed to the user profile.
   home.packages =
@@ -281,7 +280,7 @@
 
         $env.config.buffer_editor = "${config.programs.helix.package}/bin/hx"
 
-        hide-env TRANSIENT_PROMPT_COMMAND_RIGHT
+        hide-env --ignore-errors TRANSIENT_PROMPT_COMMAND_RIGHT
       ''
     ];
   };
