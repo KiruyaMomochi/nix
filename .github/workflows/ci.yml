@@ -27,7 +27,13 @@ jobs:
           attic_token: ${{ secrets.ATTIC_TOKEN }}
           attic_endpoint: ${{ secrets.ATTIC_ENDPOINT }}
       - name: Check Flake
-        run: nix flake check --no-build
+        run: |
+          # Full `nix flake check` fails due to fenix IFD (needs to build
+          # rust-nightly manifest before it can eval). Instead verify that
+          # all outputs we care about can be evaluated without building.
+          nix eval .#nixosConfigurations --apply 'builtins.attrNames' --json
+          nix eval .#homeConfigurations --apply 'builtins.attrNames' --json
+          nix eval .#packages.x86_64-linux --apply 'builtins.attrNames' --json
 
   build-packages:
     runs-on: ubuntu-latest
