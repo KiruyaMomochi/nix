@@ -1,5 +1,5 @@
-name: "Setup Nix & S3 Cache"
-description: "Installs Nix with custom config and sets up the S3 secret key."
+name: "Setup Nix & Attic Cache"
+description: "Installs Nix with custom config and sets up Attic binary cache."
 inputs:
   github_access_token:
     description: "GitHub Token for API requests"
@@ -8,7 +8,7 @@ inputs:
     description: "Attic endpoint url"
     required: true
   attic_cache:
-    description: "Attic cache name, default is public"
+    description: "Attic cache name"
     default: "public"
     required: false
   attic_token:
@@ -17,18 +17,18 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: cachix/install-nix-action@v27
+    - uses: cachix/install-nix-action@v31
       with:
         github_access_token: ${{ inputs.github_access_token }}
         extra_nix_config: |
           accept-flake-config = true
           max-jobs = auto
-          substituters = https://nix-community.cachix.org https://cuda-maintainers.cachix.org https://cache.nixos.org
-          trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM= cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E= nix-cache.kyaru.bond:J0etzH0FG42erzDPaPzET4x0R8VAzeB8N/Swn4iPXXA=
+          extra-substituters = https://nix-cache.kyaru.bond/public https://nix-community.cachix.org https://cuda-maintainers.cachix.org
+          extra-trusted-public-keys = nix-cache.kyaru.bond:J0etzH0FG42erzDPaPzET4x0R8VAzeB8N/Swn4iPXXA= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM= cuda-maintainers.cachix.org-1:0dq3bujKpuEPMCX6U4WylrUDZ9JyUG0VpVZa7CNfq5E=
+          access-tokens = github.com=${{ inputs.github_access_token }}
     - name: Setup Attic cache
-      uses: ryanccn/attic-action@v0
+      uses: ryanccn/attic-action@v0.5
       with:
         endpoint: ${{ inputs.attic_endpoint }}
         cache: ${{ inputs.attic_cache }}
         token: ${{ inputs.attic_token }}
-        skip-push: true

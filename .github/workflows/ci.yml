@@ -3,9 +3,10 @@ name: "Nix Flake CI"
 on:
   pull_request:
   push:
+    branches: [main]
 
 jobs:
-  build-packages-home:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,52 +26,21 @@ jobs:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
           attic_token: ${{ secrets.ATTIC_TOKEN }}
           attic_endpoint: ${{ secrets.ATTIC_ENDPOINT }}
-      - name: Build and Push Packages and Home Configuration
-        run: |
-          build_and_push() {
-            nix run github:Mic92/nix-fast-build -- \
-              --no-nom \
-              --skip-cached \
-              --attic-cache public \
-              --flake "$1"
-          }
-          
-          build_and_push ".#packages.x86_64-linux.naiveproxy"
-          build_and_push ".#packages.x86_64-linux.caddy-naive"
-          build_and_push ".#homeConfigurations.kyaru.activation-script"
       - name: Check Flake
-        run: nix flake check
-          
-  build-caon:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Free Disk Space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
-      - name: Setup Nix with Cache
-        uses: ./.github/actions/setup-nix
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-          attic_token: ${{ secrets.ATTIC_TOKEN }}
-          attic_endpoint: ${{ secrets.ATTIC_ENDPOINT }}
-      - name: Build and Push Caon Configuration
-        run: |
-          nix run github:Mic92/nix-fast-build -- \
-            --no-nom \
-            --skip-cached \
-            --flake ".#nixosConfigurations.caon.config.system.build.toplevel" \
-            --attic-cache public
+        run: nix flake check --no-build
 
-  build-elizabeth:
+  build-packages:
     runs-on: ubuntu-latest
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - naiveproxy
+          - caddy-naive
+          - sing-box-naive
+          - vlmcsd
+          - hermes-agent
     steps:
       - uses: actions/checkout@v4
       - name: Free Disk Space
@@ -89,10 +59,62 @@ jobs:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
           attic_token: ${{ secrets.ATTIC_TOKEN }}
           attic_endpoint: ${{ secrets.ATTIC_ENDPOINT }}
-      - name: Build and Push Elizabeth Configuration
-        run: |
-          nix run github:Mic92/nix-fast-build -- \
-            --no-nom \
-            --skip-cached \
-            --flake ".#nixosConfigurations.elizabeth.config.system.build.toplevel" \
-            --attic-cache public
+      - name: Build ${{ matrix.package }}
+        run: nix build .#${{ matrix.package }} --no-link --print-out-paths -L
+
+  build-hosts:
+    runs-on: ubuntu-latest
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        host:
+          - caon
+          - dragons-nest
+          - twinkle-wish
+          - mercurius-foundation
+          - forester
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+      - name: Setup Nix with Cache
+        uses: ./.github/actions/setup-nix
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          attic_token: ${{ secrets.ATTIC_TOKEN }}
+          attic_endpoint: ${{ secrets.ATTIC_ENDPOINT }}
+      - name: Build ${{ matrix.host }}
+        run: nix build .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel --no-link -L
+
+  build-home:
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+      - name: Setup Nix with Cache
+        uses: ./.github/actions/setup-nix
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          attic_token: ${{ secrets.ATTIC_TOKEN }}
+          attic_endpoint: ${{ secrets.ATTIC_ENDPOINT }}
+      - name: Build Home Configuration
+        run: nix build .#homeConfigurations.kyaru.activationPackage --no-link -L

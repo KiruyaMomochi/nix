@@ -1,0 +1,96 @@
+name: "Auto Update Packages"
+
+on:
+  schedule:
+    # Every Wednesday at 03:00 UTC (offset from flake update on Monday)
+    - cron: '0 3 * * 3'
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Specific package to update (leave empty for all)"
+        required: false
+        type: string
+
+jobs:
+  update-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Nix with Cache
+        uses: ./.github/actions/setup-nix
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          attic_token: ${{ secrets.ATTIC_TOKEN }}
+          attic_endpoint: ${{ secrets.ATTIC_ENDPOINT }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Update packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          updated=""
+          failed=""
+
+          run_update() {
+            local pkg="$1"
+            local script="packages/$pkg/update.sh"
+            if [ ! -f "$script" ]; then
+              echo "::warning::No update.sh found for $pkg"
+              return
+            fi
+            echo "::group::Updating $pkg"
+            # libcronet-naive must be updated before sing-box-naive
+            if bash "$script"; then
+              echo "::endgroup::"
+              if ! git diff --quiet; then
+                git add -A
+                git commit -m "chore($pkg): auto-update to latest"
+                updated="$updated $pkg"
+              fi
+            else
+              echo "::endgroup::"
+              echo "::warning::Failed to update $pkg"
+              failed="$failed $pkg"
+              git checkout -- .
+            fi
+          }
+
+          if [ -n "${{ inputs.package }}" ]; then
+            run_update "${{ inputs.package }}"
+          else
+            # Order matters: libcronet-naive before sing-box-naive
+            run_update "naiveproxy"
+            run_update "libcronet-naive"
+            run_update "sing-box-naive"
+            run_update "caddy-naive"
+          fi
+
+          echo "## Update Summary" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$updated" ]; then
+            echo "Updated:$updated" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -n "$failed" ]; then
+            echo "Failed:$failed" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -z "$updated" ] && [ -z "$failed" ]; then
+            echo "Everything is already up to date." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(packages): auto-update"
+          body: |
+            Automated package version updates.
+
+            Check the workflow summary for details on which packages were updated.
+          branch: update-packages
+          delete-branch: true
+          base: main
