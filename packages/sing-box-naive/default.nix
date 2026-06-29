@@ -10,12 +10,12 @@ sing-box.overrideAttrs (
   final: old: {
     pname = "sing-box-naive";
 
-    version = "1.13.13";
+    version = "1.13.14";
     src = fetchFromGitHub {
       owner = "SagerNet";
       repo = "sing-box";
       rev = "refs/tags/v${final.version}";
-      hash = "sha256-RsiBxPQOE4rE3cFRjl81x1uIG2A4/smSBUg+G0vm7uQ=";
+      hash = "sha256-ODQ1i2lOuQLb3LDq6ONqHJQ7sT7dXICCJoyW/I9zF38=";
     };
 
     tags = (old.tags or [ ]) ++ [
@@ -25,7 +25,7 @@ sing-box.overrideAttrs (
 
     # New tags might change dependencies, so we need a new vendorHash.
     # Set to fake hash to trigger mismatch error and get the correct one.
-    vendorHash = "sha256-RxXmhpj+fvpLBHqLnCv7hrH1Bot6FnzjTkxvXKuafSE=";
+    vendorHash = "sha256-VDaiyxnSCWyWZ68Yru4P2PyGx7DI2OhwV3SOWi+NlFA=";
 
     # cronet-go commit was force-pushed on GitHub; the old pseudo-version
     # is unresolvable via direct git fetch but still cached on Go module proxy.

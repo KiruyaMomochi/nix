@@ -60,27 +60,27 @@ let
   # Pre-built dashboard frontend assets. The build.rs fetches these from
   # GitHub when the "dashboard" feature is enabled, but the sandbox has
   # no network. We pre-fetch and extract in postPatch instead.
-  dashboardVersion = "v0.12.0";
+  dashboardVersion = "v0.12.2";
   dashboardAssets = fetchurl {
     url = "https://github.com/GreptimeTeam/dashboard/releases/download/${dashboardVersion}/build.tar.gz";
-    hash = "sha256-rmN3zoreYMtwISzq7dxtKLV2H0L2jPItifF9mY4fMWw=";
+    hash = "sha256-NUdyKea962AWnltxt/tVgltQvjtZ6WXnI6pBfnuktzQ=";
   };
 in
 rustPlatform.buildRustPackage rec {
   pname = "greptimedb";
-  version = "1.0.2";
+  version = "1.1.1";
 
   src = fetchFromGitHub {
     owner = "GreptimeTeam";
     repo = "greptimedb";
     rev = "v${version}";
-    hash = "sha256-LMow1zgC2gr568XBrkliPaNrsw9ayoGf3JktQKkiG2I=";
+    hash = "sha256-srHhOQP4yxosuj+XxeyrpwhAiJO7MVETLzr/LuhbchM=";
   };
 
   # Single-FOD vendor of all dependencies (including git deps) via
   # fetchCargoVendor. To update: set to lib.fakeHash, build once,
   # nix reports the correct hash, paste it back.
-  cargoHash = "sha256-+hu7LRbXk4eBFgawJ6rVKRwNz9LRNOD3uby8zOk+jPE=";
+  cargoHash = "sha256-pAwTI3OFGmkWM+A3wpHyCyO/h99/GiU0yLtOIdiyB/s=";
 
   nativeBuildInputs = [
     pkg-config   # lets *-sys crates find C library .pc files

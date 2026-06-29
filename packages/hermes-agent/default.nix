@@ -7,27 +7,7 @@
 , hermesAgentSrc ? inputs.hermes-agent
 , extraDependencyGroups ? [ ]
 , includeLocales ? true
-, patches ? [
-    ./vision-anthropic.patch
-    ./fallback-custom-api-mode.patch
-    ./gemini-cli-aux.patch
-    ./context-control.patch              # context_control.yaml injection
-    ./prompt-overrides.patch             # prompt_overrides.yaml support
-    ./memory-context-header-override.patch
-    ./context-window-override.patch
-    ./compaction-preamble-override.patch  # custom compaction preamble
-    ./compaction-role-labels.patch        # [USER]/[ASSISTANT] → custom labels
-    ./post-compaction-message-loss.patch  # flush offset reset after split (#43066)
-    ./session-db-flush-cursor.patch      # stale cursor clamp (#43066)
-    ./gateway-db-persistence-fallback.patch # gateway-side DB write fallback (#43066)
-    ./telegram-hide-reasoning.patch      # suppress reasoning blocks in TG
-    ./telegram-split-replies.patch       # opt-in paragraph splitting for TG replies
-    ./telegram-stream-split-replies.patch # split TG streaming replies on ---
-    ./telegram-split-reply-first-only.patch # only first bubble replies to user msg
-    ./stop-retry-message-loss.patch      # message loss on stop+retry
-    ./background-review-file-tools.patch
-    ./nixos-path-fill.patch              # PATH handling for NixOS
-  ]
+, patches ? [ ]
 ,
 }:
 
