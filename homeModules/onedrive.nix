@@ -26,7 +26,6 @@ in
         Wants = [ "network-online.target" ];
         ConditionPathExists = [
           "${config.xdg.configHome}/rclone/rclone.conf"
-          "${config.home.homeDirectory}/OneDrive"
         ];
       };
       Install = {
@@ -34,6 +33,10 @@ in
       };
       Service = {
         Type = "notify";
+        ExecStartPre = [
+          "-/run/wrappers/bin/fusermount -uz ${cfg.mountPath}"
+          "${pkgs.coreutils}/bin/mkdir -p ${cfg.mountPath}"
+        ];
         ExecStart = "${cfg.package}/bin/rclone mount onedrive: ${cfg.mountPath} --vfs-cache-mode full";
         ExecStop = "fusermount -u ${cfg.mountPath}"; # Dismounts
         Restart = "on-failure";
