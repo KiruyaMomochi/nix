@@ -25,7 +25,7 @@ sing-box.overrideAttrs (
 
     # New tags might change dependencies, so we need a new vendorHash.
     # Set to fake hash to trigger mismatch error and get the correct one.
-    vendorHash = "sha256-VDaiyxnSCWyWZ68Yru4P2PyGx7DI2OhwV3SOWi+NlFA=";
+    vendorHash = "sha256-IQDtNGV1eIYsfOx1Je/wAncbp2QPav5JZ8dfd0E2C54=";
 
     # cronet-go commit was force-pushed on GitHub; the old pseudo-version
     # is unresolvable via direct git fetch but still cached on Go module proxy.
