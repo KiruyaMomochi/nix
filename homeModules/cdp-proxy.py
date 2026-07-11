@@ -1,7 +1,8 @@
 """
-CDP Fallback Proxy — tries laptop first, falls back to local headless.
+CDP Fallback Proxy — probes upstreams in order, first healthy one wins.
 
 Handles both HTTP (CDP discovery: /json/*) and WebSocket (debug sessions).
+Last resort is always the local headless browser.
 """
 
 import asyncio
@@ -24,10 +25,11 @@ async def probe_upstream(session: aiohttp.ClientSession, url: str, timeout: floa
 
 
 async def pick_upstream(app: web.Application) -> str:
-    """Pick the best available upstream."""
+    """Pick the first reachable upstream from the ordered list."""
     session = app["session"]
-    if await probe_upstream(session, app["laptop_url"], app["probe_timeout"]):
-        return app["laptop_url"]
+    for url in app["upstreams"]:
+        if await probe_upstream(session, url, app["probe_timeout"]):
+            return url
     return app["local_url"]
 
 
@@ -119,14 +121,17 @@ def main():
     parser = argparse.ArgumentParser(description="CDP Fallback Proxy")
     parser.add_argument("--port", type=int, default=9224, help="Listen port")
     parser.add_argument("--host", default="127.0.0.1", help="Listen host")
-    parser.add_argument("--laptop", default="http://100.82.238.137:9222", help="Laptop CDP URL")
-    parser.add_argument("--local", default="http://127.0.0.1:9222", help="Local headless CDP URL")
+    parser.add_argument(
+        "--upstream", action="append", default=[],
+        help="CDP upstream URL (repeatable, probed in order)"
+    )
+    parser.add_argument("--local", default="http://127.0.0.1:9222", help="Local headless CDP (last resort)")
     parser.add_argument("--probe-timeout", type=float, default=1.5, help="Probe timeout (seconds)")
     args = parser.parse_args()
 
     app = web.Application()
     app["port"] = args.port
-    app["laptop_url"] = args.laptop
+    app["upstreams"] = args.upstream
     app["local_url"] = args.local
     app["probe_timeout"] = args.probe_timeout
     app.on_startup.append(on_startup)
@@ -134,8 +139,9 @@ def main():
     app.router.add_route("*", "/{path:.*}", route_handler)
 
     print(f"CDP proxy listening on {args.host}:{args.port}", file=sys.stderr)
-    print(f"  Laptop: {args.laptop}", file=sys.stderr)
-    print(f"  Local:  {args.local}", file=sys.stderr)
+    for i, u in enumerate(args.upstream):
+        print(f"  [{i}] {u}", file=sys.stderr)
+    print(f"  [fallback] {args.local}", file=sys.stderr)
     web.run_app(app, host=args.host, port=args.port, print=None)
 
 

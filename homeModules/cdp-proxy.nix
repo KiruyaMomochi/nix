@@ -15,7 +15,7 @@ let
 in
 {
   options.services.cdp-proxy = with lib; {
-    enable = mkEnableOption "CDP Fallback Proxy (headless Chrome + remote laptop)";
+    enable = mkEnableOption "CDP Fallback Proxy (ordered upstreams + local headless)";
 
     listenPort = mkOption {
       type = types.port;
@@ -23,16 +23,20 @@ in
       description = "Port the CDP proxy listens on.";
     };
 
-    laptopCdpUrl = mkOption {
-      type = types.str;
-      default = "http://127.0.0.1:9222";
-      description = "CDP endpoint of the remote laptop (e.g. via Tailscale).";
+    upstreams = mkOption {
+      type = types.listOf types.str;
+      default = [];
+      description = "Ordered list of CDP upstream URLs to probe. First reachable wins.";
+      example = [
+        "http://100.82.238.137:9222"
+        "http://127.0.0.1:9223"
+      ];
     };
 
     localCdpPort = mkOption {
       type = types.port;
       default = 9222;
-      description = "Port for the local headless browser.";
+      description = "Port for the local headless browser (last-resort fallback).";
     };
 
     browserPackage = mkOption {
@@ -63,7 +67,7 @@ in
     probeTimeout = mkOption {
       type = types.float;
       default = 1.5;
-      description = "Seconds to wait when probing the laptop CDP endpoint.";
+      description = "Seconds to wait when probing each upstream.";
     };
   };
 
@@ -96,7 +100,7 @@ in
     # CDP fallback proxy service
     systemd.user.services.cdp-proxy = {
       Unit = {
-        Description = "CDP Fallback Proxy (laptop -> local headless)";
+        Description = "CDP Fallback Proxy (ordered upstreams)";
         After = [ "headless-browser.service" "network-online.target" ];
         Wants = [ "headless-browser.service" "network-online.target" ];
       };
@@ -107,13 +111,13 @@ in
 
       Service = {
         Type = "simple";
-        ExecStart = lib.concatStringsSep " " [
+        ExecStart = lib.concatStringsSep " " ([
           "${cdpProxyScript}/bin/cdp-proxy"
           "--port" (toString cfg.listenPort)
-          "--laptop" cfg.laptopCdpUrl
+        ] ++ lib.concatMap (u: [ "--upstream" u ]) cfg.upstreams ++ [
           "--local" "http://127.0.0.1:${toString cfg.localCdpPort}"
           "--probe-timeout" (toString cfg.probeTimeout)
-        ];
+        ]);
         Restart = "on-failure";
         RestartSec = 3;
       };

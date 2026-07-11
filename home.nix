@@ -82,6 +82,7 @@
       shfmt
 
       # others
+      android-tools # adb for phone CDP/automation
       dconf # fix dconf error
       typst
       # typst-lsp # not working
