@@ -94,6 +94,7 @@
       # ai
       mods
       (writeShellScriptBin "opencode" (builtins.readFile ./scripts/opencode-wrapper.sh))
+      (writeShellScriptBin "claude" (builtins.readFile ./scripts/claude-wrapper.sh))
       (writeShellScriptBin "pi" (builtins.readFile ./scripts/pi-wrapper.sh))
       agent-browser
     ])
