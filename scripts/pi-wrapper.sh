@@ -6,6 +6,7 @@
 # - ~/kaoru/bin: xdg-open shim (WSL only, native Linux has xdg-open)
 
 export NPM_CONFIG_PREFIX="${HOME}/.local/share/pi-npm"
+export JITI_TRY_NATIVE=false
 
 # WSL: prepend ~/kaoru/bin for the xdg-open shim that hands URLs to Windows
 if [[ -f /proc/sys/fs/binfmt_misc/WSLInterop || -n "${WSL_DISTRO_NAME:-}" ]]; then
