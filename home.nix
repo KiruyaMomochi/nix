@@ -97,6 +97,7 @@
       (writeShellScriptBin "claude" (builtins.readFile ./scripts/claude-wrapper.sh))
       (writeShellScriptBin "pi" (builtins.readFile ./scripts/pi-wrapper.sh))
       agent-browser
+      d2
     ])
     ++ (with pkgs.nushellPlugins; [
       polars
