@@ -10,7 +10,6 @@
   imports = [
     {
       nixpkgs.overlays = [
-        inputs.self.overlay
       ];
     }
   ];
