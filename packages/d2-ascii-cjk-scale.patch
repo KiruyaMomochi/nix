@@ -1,0 +1,755 @@
+From b924c0452c43a2ea357add67e72f34a632f3bcbd Mon Sep 17 00:00:00 2001
+From: Chang Chin-lan <192761079+changchinlan@users.noreply.github.com>
+Date: Wed, 22 Jul 2026 16:52:59 +0800
+Subject: [PATCH] fix(ascii): handle Unicode display widths and scale
+
+---
+ .../d2ascii/asciicanvas/asciicanvas.go        | 70 +++++++++++++--
+ .../d2ascii/asciicanvas/asciicanvas_test.go   | 57 ++++++++++++
+ d2renderers/d2ascii/asciiroute/labels.go      | 29 ++-----
+ .../d2ascii/asciishapes/asciishapes.go        | 26 ++++--
+ d2renderers/d2ascii/asciishapes/callout.go    |  5 +-
+ d2renderers/d2ascii/asciishapes/cylinder.go   |  5 +-
+ d2renderers/d2ascii/asciishapes/diamond.go    |  5 +-
+ d2renderers/d2ascii/asciishapes/document.go   |  5 +-
+ d2renderers/d2ascii/asciishapes/step.go       |  5 +-
+ d2renderers/d2ascii/asciitext/asciitext.go    | 18 ++++
+ .../d2ascii/asciitext/asciitext_test.go       | 25 ++++++
+ d2renderers/d2ascii/d2ascii.go                | 48 +++++++----
+ d2renderers/d2ascii/d2ascii_test.go           | 86 +++++++++++++++++++
+ e2etests/asciitxtar.txt                       | 11 +++
+ .../unicode-labels/extended.exp.txt           |  7 ++
+ .../unicode-labels/standard.exp.txt           |  7 ++
+ 16 files changed, 347 insertions(+), 62 deletions(-)
+ create mode 100644 d2renderers/d2ascii/asciicanvas/asciicanvas_test.go
+ create mode 100644 d2renderers/d2ascii/asciitext/asciitext.go
+ create mode 100644 d2renderers/d2ascii/asciitext/asciitext_test.go
+ create mode 100644 d2renderers/d2ascii/d2ascii_test.go
+ create mode 100644 e2etests/testdata/asciitxtar/unicode-labels/extended.exp.txt
+ create mode 100644 e2etests/testdata/asciitxtar/unicode-labels/standard.exp.txt
+
+diff --git a/d2renderers/d2ascii/asciicanvas/asciicanvas.go b/d2renderers/d2ascii/asciicanvas/asciicanvas.go
+index 5eda740..14f08c4 100644
+--- a/d2renderers/d2ascii/asciicanvas/asciicanvas.go
++++ b/d2renderers/d2ascii/asciicanvas/asciicanvas.go
+@@ -5,27 +5,55 @@ import (
+ 	"strings"
+ 	"unicode"
+ 
++	"github.com/rivo/uniseg"
++
+ 	"oss.terrastruct.com/d2/d2renderers/d2ascii/charset"
+ )
+ 
+ type Canvas struct {
+-	grid [][]string
++	grid           [][]string
++	wideLabelOwner [][]int
+ }
+ 
+ func New(width, height int) *Canvas {
+ 	grid := make([][]string, height)
++	wideLabelOwner := make([][]int, height)
+ 	for i := range grid {
+ 		grid[i] = make([]string, width)
++		wideLabelOwner[i] = make([]int, width)
+ 		for j := range grid[i] {
+ 			grid[i][j] = " "
++			wideLabelOwner[i][j] = -1
+ 		}
+ 	}
+-	return &Canvas{grid: grid}
++	return &Canvas{grid: grid, wideLabelOwner: wideLabelOwner}
+ }
+ 
+ func (c *Canvas) Set(x, y int, char string) {
++	if c.IsInBounds(x, y) && c.wideLabelOwner[y][x] == -1 {
++		c.grid[y][x] = char
++	}
++}
++
++func (c *Canvas) clearWideLabelAt(x, y int) {
++	if !c.IsInBounds(x, y) {
++		return
++	}
++	owner := c.wideLabelOwner[y][x]
++	if owner == -1 {
++		return
++	}
++	for column := owner; c.IsInBounds(column, y) && c.wideLabelOwner[y][column] == owner; column++ {
++		c.grid[y][column] = " "
++		c.wideLabelOwner[y][column] = -1
++	}
++}
++
++func (c *Canvas) setLabelCell(x, y int, char string, wideOwner int) {
+ 	if c.IsInBounds(x, y) {
++		c.clearWideLabelAt(x, y)
+ 		c.grid[y][x] = char
++		c.wideLabelOwner[y][x] = wideOwner
+ 	}
+ }
+ 
+@@ -52,11 +80,41 @@ func (c *Canvas) Height() int {
+ }
+ 
+ func (c *Canvas) DrawLabel(x, y int, label string) {
+-	if !c.IsInBounds(x, y) {
+-		return
++	for lineIndex, line := range strings.Split(label, "\n") {
++		column := x
++		graphemes := uniseg.NewGraphemes(line)
++		for graphemes.Next() {
++			width := graphemes.Width()
++			if width <= 0 {
++				continue
++			}
++
++			row := y + lineIndex
++			if !c.IsInBounds(column, row) || !c.IsInBounds(column+width-1, row) {
++				column += width
++				continue
++			}
++
++			wideOwner := -1
++			if width > 1 {
++				wideOwner = column
++			}
++			c.setLabelCell(column, row, graphemes.Str(), wideOwner)
++			// A wide grapheme occupies multiple terminal cells. Empty continuation
++			// cells preserve canvas coordinates without printing extra spaces. The
++			// owner keeps routes from overwriting only part of a wide grapheme.
++			for offset := 1; offset < width; offset++ {
++				c.setLabelCell(column+offset, row, "", wideOwner)
++			}
++			column += width
++		}
+ 	}
+-	for i, ch := range label {
+-		c.Set(x+i, y, string(ch))
++}
++
++func (c *Canvas) DrawLabelCentered(x, y, width int, label string) {
++	for lineIndex, line := range strings.Split(label, "\n") {
++		lineX := x + (width-uniseg.StringWidth(line))/2
++		c.DrawLabel(lineX, y+lineIndex, line)
+ 	}
+ }
+ 
+diff --git a/d2renderers/d2ascii/asciicanvas/asciicanvas_test.go b/d2renderers/d2ascii/asciicanvas/asciicanvas_test.go
+new file mode 100644
+index 0000000..ed8ba66
+--- /dev/null
++++ b/d2renderers/d2ascii/asciicanvas/asciicanvas_test.go
+@@ -0,0 +1,57 @@
++package asciicanvas
++
++import "testing"
++
++func TestDrawLabelUsesTerminalCellWidths(t *testing.T) {
++	canvas := New(12, 2)
++	canvas.DrawLabel(1, 0, "Aカ🏳️‍🌈e\u0301\nカナ")
++
++	wantFirstRow := map[int]string{
++		1: "A",
++		2: "カ",
++		3: "",
++		4: "🏳️‍🌈",
++		5: "",
++		6: "e\u0301",
++	}
++	for column, want := range wantFirstRow {
++		if got := canvas.Get(column, 0); got != want {
++			t.Errorf("cell (%d, 0) = %q, want %q", column, got, want)
++		}
++	}
++
++	wantSecondRow := map[int]string{1: "カ", 2: "", 3: "ナ", 4: ""}
++	for column, want := range wantSecondRow {
++		if got := canvas.Get(column, 1); got != want {
++			t.Errorf("cell (%d, 1) = %q, want %q", column, got, want)
++		}
++	}
++
++	for column := 1; column <= 4; column++ {
++		canvas.Set(column, 1, "─")
++	}
++	for column, want := range wantSecondRow {
++		if got := canvas.Get(column, 1); got != want {
++			t.Errorf("route overwrote wide label cell (%d, 1): got %q, want %q", column, got, want)
++		}
++	}
++
++	canvas.DrawLabel(1, 1, "A")
++	if got := canvas.Get(1, 1); got != "A" {
++		t.Errorf("overlapping label lead = %q, want A", got)
++	}
++	if got := canvas.Get(2, 1); got != " " {
++		t.Errorf("overlapping label left stale continuation cell: got %q", got)
++	}
++}
++
++func TestDrawLabelSkipsWideGraphemeOutsideCanvas(t *testing.T) {
++	canvas := New(4, 1)
++	canvas.DrawLabel(-1, 0, "カA")
++	if got := canvas.Get(0, 0); got != " " {
++		t.Fatalf("orphan continuation cell at left edge: got %q", got)
++	}
++	if got := canvas.Get(1, 0); got != "A" {
++		t.Fatalf("following label cell = %q, want A", got)
++	}
++}
+diff --git a/d2renderers/d2ascii/asciiroute/labels.go b/d2renderers/d2ascii/asciiroute/labels.go
+index f32e895..8dcf7c4 100644
+--- a/d2renderers/d2ascii/asciiroute/labels.go
++++ b/d2renderers/d2ascii/asciiroute/labels.go
+@@ -4,6 +4,7 @@ import (
+ 	"math"
+ 	"strings"
+ 
++	"oss.terrastruct.com/d2/d2renderers/d2ascii/asciitext"
+ 	"oss.terrastruct.com/d2/lib/geo"
+ )
+ 
+@@ -70,7 +71,7 @@ func calculateBestLabelPosition(rd RouteDrawer, routes []*geo.Point, label strin
+ 
+ 	return &RouteLabelPosition{
+ 		I:       bestIndex,
+-		X:       int(math.Round(bestX)) - len(label)/2,
++		X:       int(math.Round(bestX)) - asciitext.Width(label)/2,
+ 		Y:       int(math.Round(maxDiff / 2)),
+ 		MaxDiff: maxDiff,
+ 	}
+@@ -84,11 +85,7 @@ func drawConnectionLabel(rd RouteDrawer, labelPos *RouteLabelPosition, label, la
+ 		if isInBounds(rd, x, y) {
+ 			canvas.Set(x, y, " ")
+ 		}
+-		for j, ch := range label {
+-			if isInBounds(rd, labelPos.X+j, y) {
+-				canvas.Set(labelPos.X+j, y, string(ch))
+-			}
+-		}
++		canvas.DrawLabel(labelPos.X, y, label)
+ 	} else if sx != 0 {
+ 		// Horizontal segment - draw label above or below
+ 		yFactor := 0
+@@ -103,14 +100,10 @@ func drawConnectionLabel(rd RouteDrawer, labelPos *RouteLabelPosition, label, la
+ 		if strings.Contains(labelPosition, "LEFT") {
+ 			xPos = int(routes[labelPos.I+absInt((geo.Sign(sx)-1)/2)].X)
+ 		} else if strings.Contains(labelPosition, "RIGHT") {
+-			xPos = int(routes[labelPos.I+((geo.Sign(sx)+1)/2)].X) - len(label)/2
++			xPos = int(routes[labelPos.I+((geo.Sign(sx)+1)/2)].X) - asciitext.Width(label)/2
+ 		}
+ 
+-		for j, ch := range label {
+-			if isInBounds(rd, xPos+j, y+yFactor) {
+-				canvas.Set(xPos+j, y+yFactor, string(ch))
+-			}
+-		}
++		canvas.DrawLabel(xPos, y+yFactor, label)
+ 	}
+ }
+ 
+@@ -121,7 +114,7 @@ func drawDestinationLabel(rd RouteDrawer, label string, cx, cy, sx, sy float64)
+ 	if math.Abs(sx) > 0 {
+ 		ly = int(cy - 1)
+ 		if sx > 0 {
+-			lx = int(cx) - 1 - len(label)
++			lx = int(cx) - 1 - asciitext.Width(label)
+ 		} else {
+ 			lx = int(cx)
+ 		}
+@@ -129,9 +122,7 @@ func drawDestinationLabel(rd RouteDrawer, label string, cx, cy, sx, sy float64)
+ 		ly = int(cy - 1)
+ 		lx = int(cx + 1)
+ 	}
+-	for j, ch := range label {
+-		canvas.Set(lx+j+LabelOffsetX, ly, string(ch))
+-	}
++	canvas.DrawLabel(lx+LabelOffsetX, ly, label)
+ }
+ 
+ func drawSourceLabel(rd RouteDrawer, label string, ax, cy, cx, sx, sy float64) {
+@@ -143,13 +134,11 @@ func drawSourceLabel(rd RouteDrawer, label string, ax, cy, cx, sx, sy float64) {
+ 		if sx > 0 {
+ 			lx = int(ax)
+ 		} else {
+-			lx = int(ax) - 1 - len(label)
++			lx = int(ax) - 1 - asciitext.Width(label)
+ 		}
+ 	} else if math.Abs(sy) > 0 {
+ 		ly = int(cy - 1)
+ 		lx = int(cx + 1)
+ 	}
+-	for j, ch := range label {
+-		canvas.Set(lx+j, ly, string(ch))
+-	}
++	canvas.DrawLabel(lx, ly, label)
+ }
+diff --git a/d2renderers/d2ascii/asciishapes/asciishapes.go b/d2renderers/d2ascii/asciishapes/asciishapes.go
+index 1dde0ee..ef27f94 100644
+--- a/d2renderers/d2ascii/asciishapes/asciishapes.go
++++ b/d2renderers/d2ascii/asciishapes/asciishapes.go
+@@ -7,6 +7,7 @@ import (
+ 	"strings"
+ 
+ 	"oss.terrastruct.com/d2/d2renderers/d2ascii/asciicanvas"
++	"oss.terrastruct.com/d2/d2renderers/d2ascii/asciitext"
+ 	"oss.terrastruct.com/d2/d2renderers/d2ascii/charset"
+ 	"oss.terrastruct.com/d2/lib/log"
+ )
+@@ -43,14 +44,15 @@ func (ctx *Context) Calibrate(x, y, w, h float64) (int, int, int, int) {
+ 
+ func LabelY(ctx context.Context, y1, y2, h int, label, labelPosition string) int {
+ 	ly := -1
+-	log.Debug(ctx, "label Y calculation", slog.Int("y1", y1), slog.Int("y2", y2), slog.Int("height", h), slog.String("position", labelPosition))
++	lineCount := strings.Count(label, "\n") + 1
++	log.Debug(ctx, "label Y calculation", slog.Int("y1", y1), slog.Int("y2", y2), slog.Int("height", h), slog.Int("lines", lineCount), slog.String("position", labelPosition))
+ 
+ 	if strings.Contains(labelPosition, "OUTSIDE") {
+ 		if strings.Contains(labelPosition, "BOTTOM") {
+ 			ly = y2 + 1
+ 			log.Debug(ctx, "label position outside bottom", slog.Int("y", ly))
+ 		} else if strings.Contains(labelPosition, "TOP") {
+-			ly = y1 - 1
++			ly = y1 - lineCount
+ 			log.Debug(ctx, "label position outside top", slog.Int("y", ly))
+ 		}
+ 	} else {
+@@ -58,10 +60,10 @@ func LabelY(ctx context.Context, y1, y2, h int, label, labelPosition string) int
+ 			ly = y1 + 1
+ 			log.Debug(ctx, "label position inside top", slog.Int("y", ly))
+ 		} else if strings.Contains(labelPosition, "MIDDLE") {
+-			ly = y1 + h/2
++			ly = y1 + h/2 - (lineCount-1)/2
+ 			log.Debug(ctx, "label position inside middle", slog.Int("y", ly))
+ 		} else if strings.Contains(labelPosition, "BOTTOM") {
+-			ly = y2 - 1
++			ly = y2 - lineCount
+ 			log.Debug(ctx, "label position inside bottom", slog.Int("y", ly))
+ 		}
+ 	}
+@@ -76,9 +78,10 @@ func DrawShapeLabel(ctx *Context, x1, y1, x2, y2, width, height int, label, labe
+ 	log.Debug(ctx.Ctx, "drawing shape label", slog.String("label", label), slog.Int("x1", x1), slog.Int("y1", y1), slog.Int("x2", x2), slog.Int("y2", y2), slog.Int("width", width), slog.Int("height", height))
+ 
+ 	ly := LabelY(ctx.Ctx, y1, y2, height, label, labelPosition)
+-	lx := x1 + (width-len(label))/2
++	labelWidth := LabelWidth(label)
++	lx := x1 + (width-labelWidth)/2
+ 	log.Debug(ctx.Ctx, "label position calculated", slog.Int("x", lx), slog.Int("y", ly))
+-	ctx.Canvas.DrawLabel(lx, ly, label)
++	ctx.Canvas.DrawLabelCentered(lx, ly, labelWidth, label)
+ }
+ 
+ func AdjustWidthForLabel(ctx *Context, x, y, w, h float64, width int, label string) int {
+@@ -88,11 +91,12 @@ func AdjustWidthForLabel(ctx *Context, x, y, w, h float64, width int, label stri
+ 	}
+ 
+ 	originalWidth := width
+-	availableSpace := width - len(label)
+-	log.Debug(ctx.Ctx, "width adjustment for label", slog.String("label", label), slog.Int("chars", len(label)), slog.Int("width", width), slog.Int("available", availableSpace))
++	labelWidth := LabelWidth(label)
++	availableSpace := width - labelWidth
++	log.Debug(ctx.Ctx, "width adjustment for label", slog.String("label", label), slog.Int("cells", labelWidth), slog.Int("width", width), slog.Int("available", availableSpace))
+ 
+ 	if availableSpace < MinLabelPadding {
+-		width = len(label) + MinLabelPadding
++		width = labelWidth + MinLabelPadding
+ 		log.Debug(ctx.Ctx, "insufficient space, expanding width", slog.Int("original", originalWidth), slog.Int("new", width), slog.Int("minPadding", MinLabelPadding))
+ 		return width
+ 	}
+@@ -106,3 +110,7 @@ func AdjustWidthForLabel(ctx *Context, x, y, w, h float64, width int, label stri
+ 	log.Debug(ctx.Ctx, "width unchanged", slog.Int("width", width))
+ 	return width
+ }
++
++func LabelWidth(label string) int {
++	return asciitext.Width(label)
++}
+diff --git a/d2renderers/d2ascii/asciishapes/callout.go b/d2renderers/d2ascii/asciishapes/callout.go
+index 7c6ddef..ae3509f 100644
+--- a/d2renderers/d2ascii/asciishapes/callout.go
++++ b/d2renderers/d2ascii/asciishapes/callout.go
+@@ -35,7 +35,8 @@ func DrawCallout(ctx *Context, x, y, w, h float64, label, labelPosition string)
+ 
+ 	if label != "" {
+ 		ly := LabelY(ctx.Ctx, y1, y2, body, label, labelPosition)
+-		lx := x1 + (iw-len(label))/2
+-		ctx.Canvas.DrawLabel(lx, ly, label)
++		labelWidth := LabelWidth(label)
++		lx := x1 + (iw-labelWidth)/2
++		ctx.Canvas.DrawLabelCentered(lx, ly, labelWidth, label)
+ 	}
+ }
+diff --git a/d2renderers/d2ascii/asciishapes/cylinder.go b/d2renderers/d2ascii/asciishapes/cylinder.go
+index c7b6907..8b5fb10 100644
+--- a/d2renderers/d2ascii/asciishapes/cylinder.go
++++ b/d2renderers/d2ascii/asciishapes/cylinder.go
+@@ -37,7 +37,8 @@ func DrawCylinder(ctx *Context, x, y, w, h float64, label, labelPosition string)
+ 
+ 	if label != "" {
+ 		ly := LabelY(ctx.Ctx, y1+1, y2, hi, label, labelPosition)
+-		lx := x1 + (wi-len(label))/2
+-		ctx.Canvas.DrawLabel(lx, ly, label)
++		labelWidth := LabelWidth(label)
++		lx := x1 + (wi-labelWidth)/2
++		ctx.Canvas.DrawLabelCentered(lx, ly, labelWidth, label)
+ 	}
+ }
+diff --git a/d2renderers/d2ascii/asciishapes/diamond.go b/d2renderers/d2ascii/asciishapes/diamond.go
+index f0150ac..6ef77c6 100644
+--- a/d2renderers/d2ascii/asciishapes/diamond.go
++++ b/d2renderers/d2ascii/asciishapes/diamond.go
+@@ -48,7 +48,8 @@ func DrawDiamond(ctx *Context, x, y, w, h float64, label, labelPosition string)
+ 
+ 	if label != "" {
+ 		ly := LabelY(ctx.Ctx, y1, y2, ih, label, labelPosition)
+-		lx := x1 + (iw-len(label))/2
+-		ctx.Canvas.DrawLabel(lx, ly, label)
++		labelWidth := LabelWidth(label)
++		lx := x1 + (iw-labelWidth)/2
++		ctx.Canvas.DrawLabelCentered(lx, ly, labelWidth, label)
+ 	}
+ }
+diff --git a/d2renderers/d2ascii/asciishapes/document.go b/d2renderers/d2ascii/asciishapes/document.go
+index ec660de..2bbe837 100644
+--- a/d2renderers/d2ascii/asciishapes/document.go
++++ b/d2renderers/d2ascii/asciishapes/document.go
+@@ -55,7 +55,8 @@ func DrawDocument(ctx *Context, x, y, w, h float64, label, labelPosition string)
+ 
+ 	if label != "" {
+ 		ly := LabelY(ctx.Ctx, y1, y2, ih-2, label, labelPosition)
+-		lx := x1 + (iw-len(label))/2
+-		ctx.Canvas.DrawLabel(lx, ly, label)
++		labelWidth := LabelWidth(label)
++		lx := x1 + (iw-labelWidth)/2
++		ctx.Canvas.DrawLabelCentered(lx, ly, labelWidth, label)
+ 	}
+ }
+diff --git a/d2renderers/d2ascii/asciishapes/step.go b/d2renderers/d2ascii/asciishapes/step.go
+index 6c85c22..d0deb1f 100644
+--- a/d2renderers/d2ascii/asciishapes/step.go
++++ b/d2renderers/d2ascii/asciishapes/step.go
+@@ -24,7 +24,8 @@ func DrawStep(ctx *Context, x, y, w, h float64, label, labelPosition string) {
+ 
+ 	if label != "" {
+ 		ly := LabelY(ctx.Ctx, y1, y2, ih, label, labelPosition)
+-		lx := x1 + (iw-len(label))/2
+-		ctx.Canvas.DrawLabel(lx, ly, label)
++		labelWidth := LabelWidth(label)
++		lx := x1 + (iw-labelWidth)/2
++		ctx.Canvas.DrawLabelCentered(lx, ly, labelWidth, label)
+ 	}
+ }
+diff --git a/d2renderers/d2ascii/asciitext/asciitext.go b/d2renderers/d2ascii/asciitext/asciitext.go
+new file mode 100644
+index 0000000..7df4623
+--- /dev/null
++++ b/d2renderers/d2ascii/asciitext/asciitext.go
+@@ -0,0 +1,18 @@
++package asciitext
++
++import (
++	"strings"
++
++	"github.com/rivo/uniseg"
++)
++
++// Width returns the terminal-cell width of the widest line in text.
++func Width(text string) int {
++	maxWidth := 0
++	for _, line := range strings.Split(text, "\n") {
++		if width := uniseg.StringWidth(line); width > maxWidth {
++			maxWidth = width
++		}
++	}
++	return maxWidth
++}
+diff --git a/d2renderers/d2ascii/asciitext/asciitext_test.go b/d2renderers/d2ascii/asciitext/asciitext_test.go
+new file mode 100644
+index 0000000..e43cdf6
+--- /dev/null
++++ b/d2renderers/d2ascii/asciitext/asciitext_test.go
+@@ -0,0 +1,25 @@
++package asciitext
++
++import "testing"
++
++func TestWidth(t *testing.T) {
++	tests := []struct {
++		name string
++		text string
++		want int
++	}{
++		{name: "ascii", text: "local port", want: 10},
++		{name: "wide katakana", text: "ポートピック", want: 12},
++		{name: "combining", text: "e\u0301", want: 1},
++		{name: "emoji grapheme", text: "🏳️‍🌈", want: 2},
++		{name: "widest line", text: "ミニ\nlonger", want: 6},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			if got := Width(tt.text); got != tt.want {
++				t.Fatalf("Width(%q) = %d, want %d", tt.text, got, tt.want)
++			}
++		})
++	}
++}
+diff --git a/d2renderers/d2ascii/d2ascii.go b/d2renderers/d2ascii/d2ascii.go
+index 124e2e9..209b9c3 100644
+--- a/d2renderers/d2ascii/d2ascii.go
++++ b/d2renderers/d2ascii/d2ascii.go
+@@ -10,6 +10,7 @@ import (
+ 	"oss.terrastruct.com/d2/d2renderers/d2ascii/asciicanvas"
+ 	"oss.terrastruct.com/d2/d2renderers/d2ascii/asciiroute"
+ 	"oss.terrastruct.com/d2/d2renderers/d2ascii/asciishapes"
++	"oss.terrastruct.com/d2/d2renderers/d2ascii/asciitext"
+ 	"oss.terrastruct.com/d2/d2renderers/d2ascii/charset"
+ 	"oss.terrastruct.com/d2/d2target"
+ 	"oss.terrastruct.com/d2/lib/log"
+@@ -80,7 +81,7 @@ func (a *ASCIIartist) GetBoundary(s d2target.Shape) (Point, Point) {
+ 	preserveWidth := hasConnectionsAtRightEdge(s, a.diagram.Connections, a.FW)
+ 	preserveHeight := hasConnectionsAtTopEdge(s, a.diagram.Connections, a.FH)
+ 	if preserveWidth && s.Label != "" {
+-		availableSpace := wC - len(s.Label)
++		availableSpace := wC - asciitext.Width(s.Label)
+ 		if availableSpace >= asciishapes.MinLabelPadding && availableSpace%2 == 1 {
+ 			// Adjust the original width before recalibrating
+ 			width += float64(int(a.FW / a.SCALE))
+@@ -155,11 +156,13 @@ func (a *ASCIIartist) calculateExtendedBounds(diagram *d2target.Diagram) (tl, br
+ 					}
+ 				}
+ 			}
+-			labelX := bestX - float64(len(conn.Label))/2*a.FW
+-			labelX2 := bestX + float64(len(conn.Label))/2*a.FW
++			labelHalfWidth := float64(asciitext.Width(conn.Label)) / 2 * a.FW / a.SCALE
++			labelX := bestX - labelHalfWidth
++			labelX2 := bestX + labelHalfWidth
+ 			midY := (conn.Route[0].Y + conn.Route[len(conn.Route)-1].Y) / 2
+-			labelY := midY - a.FH
+-			labelY2 := midY + a.FH
++			labelHeight := a.FH / a.SCALE
++			labelY := midY - labelHeight
++			labelY2 := midY + labelHeight
+ 			if int(labelX) < tl.X {
+ 				tl.X = int(labelX)
+ 			}
+@@ -176,10 +179,12 @@ func (a *ASCIIartist) calculateExtendedBounds(diagram *d2target.Diagram) (tl, br
+ 
+ 		if conn.DstLabel != nil && len(conn.Route) > 0 {
+ 			lastRoute := conn.Route[len(conn.Route)-1]
+-			labelX := lastRoute.X - float64(len(conn.DstLabel.Label))*a.FW
+-			labelX2 := lastRoute.X + float64(len(conn.DstLabel.Label))*a.FW
+-			labelY := lastRoute.Y - a.FH
+-			labelY2 := lastRoute.Y + a.FH
++			labelWidth := float64(asciitext.Width(conn.DstLabel.Label)) * a.FW / a.SCALE
++			labelX := lastRoute.X - labelWidth
++			labelX2 := lastRoute.X + labelWidth
++			labelHeight := a.FH / a.SCALE
++			labelY := lastRoute.Y - labelHeight
++			labelY2 := lastRoute.Y + labelHeight
+ 			if int(labelX) < tl.X {
+ 				tl.X = int(labelX)
+ 			}
+@@ -196,10 +201,12 @@ func (a *ASCIIartist) calculateExtendedBounds(diagram *d2target.Diagram) (tl, br
+ 
+ 		if conn.SrcLabel != nil && len(conn.Route) > 0 {
+ 			firstRoute := conn.Route[0]
+-			labelX := firstRoute.X - float64(len(conn.SrcLabel.Label))*a.FW
+-			labelX2 := firstRoute.X + float64(len(conn.SrcLabel.Label))*a.FW
+-			labelY := firstRoute.Y - a.FH
+-			labelY2 := firstRoute.Y + a.FH
++			labelWidth := float64(asciitext.Width(conn.SrcLabel.Label)) * a.FW / a.SCALE
++			labelX := firstRoute.X - labelWidth
++			labelX2 := firstRoute.X + labelWidth
++			labelHeight := a.FH / a.SCALE
++			labelY := firstRoute.Y - labelHeight
++			labelY2 := firstRoute.Y + labelHeight
+ 			if int(labelX) < tl.X {
+ 				tl.X = int(labelX)
+ 			}
+@@ -227,6 +234,11 @@ func (a *ASCIIartist) Render(ctx context.Context, diagram *d2target.Diagram, opt
+ 		ctx = log.Leveled(ctx, slog.LevelInfo)
+ 	}
+ 	a.ctx = ctx
++	originalScale := a.SCALE
++	if opts.Scale != nil && *opts.Scale > 0 {
++		a.SCALE = *opts.Scale
++	}
++
+ 	chars := a.chars
+ 	if opts.Charset == charset.ASCII {
+ 		chars = charset.New(charset.ASCII)
+@@ -237,6 +249,7 @@ func (a *ASCIIartist) Render(ctx context.Context, diagram *d2target.Diagram, opt
+ 	a.chars = chars
+ 	defer func() {
+ 		a.chars = originalChars
++		a.SCALE = originalScale
+ 	}()
+ 	xOffset := 0
+ 	yOffset := 0
+@@ -260,8 +273,8 @@ func (a *ASCIIartist) Render(ctx context.Context, diagram *d2target.Diagram, opt
+ 
+ 	maxLabelLen := 0
+ 	for _, shape := range diagram.Shapes {
+-		if len(shape.Label) > maxLabelLen {
+-			maxLabelLen = len(shape.Label)
++		if labelWidth := asciitext.Width(shape.Label); labelWidth > maxLabelLen {
++			maxLabelLen = labelWidth
+ 		}
+ 	}
+ 	padding := maxLabelLen + asciishapes.MinLabelPadding
+@@ -294,8 +307,9 @@ func (a *ASCIIartist) Render(ctx context.Context, diagram *d2target.Diagram, opt
+ 		originalWidth := shape.Width
+ 		if preserveWidth && shape.Label != "" {
+ 			wC := int(math.Round((float64(shape.Width) / a.FW) * a.SCALE))
+-			availableSpace := wC - len(shape.Label)
+-			log.Debug(ctx, "width preservation check", slog.Int("calibrated", wC), slog.Int("labelChars", len(shape.Label)), slog.Int("available", availableSpace))
++			labelWidth := asciitext.Width(shape.Label)
++			availableSpace := wC - labelWidth
++			log.Debug(ctx, "width preservation check", slog.Int("calibrated", wC), slog.Int("labelCells", labelWidth), slog.Int("available", availableSpace))
+ 			if availableSpace >= asciishapes.MinLabelPadding && availableSpace%2 == 1 {
+ 				shape.Width += int(a.FW / a.SCALE)
+ 				log.Debug(ctx, "width adjusted", slog.Int("originalWidth", originalWidth), slog.Int("newWidth", shape.Width))
+diff --git a/d2renderers/d2ascii/d2ascii_test.go b/d2renderers/d2ascii/d2ascii_test.go
+new file mode 100644
+index 0000000..16a2059
+--- /dev/null
++++ b/d2renderers/d2ascii/d2ascii_test.go
+@@ -0,0 +1,86 @@
++package d2ascii
++
++import (
++	"context"
++	"strings"
++	"testing"
++
++	"github.com/rivo/uniseg"
++
++	"oss.terrastruct.com/d2/d2renderers/d2ascii/charset"
++	"oss.terrastruct.com/d2/d2target"
++)
++
++func testDiagram(label string) *d2target.Diagram {
++	diagram := d2target.NewDiagram()
++	diagram.Shapes = []d2target.Shape{
++		{
++			Type:          d2target.ShapeRectangle,
++			Pos:           d2target.NewPoint(0, 0),
++			Width:         390,
++			Height:        180,
++			Text:          d2target.Text{Label: label},
++			LabelPosition: "INSIDE_MIDDLE_CENTER",
++		},
++	}
++	return diagram
++}
++
++func renderTestDiagram(t *testing.T, label string, scale float64) string {
++	t.Helper()
++	artist := NewASCIIartist()
++	output, err := artist.Render(context.Background(), testDiagram(label), &RenderOpts{
++		Scale:   &scale,
++		Charset: charset.Unicode,
++	})
++	if err != nil {
++		t.Fatal(err)
++	}
++	return string(output)
++}
++
++func maxOutputWidth(output string) int {
++	maxWidth := 0
++	for _, line := range strings.Split(strings.TrimSuffix(output, "\n"), "\n") {
++		if width := uniseg.StringWidth(line); width > maxWidth {
++			maxWidth = width
++		}
++	}
++	return maxWidth
++}
++
++func TestRenderHonorsScale(t *testing.T) {
++	fullSize := renderTestDiagram(t, "node", 1)
++	halfSize := renderTestDiagram(t, "node", 0.5)
++
++	fullWidth := maxOutputWidth(fullSize)
++	halfWidth := maxOutputWidth(halfSize)
++	if halfWidth >= fullWidth {
++		t.Fatalf("scale 0.5 width = %d, want less than scale 1 width %d", halfWidth, fullWidth)
++	}
++}
++
++func TestRenderUsesArtistScaleWhenOptionIsUnset(t *testing.T) {
++	artist := NewASCIIartist()
++	artist.SCALE = 0.5
++	output, err := artist.Render(context.Background(), testDiagram("node"), &RenderOpts{Charset: charset.Unicode})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if got := maxOutputWidth(string(output)); got >= maxOutputWidth(renderTestDiagram(t, "node", 1)) {
++		t.Fatalf("artist scale width = %d, want less than scale 1", got)
++	}
++	if artist.SCALE != 0.5 {
++		t.Fatalf("artist scale after render = %v, want 0.5", artist.SCALE)
++	}
++}
++
++func TestRenderUnicodeMultilineLabel(t *testing.T) {
++	output := renderTestDiagram(t, "ポートピック\n🏳️‍🌈 port", 1)
++	if !strings.Contains(output, "ポートピック") {
++		t.Fatalf("CJK label is not contiguous:\n%s", output)
++	}
++	if !strings.Contains(output, "🏳️‍🌈 port") {
++		t.Fatalf("multiline emoji label is missing:\n%s", output)
++	}
++}
+diff --git a/e2etests/asciitxtar.txt b/e2etests/asciitxtar.txt
+index 9f65a67..bdad219 100644
+--- a/e2etests/asciitxtar.txt
++++ b/e2etests/asciitxtar.txt
+@@ -217,3 +217,14 @@ api server -> logs: persist
+ logs: {shape: page; style.multiple: true}
+ 
+ network.data processor -> api server
++
++-- unicode-labels --
++direction: right
++client: "クライアント"
++picker: {
++  label: "ポートピック\nlocal port"
++  shape: diamond
++}
++remote: "サーバー 🏳️‍🌈"
++client -> picker: "source port omitted"
++picker -> remote: "connect"
+diff --git a/e2etests/testdata/asciitxtar/unicode-labels/extended.exp.txt b/e2etests/testdata/asciitxtar/unicode-labels/extended.exp.txt
+new file mode 100644
+index 0000000..27f32d9
+--- /dev/null
++++ b/e2etests/testdata/asciitxtar/unicode-labels/extended.exp.txt
+@@ -0,0 +1,7 @@
++                                                          *****                                              
++                                                     *****     ****                                          
++ ┌─────────────────┐                             ****              *****                     ┌──────────────┐
++ │  クライアント   │────source port─omitted──▶***     ポートピック      ***──────connect────▶│ サーバー 🏳️‍🌈  │
++ │                 │                             ***** local port   ****                     │              │
++ └─────────────────┘                                  ****     *****                         └──────────────┘
++                                                          *****                                              
+diff --git a/e2etests/testdata/asciitxtar/unicode-labels/standard.exp.txt b/e2etests/testdata/asciitxtar/unicode-labels/standard.exp.txt
+new file mode 100644
+index 0000000..59fbb8f
+--- /dev/null
++++ b/e2etests/testdata/asciitxtar/unicode-labels/standard.exp.txt
+@@ -0,0 +1,7 @@
++                                                          *****                                              
++                                                     *****     ****                                          
++ +-----------------+                             ****              *****                     +--------------+
++ |  クライアント   |----source port-omitted-->***     ポートピック      ***------connect---->| サーバー 🏳️‍🌈  |
++ |                 |                             ***** local port   ****                     |              |
++ +-----------------+                                  ****     *****                         +--------------+
++                                                          *****                                              
+-- 
+2.54.0
+
+
