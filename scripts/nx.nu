@@ -1,7 +1,7 @@
 #!/usr/bin/env nu
 
 # --- Core Logic ---
-# Can be used directly if sourced
+# Can be used directly if sourced (list arguments use Nushell syntax, e.g. -s [bun jq])
 def --wrapped nx [
     --pkgs (-s): list<string>          # System packages
     --python-pkgs (-p): list<string>   # Python packages
@@ -61,31 +61,62 @@ pkgs // {
     nix shell --impure --expr $expr ...$pkgs --command ...$final_cmd
 }
 
-# Parses raw string arguments into lists for the core logic
-def --wrapped main [
-    --python (-p): string   # Python packages (space separated)
-    ...args: string         # System packages and command (separated by --)
-] {
-    # Separate System Packages vs Command
-    mut sys_list = []
-    mut cmd_list = []
-    mut parsing_cmd = false
+def split_words [value?: string] {
+    $value
+    | default ""
+    | split row ' '
+    | each { |it| $it | str trim }
+    | where { |it| $it != '' }
+}
 
-    for arg in $args {
-        if $parsing_cmd {
-            $cmd_list = ($cmd_list | append $arg)
-        } else if $arg == "--" {
-            $parsing_cmd = true
+# Executable interface. There are two unambiguous forms:
+#   nx "bun jq" -- bash -c '...'
+#   nx -s "bun jq" bash -c '...'
+# With -s/--pkgs, every positional argument is part of the command. Without it,
+# positional arguments before -- are package names.
+def --wrapped main [
+    --pkgs (-s): string     # System packages (space separated)
+    --python (-p): string   # Python packages (space separated)
+    --verbose (-v)          # Print resolved packages and the Nix expression
+    --help (-h)             # Show usage
+    ...args: string
+] {
+    if $help {
+        print "Usage:
+  nx \"<system packages>\" [--python \"<python packages>\"] -- <command...>
+  nx --pkgs \"<system packages>\" [--python \"<python packages>\"] <command...>
+
+Options:
+  -s, --pkgs       System packages, space separated
+  -p, --python     Python packages, space separated
+  -v, --verbose    Print the generated Nix expression
+  -h, --help       Show this help"
+        return
+    }
+
+    mut sys_list = (split_words $pkgs)
+    mut cmd_list = []
+
+    if ($sys_list | is-not-empty) {
+        # An explicit package flag removes the package/command ambiguity. Keep a
+        # separator optional, but discard it when callers include one for clarity.
+        $cmd_list = if (($args | first | default "") == "--") {
+            $args | skip 1
         } else {
-            $sys_list = ($sys_list | append ($arg | split row ' ' | where { |it| ($it | str trim) != '' }))
+            $args
+        }
+    } else {
+        mut parsing_cmd = false
+        for arg in $args {
+            if $parsing_cmd {
+                $cmd_list = ($cmd_list | append $arg)
+            } else if $arg == "--" {
+                $parsing_cmd = true
+            } else {
+                $sys_list = ($sys_list | append (split_words $arg))
+            }
         }
     }
 
-    # Parse Python String to List
-    let py_list = if ($python | is-empty) { [] } else {
-        $python | split row ' ' | each { |it| $it | str trim } | where { |it| $it != '' }
-    }
-
-    # Delegate to core logic
-    nx --pkgs $sys_list --python-pkgs $py_list ...$cmd_list
+    nx --pkgs $sys_list --python-pkgs (split_words $python) --verbose=$verbose ...$cmd_list
 }

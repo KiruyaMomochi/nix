@@ -63,7 +63,7 @@ in
       specialArgs = { inherit inputs; };
       modules = [
         {
-          nixpkgs.overlays = [ inputs.self.overlays.default ];
+          nixpkgs.overlays = inputs.self.lib.packages.defaultOverlays;
           networking.hostName = mkDefault hostname;
         }
         ../nixosModules/kyaru/default.nix

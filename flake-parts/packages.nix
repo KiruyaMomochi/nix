@@ -7,7 +7,7 @@ in
   perSystem = { system, pkgs, ... }: {
     _module.args.pkgs = import inputs.nixpkgs {
       inherit system;
-      overlays = [ inputs.self.overlays.default ];
+      overlays = flake.lib.packages.defaultOverlays;
       config = import ../nixpkgs-config.nix;
     };
     packages = (mkPackages pkgs) // {

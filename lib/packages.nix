@@ -4,14 +4,17 @@ let
   inherit (lib.kyaru.modules) mapModules;
 in
 {
+  defaultOverlays = [ inputs.self.overlays.default ];
+
   mkPkgs = pkgs: system: import pkgs {
     inherit system;
     config = import ../nixpkgs-config.nix;
     # overlays = [ inputs.self.overlays.default ];
   };
-  
+
   mkPkgsWithConfig = pkgs: system: extraConfig: import pkgs {
     inherit system;
+    overlays = self.defaultOverlays;
     config = (import ../nixpkgs-config.nix) // extraConfig;
   };
 
