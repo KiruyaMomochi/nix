@@ -47,9 +47,14 @@ in
         nushellPlugins = prev.nushellPlugins // {
           polars = prev.nushellPlugins.polars.overrideAttrs (
             finalAttrs: old: {
-              # buildRustPackage folds cargoPatches into patches at call time
-              # (`patches = cargoPatches ++ patches`), so overrideAttrs has to
-              # add the patch to `patches` itself as well.
+              # Both lists are required. buildRustPackage folds cargoPatches
+              # into patches when it is *called* (`patches = cargoPatches ++
+              # patches`), and overrideAttrs runs after that, so neither the
+              # source tree nor the vendored lockfile picks the patch up on its
+              # own: `patches` applies it to the source tree, `cargoPatches` is
+              # what the rebuilt cargoDeps below reads. Setting only one leaves
+              # source and vendor Cargo.lock out of sync and the build fails the
+              # cargoSetupPostPatchHook consistency check.
               cargoPatches = (old.cargoPatches or [ ]) ++ [
                 ../packages/nushell-plugin-polars-ethnum-1.5.3.patch
               ];
