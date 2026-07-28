@@ -11,11 +11,11 @@ const extra_config = $nu.default-config-dir | path join 'config.local.nu'
 source $extra_config
 
 def --env set-proxy [$proxy: string] {
-    ["http", "https", "all"] | each { $in + "_proxy"} | append ($in | str upcase) | reduce --fold {} {|elm, acc| $acc | insert $elm $proxy} | load-env
+    ["http", "https", "all"] | each { $in + "_proxy"} | append ($in | str uppercase) | reduce --fold {} {|elm, acc| $acc | insert $elm $proxy} | load-env
 }
 
 def --env hide-proxy [] {
-    ["http", "https", "all"] | each { $in + "_proxy"} | append ($in | str upcase) | where { $in in $env } | hide-env ...$in
+    ["http", "https", "all"] | each { $in + "_proxy"} | append ($in | str uppercase) | where { $in in $env } | hide-env ...$in
 }
 
 use std/dirs shells-aliases *
