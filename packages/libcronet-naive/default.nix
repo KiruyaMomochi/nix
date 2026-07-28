@@ -84,20 +84,34 @@ chromium.mkDerivation (base: rec {
     echo "Overlay complete."
   '';
 
-  # Drop chromium-147-llvm-22.patch because naive's build/config/compiler/BUILD.gn
-  # carries an extra `&& !is_apple` clause around the `-fno-lifetime-dse` block,
-  # so the hunk context doesn't match. We strip the flag ourselves in postPatch instead.
+  # Drop two chromium patches whose hunk context doesn't match naive's older
+  # (M143) chromium subset. We reimplement both in postPatch instead.
+  #   * chromium-147-llvm-22.patch: naive's build/config/compiler/BUILD.gn carries
+  #     an extra `&& !is_apple` clause around the `-fno-lifetime-dse` block.
+  #   * chromium-150-rust.patch: removes the `compiler_builtins` block, but M143
+  #     wraps its leading comment differently ("operations. We" vs "operations."),
+  #     so GNU patch's reverse probe misfires and reports "previously applied".
   patches = lib.filter (
-    p: !(lib.hasSuffix "llvm-22.patch" (p.name or (toString p)))
+    p:
+    let
+      n = p.name or (toString p);
+    in
+    !(lib.hasSuffix "llvm-22.patch" n) && !(lib.hasSuffix "chromium-150-rust.patch" n)
   ) base.patches;
 
   # Inherit chromium's enormous postPatch (LASTCHANGE, sandbox paths, system-libs filtering,
   # node/java symlinks, gperf shim, etc.) and tack on naive-specific tweaks:
   #   * Drop the `cflags += [ "-fno-lifetime-dse" ]` line (replaces chromium-147-llvm-22.patch).
+  #   * Drop the `compiler_builtins` config (replaces chromium-150-rust.patch).
   postPatch = (base.postPatch or "") + ''
     echo "Stripping -fno-lifetime-dse for LLVM 21 compatibility (naive-adapted)..."
     substituteInPlace build/config/compiler/BUILD.gn \
       --replace-warn 'cflags += [ "-fno-lifetime-dse" ]' '# -fno-lifetime-dse stripped for LLVM 21'
+
+    echo "Dropping compiler_builtins config (naive-adapted chromium-150-rust.patch)..."
+    substituteInPlace build/config/compiler/BUILD.gn \
+      --replace-fail 'configs += [ "//build/config/clang:compiler_builtins" ]' \
+                     '# compiler_builtins dropped (naive-adapted chromium-150-rust.patch)'
   '';
 
   # Configure Phase: Just run GN.
