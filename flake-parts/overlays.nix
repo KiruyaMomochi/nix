@@ -40,6 +40,18 @@ in
             ../packages/d2-ascii-cjk-scale.patch
           ];
         });
+        # nu_plugin_polars 0.114.1 pins ethnum 1.5.2, whose mem::transmute(()) ->
+        # TryFromIntError no longer compiles under rustc 1.97 (E0512). Carry the
+        # lockfile bump to ethnum 1.5.3 from nixpkgs PR #546343; drop this once
+        # that PR (or a nushell release containing the bump) lands.
+        nushellPlugins = prev.nushellPlugins // {
+          polars = prev.nushellPlugins.polars.overrideAttrs (old: {
+            cargoPatches = (old.cargoPatches or [ ]) ++ [
+              ../packages/nushell-plugin-polars-ethnum-1.5.3.patch
+            ];
+            cargoHash = "sha256-Cpv58bqpx1o0Dz2AykqzFY+PQE/Updr5MusQflpEF74=";
+          });
+        };
         # krdp: nixpkgs missing plasma-wayland-protocols → WITH_PLASMA_SESSION not built
         # --plasma flag is a no-op without this, falls back to broken PortalSession
         # upstream CMakeLists: find_package(PlasmaWaylandProtocols REQUIRED) when BUILD_PLASMA_SESSION=ON
