@@ -45,12 +45,29 @@ in
         # lockfile bump to ethnum 1.5.3 from nixpkgs PR #546343; drop this once
         # that PR (or a nushell release containing the bump) lands.
         nushellPlugins = prev.nushellPlugins // {
-          polars = prev.nushellPlugins.polars.overrideAttrs (old: {
-            cargoPatches = (old.cargoPatches or [ ]) ++ [
-              ../packages/nushell-plugin-polars-ethnum-1.5.3.patch
-            ];
-            cargoHash = "sha256-Cpv58bqpx1o0Dz2AykqzFY+PQE/Updr5MusQflpEF74=";
-          });
+          polars = prev.nushellPlugins.polars.overrideAttrs (
+            finalAttrs: old: {
+              # buildRustPackage folds cargoPatches into patches at call time
+              # (`patches = cargoPatches ++ patches`), so overrideAttrs has to
+              # add the patch to `patches` itself as well.
+              cargoPatches = (old.cargoPatches or [ ]) ++ [
+                ../packages/nushell-plugin-polars-ethnum-1.5.3.patch
+              ];
+              patches = (old.patches or [ ]) ++ [
+                ../packages/nushell-plugin-polars-ethnum-1.5.3.patch
+              ];
+              # cargoDeps is computed from the unpatched Cargo.lock at
+              # buildRustPackage call time, so overrideAttrs must rebuild it too.
+              # fetchCargoVendor takes `patches`, not `cargoPatches` — that
+              # rename happens inside buildRustPackage (build-rust-package
+              # default.nix: `patches = cargoPatches;`).
+              cargoDeps = final.rustPlatform.fetchCargoVendor {
+                inherit (finalAttrs) pname version src;
+                patches = finalAttrs.cargoPatches;
+                hash = "sha256-Cpv58bqpx1o0Dz2AykqzFY+PQE/Updr5MusQflpEF74=";
+              };
+            }
+          );
         };
         # krdp: nixpkgs missing plasma-wayland-protocols → WITH_PLASMA_SESSION not built
         # --plasma flag is a no-op without this, falls back to broken PortalSession
