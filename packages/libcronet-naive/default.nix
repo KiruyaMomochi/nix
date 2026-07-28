@@ -1,213 +1,132 @@
-{
-  lib,
-  chromium,
-  fetchFromGitHub,
+{ lib
+, stdenvNoCC
+, buildGoModule
+, fetchgit
+, gn
+, ninja
+, python3
+, symlinkJoin
+, llvmPackages
+,
 }:
 
 let
-  naiveproxy-src = fetchFromGitHub {
-    owner = "SagerNet";
-    repo = "naiveproxy";
-    # From https://github.com/SagerNet/cronet-go
-    rev = "2be061b6c2e9b316f75ec1e329e345406cd4c62d";
-    hash = "sha256-eK3t8YmXnmPptQMSuKTne+Ro+G+u5BWXHrX/Nh4VYvo=";
+  version = "148.0.7778.96";
+
+  src = fetchgit {
+    url = "https://github.com/SagerNet/cronet-go.git";
+    rev = "d62042e935130168f4cebcd4515319a88ee7abcf";
+    hash = "sha256-QT9+2p8H7b9h83K6euPkrGBqeXnM71/66QOMw1Fs9fA=";
+    fetchSubmodules = true;
+  };
+
+  clangBasePath = symlinkJoin {
+    name = "cronet-go-llvm-toolchain";
+    paths = [
+      llvmPackages.llvm
+      llvmPackages.stdenv.cc
+    ];
+  };
+
+  build-naive = buildGoModule {
+    pname = "cronet-go-build-naive";
+    inherit version src;
+
+    vendorHash = "sha256-pyeE+JPuRQEjNzrF+o9jslBcBM1vruuL+I/DCIa2BG0=";
+    nativeBuildInputs = [ python3 ];
+    subPackages = [ "cmd/build-naive" ];
+
+    postPatch = ''
+      substituteInPlace cmd/build-naive/cmd_build.go \
+        --replace-fail 'runGetClang(t)' '// runGetClang(t)' \
+        --replace-fail 'gnPath := filepath.Join(srcRoot, "gn", "out", "gn")' 'gnPath := "${lib.getExe gn}"'
+
+      export CRONET_GO_CLANG_BASE_PATH=${lib.escapeShellArg (toString clangBasePath)}
+      ${lib.getExe python3} - <<'PY'
+      from pathlib import Path
+
+      path = Path("cmd/build-naive/cmd_build.go")
+      text = path.read_text()
+
+      old = '\t\tfmt.Sprintf("target_cpu=\\"%s\\"", t.CPU),\n'
+      new = old + '\t\t"clang_use_chrome_plugins=false",\n' + \
+          '\t\tfmt.Sprintf("clang_base_path=\\"%s\\"", os.Getenv("CRONET_GO_CLANG_BASE_PATH")),\n'
+      if old not in text:
+          raise SystemExit("target_cpu GN argument anchor not found")
+      text = text.replace(old, new, 1)
+
+      old = ('\t\t// Sysroot is handled by get-clang.sh, use the naiveproxy path\n'
+             '\t\tsysrootPath := getSysrootPath(t)\n'
+             '\t\tsysrootDirectory := strings.TrimPrefix(sysrootPath, srcRoot+string(filepath.Separator))\n'
+             '\t\targs = append(args, "use_sysroot=true", fmt.Sprintf("target_sysroot=\\"//%s\\"", sysrootDirectory))')
+      new = '\t\targs = append(args, "use_sysroot=false")'
+      if old not in text:
+          raise SystemExit("Linux sysroot GN argument block not found")
+      path.write_text(text.replace(old, new, 1))
+      PY
+
+      substituteInPlace cmd/build-naive/cmd_package.go \
+        --replace-fail 'runCommand(targetDirectory, "go", "mod", "tidy")' '// runCommand(targetDirectory, "go", "mod", "tidy")'
+    '';
+
+    meta.mainProgram = "build-naive";
   };
 in
+stdenvNoCC.mkDerivation {
+  pname = "libcronet-naive";
+  inherit version src;
 
-# Use mkChromiumDerivation to get the environment and source for free
-chromium.mkDerivation (base: rec {
-  name = "libcronet-naive";
-  packageName = "libcronet";
-
-  # Canonical target
-  buildTargets = [ "components/cronet:cronet" ];
-
-  # "SageNet Style" GN flags (Copied from cronet-go/cmd/build-naive/cmd_build.go)
-  gnFlags = {
-    # Common flags
-    is_official_build = true;
-    is_debug = false;
-    is_clang = true;
-    use_clang_modules = false;
-    use_thin_lto = false;
-    fatal_linker_warnings = false;
-    treat_warnings_as_errors = false;
-    is_cronet_build = true;
-    use_udev = false;
-    use_aura = false;
-    use_ozone = false;
-    use_gio = false;
-    use_glib = false;
-    use_kerberos = false;
-    disable_zstd_filter = false;
-    enable_reporting = false;
-    enable_bracketed_proxy_uris = true;
-    enable_quic_proxy_support = true;
-    use_nss_certs = false;
-    enable_backup_ref_ptr_support = false;
-    enable_dangling_raw_ptr_checks = false;
-    exclude_unwind_tables = true;
-    enable_resource_allowlist_generation = false;
-    symbol_level = 0;
-    enable_dsyms = false;
-    optimize_for_size = true;
-
-    # CFI Config (Must match use_thin_lto=false)
-    use_cfi_icall = false;
-    is_cfi = false;
-
-    target_os = "linux";
-    target_cpu = "x64";
-
-    # We disable sysroot because we are in Nix environment
-    use_sysroot = false;
-
-    # Note: We do NOT set use_platform_icu_alternatives (Let it default)
-  };
-
-  # Overlay NaiveProxy source BEFORE patches are applied.
-  # The chromium base provides LLVM compatibility patches (e.g. chromium-147-llvm-22.patch,
-  # chromium-148-revert-build-Add--fsanitizer=return-config.patch) that fix
-  # `unknown argument: -fno-lifetime-dse`, `-fsanitize-ignore-for-ubsan-feature=*` errors
-  # against LLVM 21. If we overlay naive's src *after* patches, those fixes get reverted
-  # and the build breaks on those unknown clang flags. Apply via prePatch so the chromium
-  # patches land on naive's tree.
-  prePatch = ''
-    echo "Overlaying NaiveProxy source..."
-    cp -rf ${naiveproxy-src}/src/* .
-    if [ -f "${naiveproxy-src}/src/.gn" ]; then
-      cp -f "${naiveproxy-src}/src/.gn" .
-    fi
-    # fetchFromGitHub stores files read-only; chromium's postPatch (and our own)
-    # needs to overwrite them. Restore write permission on the overlay.
-    chmod -R u+w .
-    echo "Overlay complete."
-  '';
-
-  # Drop two chromium patches whose hunk context doesn't match naive's older
-  # (M143) chromium subset. We reimplement both in postPatch instead.
-  #   * chromium-147-llvm-22.patch: naive's build/config/compiler/BUILD.gn carries
-  #     an extra `&& !is_apple` clause around the `-fno-lifetime-dse` block.
-  #   * chromium-150-rust.patch: removes the `compiler_builtins` block, but M143
-  #     wraps its leading comment differently ("operations. We" vs "operations."),
-  #     so GNU patch's reverse probe misfires and reports "previously applied".
-  #     Reimplemented in postPatch below.
-  #   * chromium-150-backport-build--Omit-ar-from-inputs-...: guards the `inputs =`
-  #     assignment in build/toolchain/gcc_toolchain.gni. M143's `ar` tool block
-  #     has no such assignment at all, so the patch is a no-op there — dropped
-  #     outright, nothing to reimplement.
-  droppedPatchSuffixes = [
-    "llvm-22.patch"
-    "chromium-150-rust.patch"
-    "chromium-150-backport-build--Omit-ar-from-inputs-when-resolved-via--PATH.patch"
+  outputs = [
+    "out"
+    "static"
   ];
 
-  patches = lib.filter (
-    p:
-    let
-      n = p.name or (toString p);
-    in
-    !(lib.any (s: lib.hasSuffix s n) droppedPatchSuffixes)
-  ) base.patches;
-
-  # Inherit chromium's enormous postPatch (LASTCHANGE, sandbox paths, system-libs filtering,
-  # node/java symlinks, gperf shim, etc.) and tack on naive-specific tweaks:
-  #   * Drop the `cflags += [ "-fno-lifetime-dse" ]` line (replaces chromium-147-llvm-22.patch).
-  #   * Drop the `compiler_builtins` config (replaces chromium-150-rust.patch).
-  postPatch = (base.postPatch or "") + ''
-    echo "Stripping -fno-lifetime-dse for LLVM 21 compatibility (naive-adapted)..."
-    substituteInPlace build/config/compiler/BUILD.gn \
-      --replace-warn 'cflags += [ "-fno-lifetime-dse" ]' '# -fno-lifetime-dse stripped for LLVM 21'
-
-    echo "Dropping compiler_builtins config (naive-adapted chromium-150-rust.patch)..."
-    substituteInPlace build/config/compiler/BUILD.gn \
-      --replace-fail 'configs += [ "//build/config/clang:compiler_builtins" ]' \
-                     '# compiler_builtins dropped (naive-adapted chromium-150-rust.patch)'
+  postPatch = ''
+    substituteInPlace naiveproxy/src/build/config/compiler/BUILD.gn \
+      --replace-fail 'cflags += [ "-fno-lifetime-dse" ]' '# cflags += [ "-fno-lifetime-dse" ]' \
+      --replace-fail '"-fsanitize-ignore-for-ubsan-feature=array-bounds"' '# "-fsanitize-ignore-for-ubsan-feature=array-bounds"' \
+      --replace-fail '"-fsanitize-ignore-for-ubsan-feature=return"' '# "-fsanitize-ignore-for-ubsan-feature=return"' \
+      --replace-fail '"-Wno-unsafe-buffer-usage-in-static-sized-array"' '# "-Wno-unsafe-buffer-usage-in-static-sized-array"'
   '';
 
-  # Configure Phase: Just run GN.
-  configurePhase = ''
-    runHook preConfigure
+  nativeBuildInputs = [
+    llvmPackages.bintools
+    ninja
+    python3
+  ];
 
-    # Run the replacement script for system libs
-    # Do we need this if use_sysroot=false?
-    # Yes, if we use system libs. But we disabled glib/nss.
-    # Maybe we don't need this?
-    # Let's run it anyway to avoid include errors if defaults pick system libs.
-    # python3 build/linux/unbundle/replace_gn_files.py --system-libraries flac libjpeg libpng libxml libxslt
+  env.CRONET_GO_CLANG_BASE_PATH = clangBasePath;
 
-    echo "Running gn gen..."
-    # naive ships a chromium *subset* — many BUILD.gn declarations (perfetto
-    # unittests, base/test:test_support, etc.) survive but their implementation
-    # files were stripped, so `gn gen` from the default root fails with
-    # "Unresolved dependencies." We work around this with two flags:
-    #
-    #   --root-target=//components/cronet
-    #     Override the initial BUILD.gn loaded for graph population, skipping
-    #     the //BUILD.gn `gn_all` group which references things like
-    #     `optimize_gn_gen` that pull in chromium-only targets.
-    #     (See `gn help --root-target`.)
-    #
-    #   --root-pattern='//components/cronet:*'
-    #     Even with a custom root, GN by default loads every reachable BUILD.gn;
-    #     this pattern caps the default-toolchain target set to cronet and its
-    #     transitive deps only. `:*` matches targets *in* that file (incl. the
-    #     `shared_library("cronet")` we want); `/*` only matches subdirs.
-    #     (See `gn help --root-pattern` and `gn help label_pattern`.)
-    gn gen --args="$gnFlags" \
-      --root-target=//components/cronet \
-      --root-pattern='//components/cronet:*' \
-      out/Release
+  buildPhase = ''
+    runHook preBuild
 
-    runHook postConfigure
+    ${lib.getExe build-naive} build -t ${stdenvNoCC.hostPlatform.go.GOOS}/${stdenvNoCC.hostPlatform.go.GOARCH}
+    ${lib.getExe build-naive} package --local -t ${stdenvNoCC.hostPlatform.go.GOOS}/${stdenvNoCC.hostPlatform.go.GOARCH}
+    ${lib.getExe build-naive} package -t ${stdenvNoCC.hostPlatform.go.GOOS}/${stdenvNoCC.hostPlatform.go.GOARCH}
+
+    runHook postBuild
   '';
 
-  # Install Phase
   installPhase = ''
     runHook preInstall
 
-    mkdir -p $out/lib $out/include
+    install -Dm755 lib/*/libcronet${stdenvNoCC.hostPlatform.extensions.sharedLibrary} \
+      $out/lib/libcronet${stdenvNoCC.hostPlatform.extensions.sharedLibrary}
+    install -Dm644 lib/*/libcronet.a $static/lib/libcronet.a
 
-    echo "Installing libcronet.so..."
-    SO_FILE=$(find out/Release -name "libcronet.so" -o -name "libcronet.*.so" | head -n 1)
+    install -Dm644 include/*.h -t $out/include
+    mkdir -p $out/share/cronet-go/go
+    install -Dm644 include_cgo.go lib/*/*.go lib/*/go.mod -t $out/share/cronet-go/go
 
-    if [ -n "$SO_FILE" ]; then
-      echo "Found library at: $SO_FILE"
-      cp "$SO_FILE" $out/lib/
-      if [[ "$(basename "$SO_FILE")" != "libcronet.so" ]]; then
-        ln -s "$(basename "$SO_FILE")" $out/lib/libcronet.so
-      fi
-      
-      # Check for icudtl.dat
-      if [ -f "out/Release/icudtl.dat" ]; then
-         echo "Installing icudtl.dat..."
-         cp "out/Release/icudtl.dat" $out/lib/
-      else
-         echo "Warning: icudtl.dat not found! (Checking if build works)"
-      fi
-    else
-      echo "Error: libcronet.so not found!"
-      exit 1
-    fi
-
-    echo "Installing headers..."
-    if [ -d "components/cronet/native/include" ]; then
-      find components/cronet/native/include -name "*.h" -exec cp {} $out/include/ \;
-    fi
-    if [ -d "components/cronet/native/generated" ]; then
-      find components/cronet/native/generated -name "*.h" -exec cp {} $out/include/ \;
-    fi
-    if [ -d "components/grpc_support/include" ]; then
-      find components/grpc_support/include -name "*.h" -exec cp {} $out/include/ \;
-    fi
-      
     runHook postInstall
   '';
 
-  postFixup = "";
+  passthru.build-naive = build-naive;
 
-  meta = with lib; {
-    description = "Libcronet built from Hybrid Source (SageNet Config)";
-    platforms = platforms.linux;
+  meta = {
+    description = "Cronet library with SagerNet naive proxy support";
+    homepage = "https://github.com/SagerNet/cronet-go";
+    license = lib.licenses.gpl3Plus;
+    platforms = lib.platforms.linux;
   };
-})
+}
