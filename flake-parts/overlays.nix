@@ -45,34 +45,26 @@ in
         # lockfile bump to ethnum 1.5.3 from nixpkgs PR #546343; drop this once
         # that PR (or a nushell release containing the bump) lands.
         nushellPlugins = prev.nushellPlugins // {
-          polars = prev.nushellPlugins.polars.overrideAttrs (
-            finalAttrs: old: {
-              # Both lists are required. buildRustPackage folds cargoPatches
-              # into patches when it is *called* (`patches = cargoPatches ++
-              # patches`), and overrideAttrs runs after that, so neither the
-              # source tree nor the vendored lockfile picks the patch up on its
-              # own: `patches` applies it to the source tree, `cargoPatches` is
-              # what the rebuilt cargoDeps below reads. Setting only one leaves
-              # source and vendor Cargo.lock out of sync and the build fails the
-              # cargoSetupPostPatchHook consistency check.
-              cargoPatches = (old.cargoPatches or [ ]) ++ [
-                ../packages/nushell-plugin-polars-ethnum-1.5.3.patch
-              ];
-              patches = (old.patches or [ ]) ++ [
-                ../packages/nushell-plugin-polars-ethnum-1.5.3.patch
-              ];
-              # cargoDeps is computed from the unpatched Cargo.lock at
-              # buildRustPackage call time, so overrideAttrs must rebuild it too.
-              # fetchCargoVendor takes `patches`, not `cargoPatches` — that
-              # rename happens inside buildRustPackage (build-rust-package
-              # default.nix: `patches = cargoPatches;`).
-              cargoDeps = final.rustPlatform.fetchCargoVendor {
-                inherit (finalAttrs) pname version src;
-                patches = finalAttrs.cargoPatches;
-                hash = "sha256-Cpv58bqpx1o0Dz2AykqzFY+PQE/Updr5MusQflpEF74=";
-              };
-            }
-          );
+          # Patch the lockfile in src rather than via cargoPatches: overrideAttrs
+          # runs after buildRustPackage has already derived cargoDeps from the
+          # original Cargo.lock, so a late cargoPatches never reaches the vendor
+          # step. Handing over an already-patched src keeps that derivation
+          # internal and only cargoHash has to be refreshed.
+          polars = prev.nushellPlugins.polars.overrideAttrs (finalAttrs: old: {
+            src = final.applyPatches {
+              inherit (old) src;
+              name = "${old.pname}-${old.version}-patched-src";
+              patches = [ ../packages/nushell-plugin-polars-ethnum-1.5.3.patch ];
+            };
+            # cargoHash is read by buildRustPackage from its outer args before
+            # mkDerivation is called, so overrideAttrs can't reach it. Override
+            # cargoDeps directly, pointing at the already-patched finalAttrs.src
+            # so fetchCargoVendor sees the updated Cargo.lock without extra patches.
+            cargoDeps = final.rustPlatform.fetchCargoVendor {
+              inherit (finalAttrs) pname version src;
+              hash = "sha256-Cpv58bqpx1o0Dz2AykqzFY+PQE/Updr5MusQflpEF74=";
+            };
+          });
         };
         # krdp: nixpkgs missing plasma-wayland-protocols → WITH_PLASMA_SESSION not built
         # --plasma flag is a no-op without this, falls back to broken PortalSession
