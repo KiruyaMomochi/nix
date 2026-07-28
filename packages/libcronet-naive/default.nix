@@ -91,12 +91,23 @@ chromium.mkDerivation (base: rec {
   #   * chromium-150-rust.patch: removes the `compiler_builtins` block, but M143
   #     wraps its leading comment differently ("operations. We" vs "operations."),
   #     so GNU patch's reverse probe misfires and reports "previously applied".
+  #     Reimplemented in postPatch below.
+  #   * chromium-150-backport-build--Omit-ar-from-inputs-...: guards the `inputs =`
+  #     assignment in build/toolchain/gcc_toolchain.gni. M143's `ar` tool block
+  #     has no such assignment at all, so the patch is a no-op there — dropped
+  #     outright, nothing to reimplement.
+  droppedPatchSuffixes = [
+    "llvm-22.patch"
+    "chromium-150-rust.patch"
+    "chromium-150-backport-build--Omit-ar-from-inputs-when-resolved-via--PATH.patch"
+  ];
+
   patches = lib.filter (
     p:
     let
       n = p.name or (toString p);
     in
-    !(lib.hasSuffix "llvm-22.patch" n) && !(lib.hasSuffix "chromium-150-rust.patch" n)
+    !(lib.any (s: lib.hasSuffix s n) droppedPatchSuffixes)
   ) base.patches;
 
   # Inherit chromium's enormous postPatch (LASTCHANGE, sandbox paths, system-libs filtering,
