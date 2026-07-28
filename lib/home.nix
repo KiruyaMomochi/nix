@@ -20,7 +20,7 @@ in
       modules = [
         {
         }
-        inputs.vscode-server.nixosModules.home
+        inputs.vscode-server.homeModules.default
         inputs.nix-index-database.homeModules.nix-index
         (filterAttrs (name: value: name != "pkgs") attrs)
         ../home.nix
