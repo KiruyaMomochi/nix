@@ -99,7 +99,7 @@
       d2
     ])
     ++ (with pkgs.nushellPlugins; [
-      # polars  # TODO: ethnum 1.5.2 compile failure with rustc 1.97, re-enable after upstream fix
+      polars
       formats
       gstat
       query
