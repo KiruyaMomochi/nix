@@ -35,9 +35,6 @@ in
         singularity = prev.singularity.override ({
           nvidia-docker = final.libnvidia-container;
         });
-        dragonflydb = prev.dragonflydb.override ({
-          abseil-cpp = final.abseil-cpp_202505;
-        });
         d2 = prev.d2.overrideAttrs (old: {
           patches = (old.patches or [ ]) ++ [
             ../packages/d2-ascii-cjk-scale.patch
