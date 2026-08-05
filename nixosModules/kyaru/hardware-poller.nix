@@ -10,6 +10,13 @@ let
     opentelemetry-exporter-otlp-proto-http
   ]);
 
+  # Whole source tree goes into the store so poller.py can import its
+  # sibling source_*.py modules at runtime.
+  pollerSrc = pkgs.runCommand "hardware-poller-src" { } ''
+    mkdir -p $out
+    cp ${./hardware-poller}/*.py $out/
+  '';
+
   # --- Redfish source ---
   redfishCfg = cfg.redfish;
   redfishConfigFile = pkgs.writeText "hardware-poller-redfish-config.json" (builtins.toJSON {
@@ -33,7 +40,7 @@ let
     wantedBy = [ "multi-user.target" ];
 
     serviceConfig = {
-      ExecStart = "${python}/bin/python ${./hardware-poller/poller.py} --config ${redfishConfigFile} --source redfish";
+      ExecStart = "${python}/bin/python ${pollerSrc}/poller.py --config ${redfishConfigFile} --source redfish";
       Restart = "on-failure";
       RestartSec = 10;
 
@@ -69,16 +76,18 @@ let
     wantedBy = [ "multi-user.target" ];
 
     serviceConfig = {
-      ExecStart = "${python}/bin/python ${./hardware-poller/poller.py} --config ${smartConfigFile} --source smart";
+      ExecStart = "${python}/bin/python ${pollerSrc}/poller.py --config ${smartConfigFile} --source smart";
+      # smartctl must be on PATH for the smart source
+      Environment = [ "PATH=${pkgs.smartmontools}/bin" ];
       Restart = "on-failure";
       RestartSec = 10;
 
       StateDirectory = "hardware-poller";
 
-      # SMART needs CAP_SYS_ADMIN for NVMe admin commands
+      # SMART needs /dev/nvmeXnY access (root:disk 660) for NVMe admin commands.
+      # DynamicUser + disk group membership is sufficient.
       DynamicUser = true;
-      AmbientCapabilities = [ "CAP_SYS_ADMIN" ];
-      CapabilityBoundingSet = [ "CAP_SYS_ADMIN" ];
+      SupplementaryGroups = [ "disk" ];
       NoNewPrivileges = true;
       ProtectSystem = "strict";
       ProtectHome = true;
