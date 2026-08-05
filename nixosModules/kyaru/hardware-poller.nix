@@ -29,6 +29,7 @@ let
     interval = redfishCfg.interval;
     chassis_id = redfishCfg.chassisId;
     otlp_endpoint = redfishCfg.otlpEndpoint;
+    exportInterval = redfishCfg.exportInterval;
     host_name = config.networking.hostName;
     credentials = [ "bmc_password" ];
   });
@@ -66,6 +67,7 @@ let
     devices = smartCfg.devices;
     interval = smartCfg.interval;
     otlp_endpoint = smartCfg.otlpEndpoint;
+    exportInterval = smartCfg.exportInterval;
     host_name = config.networking.hostName;
     credentials = [ ];
   });
@@ -152,6 +154,16 @@ in
           Default is the local OpenTelemetry Collector.
         '';
       };
+
+      exportInterval = mkOption {
+        type = types.int;
+        default = 60;
+        description = ''
+          How often (in seconds) to export metrics to OTLP.
+          Independent from polling interval — can push more frequently than poll.
+          Default: 60s.
+        '';
+      };
     };
 
     smart = {
@@ -180,6 +192,16 @@ in
         description = ''
           OTLP/HTTP endpoint to push metrics to.
           Default is the local OpenTelemetry Collector.
+        '';
+      };
+
+      exportInterval = mkOption {
+        type = types.int;
+        default = 60;
+        description = ''
+          How often (in seconds) to export metrics to OTLP.
+          Independent from polling interval — can push more frequently than poll.
+          Default: 60s.
         '';
       };
     };

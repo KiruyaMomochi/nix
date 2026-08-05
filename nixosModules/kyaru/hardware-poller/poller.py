@@ -96,9 +96,11 @@ def setup_otlp(cfg: dict) -> metrics.Meter:
     exporter = OTLPMetricExporter(
         endpoint=f"{cfg['otlp_endpoint']}/v1/metrics",
     )
+    # Export interval defaults to 60s; can be overridden via exportInterval config key
+    export_interval_ms = cfg.get("exportInterval", 60) * 1000
     reader = PeriodicExportingMetricReader(
         exporter,
-        export_interval_millis=cfg["interval"] * 1000,
+        export_interval_millis=export_interval_ms,
     )
     provider = MeterProvider(resource=resource, metric_readers=[reader])
     metrics.set_meter_provider(provider)
@@ -151,6 +153,10 @@ def run_poller(source: Source, config_path: str, once: bool = False):
                         description=f"Hardware metric: {metric_name}",
                     )
                 gauges[metric_name].set(value, attributes=attributes)
+            if readings:
+                log.info(f"Collected {len(readings)} reading(s)")
+            else:
+                log.warning("Poll returned no readings")
         except Exception as e:
             log.error(f"Metric poll failed: {e}", exc_info=True)
         
