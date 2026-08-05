@@ -84,10 +84,11 @@ let
 
       StateDirectory = "hardware-poller";
 
-      # SMART needs /dev/nvmeXnY access (root:disk 660) for NVMe admin commands.
-      # DynamicUser + disk group membership is sufficient.
-      DynamicUser = true;
-      SupplementaryGroups = [ "disk" ];
+      # SMART needs /dev/nvmeX (root:root 600) for controller info
+      # AND /dev/nvmeXnY (root:disk 660) for block device reads.
+      # DynamicUser + disk group only covers the latter — char device still blocked.
+      # Run as root; all other hardening (ProtectSystem/Home, PrivateTmp) still active.
+      User = "root";
       NoNewPrivileges = true;
       ProtectSystem = "strict";
       ProtectHome = true;
