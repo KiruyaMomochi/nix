@@ -20,6 +20,13 @@ in
       description = "The hermes-agent package to use.";
     };
 
+    finalPackage = mkOption {
+      type = types.package;
+      readOnly = true;
+      default = effectivePackage;
+      description = "The effective Hermes package including configured dependency groups.";
+    };
+
     extraDependencyGroups = mkOption {
       type = types.listOf types.str;
       default = [ ];
