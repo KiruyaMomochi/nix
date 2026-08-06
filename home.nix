@@ -16,7 +16,7 @@
 
   # Home Manager needs a bit of information about you and the
   # paths it should manage.
-  home.username = "kyaru";
+  home.username = lib.mkDefault "kyaru";
   home.homeDirectory = "/home/${config.home.username}";
 
   nixpkgs.config = lib.mkDefault (import ./nixpkgs-config.nix);
