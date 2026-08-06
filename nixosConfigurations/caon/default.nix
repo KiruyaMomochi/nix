@@ -12,6 +12,7 @@
       ./printing.nix
       ./nvidia.nix
       ./services.nix
+      ./yozakura.nix
     ];
 
   nixpkgs.config.cudaSupport = true;
