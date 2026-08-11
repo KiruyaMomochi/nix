@@ -10,13 +10,13 @@
 , python3
 }:
 let
-  version = "149.0.7827.114-1";
-  hash = "sha256-SW6VJN61rm0jZDlrI13uNSoQC6LPhUZVnVJg98/P754=";
+  version = "150.0.7871.63-1";
+  hash = "sha256-hZbSK5ifZLkxwR5kdUZioZdwcPMaBXUtj64Kh7l4x9s=";
   naiveSrc = fetchFromGitHub {
     repo = "naiveproxy";
     owner = "klzgrad";
     rev = "v${version}";
-    sha256 = "sha256-LfBEEshD+/TCstSbF8lkpOi95c2tshBca7wo07XFs7g=";
+    sha256 = hash;
   };
 
   packageName = self.packageName;
@@ -245,14 +245,28 @@ let
         "https://github.com/chromium/chromium/commit/50d63ffee3f7f1b1b9303363742ad8ebbfec31fa.patch"
         # nodejs
         "chromium-136-nodejs-assert-minimal-version-instead-of-exact-match.patch"
+        # Reverts a change in chrome/test/BUILD.gn, which naiveproxy's source
+        # subset does not ship (no test targets). No-op here, so drop it
+        # instead of letting `patch` fail on a missing file.
+        "chromium-146-revert-Add-finch-seeds-to-desktop-perf-builds.patch"
+        # Patches the vendored bytemuck crate under
+        # third_party/rust/chromium_crates_io, which naiveproxy's source subset
+        # does not ship. Both hunks target missing files, so it is a no-op here.
+        "chromium-142-bytemuck-rust-1.95.patch"
       ];
       # From common.nix of nixpkgs
       patches =
         let
+          # nixpkgs hands patches over either as plain paths or as fetchpatch
+          # derivations. For the latter, matching only on `url` misses the ones
+          # fetched from googlesource/GitHub commit endpoints, whose url bears
+          # no resemblance to the patch file name, so match `name` as well.
           basePatches = builtins.filter
             (p:
               if builtins.typeOf p == "path" && (builtins.elem (builtins.baseNameOf p) ignoredPatches) then false
-              else if builtins.typeOf p == "set" && p ? url && (builtins.elem p.url ignoredPatches) then false
+              else if builtins.typeOf p == "set"
+                && ((p ? url && builtins.elem p.url ignoredPatches)
+                  || (p ? name && builtins.elem p.name ignoredPatches)) then false
               else true
             )
             base.patches;
