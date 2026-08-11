@@ -81,6 +81,11 @@ sing-box.overrideAttrs (
     # mod cache patching is handled in preBuild above.
     modPostBuild = "";
 
+    # Upstream nixpkgs sing-box added postConfigure that does
+    # `pushd vendor/github.com/sagernet/cronet-go`, which doesn't exist
+    # when proxyVendor=true. Our preBuild handles cgo patching via mod cache.
+    postConfigure = "";
+
     # Use wrapper instead of patchelf to avoid binary corruption
     postFixup = (old.postFixup or "") + ''
       wrapProgram $out/bin/sing-box \
