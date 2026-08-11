@@ -16,6 +16,7 @@
     ];
 
   nixpkgs.config.cudaSupport = true;
+  kyaru.enableNoCudaOverlay = true;
 
   boot.initrd.availableKernelModules = [ "xhci_pci" "ahci" "nvme" "usbhid" "usb_storage" "sd_mod" ];
 

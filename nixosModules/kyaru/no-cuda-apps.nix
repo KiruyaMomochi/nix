@@ -3,11 +3,17 @@ let
   mkNoCuda = system: inputs.self.lib.packages.mkPkgsNoCuda inputs.nixpkgs system;
 in
 {
-  config = lib.mkIf (config.nixpkgs.config.cudaSupport or false) {
+  options.kyaru.enableNoCudaOverlay = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Enable overlay to replace heavy apps with non-CUDA versions";
+  };
+
+  config = lib.mkIf config.kyaru.enableNoCudaOverlay {
     nixpkgs.overlays = [
       (final: prev:
         let
-          pkgsNoCuda = mkNoCuda prev.stdenv.hostPlatform.system;
+          pkgsNoCuda = mkNoCuda final.stdenv.hostPlatform.system;
         in
         {
           inherit (pkgsNoCuda) firefox open-webui;
