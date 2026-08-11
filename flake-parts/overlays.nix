@@ -40,32 +40,12 @@ in
             ../packages/d2-ascii-cjk-scale.patch
           ];
         });
-        # nu_plugin_polars 0.114.1 pins ethnum 1.5.2, whose mem::transmute(()) ->
-        # TryFromIntError no longer compiles under rustc 1.97 (E0512). Carry the
-        # lockfile bump to ethnum 1.5.3 from nixpkgs PR #546343; drop this once
-        # that PR (or a nushell release containing the bump) lands.
-        nushellPlugins = prev.nushellPlugins // {
-          # Patch the lockfile in src rather than via cargoPatches: overrideAttrs
-          # runs after buildRustPackage has already derived cargoDeps from the
-          # original Cargo.lock, so a late cargoPatches never reaches the vendor
-          # step. Handing over an already-patched src keeps that derivation
-          # internal and only cargoHash has to be refreshed.
-          polars = prev.nushellPlugins.polars.overrideAttrs (finalAttrs: old: {
-            src = final.applyPatches {
-              inherit (old) src;
-              name = "${old.pname}-${old.version}-patched-src";
-              patches = [ ../packages/nushell-plugin-polars-ethnum-1.5.3.patch ];
-            };
-            # cargoHash is read by buildRustPackage from its outer args before
-            # mkDerivation is called, so overrideAttrs can't reach it. Override
-            # cargoDeps directly, pointing at the already-patched finalAttrs.src
-            # so fetchCargoVendor sees the updated Cargo.lock without extra patches.
-            cargoDeps = final.rustPlatform.fetchCargoVendor {
-              inherit (finalAttrs) pname version src;
-              hash = "sha256-Cpv58bqpx1o0Dz2AykqzFY+PQE/Updr5MusQflpEF74=";
-            };
-          });
-        };
+        # nu_plugin_polars ethnum 1.5.2 -> 1.5.3 lockfile bump used to live here
+        # (nixpkgs PR #546343, for the rustc 1.97 E0512 on mem::transmute(())).
+        # That patch is now in nixpkgs itself as update-ethnum.patch, byte-for-byte
+        # identical to the copy we carried, so keeping ours made patchPhase apply
+        # the same hunk twice and fail with "Reversed (or previously applied)".
+        # Removed 2026-08-11 along with packages/nushell-plugin-polars-ethnum-1.5.3.patch.
         # krdp: nixpkgs missing plasma-wayland-protocols → WITH_PLASMA_SESSION not built
         # --plasma flag is a no-op without this, falls back to broken PortalSession
         # upstream CMakeLists: find_package(PlasmaWaylandProtocols REQUIRED) when BUILD_PLASMA_SESSION=ON
