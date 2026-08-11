@@ -11,6 +11,7 @@ with lib;
     uid = 1002;
     description = "Yozakura";
     createHome = true;
+    homeMode = "0711";  # Allow kyaru to traverse into /home/yozakura
     shell = pkgs.nushell;
     extraGroups = [
       "wheel"
