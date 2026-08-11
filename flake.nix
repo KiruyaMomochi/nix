@@ -2,11 +2,9 @@
   description = "Nix configuration of Kiruya Momochi";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     nix-index-database.url = "github:nix-community/nix-index-database";
     nix-index-database.inputs.nixpkgs.follows = "nixpkgs";
-
-    nixpkgs-master.url = "github:NixOS/nixpkgs";
 
     sops-nix = {
       url = "github:Mic92/sops-nix";

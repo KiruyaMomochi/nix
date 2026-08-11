@@ -1,7 +1,6 @@
 { config
 , lib
 , pkgs
-, inputs
 , ...
 }:
 let
@@ -49,7 +48,7 @@ in
 
     programs.vscode =
       {
-        package = inputs.nixpkgs-master.legacyPackages.${pkgs.stdenv.hostPlatform.system}.vscode.fhs;
+        package = pkgs.vscode.fhs;
         enable = true;
       };
   };
