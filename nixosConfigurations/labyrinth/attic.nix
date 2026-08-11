@@ -11,13 +11,15 @@
     settings = {
       storage.type = "local";
       storage.path = "/mnt/data/nix";
-      # The user must be spelled out. atticd runs with DynamicUser=yes, whose
-      # unit environment has no USER/LOGNAME, so sqlx cannot infer one and
-      # falls back to the literal "anonymous" — pg_hba's `local all all trust`
-      # then rejects it because no such role exists.
-      database.url = "postgresql://atticd@/atticd?host=/run/postgresql";
+      # URL-encode the socket path (%2F = /). The `@/` syntax fails sqlx parse.
+      database.url = "postgresql://atticd@%2Frun%2Fpostgresql/atticd";
     };
   };
+
+  # atticd module sets DynamicUser=yes by default, which allocates a transient
+  # high UID that PostgreSQL peer auth cannot resolve. We define a static user
+  # below, so turn off DynamicUser to use it.
+  systemd.services.atticd.serviceConfig.DynamicUser = lib.mkForce false;
 
   users.groups.atticd = {};
   users.users.atticd = {
