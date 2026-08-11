@@ -11,12 +11,18 @@
 }:
 
 let
-  version = "148.0.7778.96";
+  version = "150.0.7871.63";
+
+  gnPinned = gn.override {
+    version = "0-unstable-chromium-150";
+    rev = "3357c4f51b1a9e676378c695dd9c7e9911c35ee6";
+    hash = "sha256-/1A+DkzAQj2zGPe/A/G0Z3VrYJXUxq4Hd/+d/o5p3G8=";
+  };
 
   src = fetchgit {
     url = "https://github.com/SagerNet/cronet-go.git";
-    rev = "d62042e935130168f4cebcd4515319a88ee7abcf";
-    hash = "sha256-QT9+2p8H7b9h83K6euPkrGBqeXnM71/66QOMw1Fs9fA=";
+    rev = "7e27f60f7f04a1c762b6bb69b4a44d7b24cd7a5d";
+    hash = "sha256-dTKKl32saIIVt8ue105Xw643TBNEf09H38GbSdEcmKQ=";
     fetchSubmodules = true;
   };
 
@@ -39,7 +45,7 @@ let
     postPatch = ''
       substituteInPlace cmd/build-naive/cmd_build.go \
         --replace-fail 'runGetClang(t)' '// runGetClang(t)' \
-        --replace-fail 'gnPath := filepath.Join(srcRoot, "gn", "out", "gn")' 'gnPath := "${lib.getExe gn}"'
+        --replace-fail 'gnPath := filepath.Join(srcRoot, "gn", "out", "gn")' 'gnPath := "${lib.getExe gnPinned}"'
 
       export CRONET_GO_CLANG_BASE_PATH=${lib.escapeShellArg (toString clangBasePath)}
       ${lib.getExe python3} - <<'PY'
@@ -82,11 +88,15 @@ stdenvNoCC.mkDerivation {
   ];
 
   postPatch = ''
+    # Chromium 150 moved -fsanitize-ignore-for-ubsan-feature out of
+    # compiler/BUILD.gn; strip its new generic source for our clang.
     substituteInPlace naiveproxy/src/build/config/compiler/BUILD.gn \
       --replace-fail 'cflags += [ "-fno-lifetime-dse" ]' '# cflags += [ "-fno-lifetime-dse" ]' \
-      --replace-fail '"-fsanitize-ignore-for-ubsan-feature=array-bounds"' '# "-fsanitize-ignore-for-ubsan-feature=array-bounds"' \
-      --replace-fail '"-fsanitize-ignore-for-ubsan-feature=return"' '# "-fsanitize-ignore-for-ubsan-feature=return"' \
-      --replace-fail '"-Wno-unsafe-buffer-usage-in-static-sized-array"' '# "-Wno-unsafe-buffer-usage-in-static-sized-array"'
+      --replace-fail 'cflags += [ "-fdiagnostics-show-inlining-chain" ]' 'cflags += []' \
+      --replace-fail 'cflags = [ "-Wno-unsafe-buffer-usage-in-static-sized-array" ]' 'cflags = []'
+
+    substituteInPlace naiveproxy/src/build/config/sanitizers/sanitizers.gni \
+      --replace-fail '"-fsanitize-ignore-for-ubsan-feature=''${invoker.sanitizer}",' '# unsupported by our clang'
   '';
 
   nativeBuildInputs = [

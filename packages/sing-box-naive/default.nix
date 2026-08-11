@@ -10,12 +10,12 @@ sing-box.overrideAttrs (
   final: old: {
     pname = "sing-box-naive";
 
-    version = "1.13.14";
+    version = "1.14.0-beta.14";
     src = fetchFromGitHub {
       owner = "SagerNet";
       repo = "sing-box";
       rev = "refs/tags/v${final.version}";
-      hash = "sha256-ODQ1i2lOuQLb3LDq6ONqHJQ7sT7dXICCJoyW/I9zF38=";
+      hash = "sha256-roTsxlazxYsFqSZoIEWVJnu7XnVEJ/1seva/gUgzpu4=";
     };
 
     tags = (old.tags or [ ]) ++ [
@@ -25,7 +25,7 @@ sing-box.overrideAttrs (
 
     # New tags might change dependencies, so we need a new vendorHash.
     # Set to fake hash to trigger mismatch error and get the correct one.
-    vendorHash = "sha256-VDaiyxnSCWyWZ68Yru4P2PyGx7DI2OhwV3SOWi+NlFA=";
+    vendorHash = "sha256-NYJPwcvE5I4rfH2ptNWrJJ/CsNXeuM0YHkpLUfwaLeY=";
 
     # cronet-go commit was force-pushed on GitHub; the old pseudo-version
     # is unresolvable via direct git fetch but still cached on Go module proxy.
@@ -37,7 +37,10 @@ sing-box.overrideAttrs (
       CGO_ENABLED = "1";
     };
 
-    patches = (old.patches or [ ]) ++ [ ./json-log-format.patch ];
+    # 1.14 rebased the option/options.go hunk: LogOptions gained JSON Schema
+    # `enum:` struct tags, so the 1.13 patch no longer applies there.
+    # log/format.go and log/log.go are identical between 1.13.18 and 1.14.
+    patches = (old.patches or [ ]) ++ [ ./json-log-format-1.14.patch ];
 
     # preBuild runs in BOTH the go-modules FOD and the main build.
     # - FOD phase: strip ",direct" from GOPROXY for force-pushed module resolution
