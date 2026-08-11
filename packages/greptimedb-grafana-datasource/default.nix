@@ -40,25 +40,28 @@ buildGoModule (
   in
   {
     pname = "info8fcc-greptimedb-datasource";
-    version = "2.1.7";
+    version = "3.0.3";
     src = fetchFromGitHub {
       owner = "GreptimeTeam";
       repo = "greptimedb-grafana-datasource";
       rev = "v${finalAttrs.version}";
-      hash = "sha256-oDzFCxd8obeAadGSG3dVB9F0y0Ud4oQgen5Ulq+29E8=";
+      hash = "sha256-OoiGx5ofqIzclXPa3fX5xGDlLCfHBIjEbfnk47qNIiI=";
     };
     nativeBuildInputs = [
       mage
     ];
 
     inherit frontend;
-    vendorHash = "sha256-9CyW9yKRuI7lilYg+ghBi7+Fx5oISWMWZAlHNg0XJIE=";
+    vendorHash = "sha256-XiKGij3higC9VNeD0G3yABDh2kbYnIJibPcSIfBHZsc=";
 
-    # Backend (Go) reads jsonData.host as bare hostname + separate port,
-    # but the frontend proxy route and config UI treat it as a full URL.
-    # Alert evaluation goes through the backend -> "invalid port" with our
-    # provisioned host = http://127.0.0.1:4000. Patch: URL-split in LoadSettings.
-    patches = [ ./url-host-backend.patch ];
+    # No local patches. Up to 2.x the Go backend required a bare hostname plus
+    # a separate port, so a provisioned host of http://127.0.0.1:4000 (the form
+    # the frontend proxy route needs) made alert evaluation fail with
+    # "invalid port"; url-host-backend.patch split the URL in LoadSettings.
+    # 3.0.0 made the backend URL-aware upstream: isValid() accepts an http(s)://
+    # host without a port, SQLURL() passes it through, and getTLSConfig() infers
+    # TLS from the scheme. Keeping the patch would break that, and upstream's
+    # own tests now assert Host stays a full URL.
 
     prePatch = ''
       cp -r ${frontend} dist

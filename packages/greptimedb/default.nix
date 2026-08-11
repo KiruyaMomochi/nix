@@ -68,19 +68,19 @@ let
 in
 rustPlatform.buildRustPackage rec {
   pname = "greptimedb";
-  version = "1.1.2";
+  version = "1.1.4";
 
   src = fetchFromGitHub {
     owner = "GreptimeTeam";
     repo = "greptimedb";
     rev = "v${version}";
-    hash = "sha256-K2E5eGNXSGgd62bU8zk/eEhzGgNsvtnQev/bM057V14=";
+    hash = "sha256-+Qb3cyvGrUhi3nBbEUoG2jJyYHFcTSIg34E6ZiI+weY=";
   };
 
   # Single-FOD vendor of all dependencies (including git deps) via
   # fetchCargoVendor. To update: set to lib.fakeHash, build once,
   # nix reports the correct hash, paste it back.
-  cargoHash = "sha256-GRb01BS311wv8YDx5vx0DY+HqUlt9Z6UJF5oEAdZHKI=";
+  cargoHash = "sha256-/Sj7TRPsJ2mP8Da2FUhL2+bl5seFFDuS7RqZ1DLTF2o=";
 
   nativeBuildInputs = [
     pkg-config   # lets *-sys crates find C library .pc files
