@@ -72,17 +72,28 @@ def split_words [value?: string] {
 # Executable interface. There are two unambiguous forms:
 #   nx "bun jq" -- bash -c '...'
 #   nx -s "bun jq" bash -c '...'
-# With -s/--pkgs, every positional argument is part of the command. Without it,
-# positional arguments before -- are package names.
-def --wrapped main [
-    --pkgs (-s): string     # System packages (space separated)
-    --python (-p): string   # Python packages (space separated)
-    --verbose (-v)          # Print resolved packages and the Nix expression
-    --help (-h)             # Show usage
-    ...args: string
-] {
-    if $help {
-        print "Usage:
+#
+# Parse flags manually instead of declaring them in main's signature. Nushell parses
+# declared short flags before main runs, so a forwarded Go-style option such as
+# `-plaintext` collides with nx's `-p` and never reaches ...args.
+def --wrapped main [...raw_args: string] {
+    mut sys_list = []
+    mut python = ""
+    mut verbose = false
+    mut explicit_pkgs = false
+    mut parsing_cmd = false
+    mut cmd_list = []
+    mut index = 0
+
+    while $index < ($raw_args | length) {
+        let arg = ($raw_args | get $index)
+
+        if $parsing_cmd {
+            $cmd_list = ($cmd_list | append $arg)
+        } else if $arg == "--" {
+            $parsing_cmd = true
+        } else if $arg in ["-h", "--help"] {
+            print "Usage:
   nx \"<system packages>\" [--python \"<python packages>\"] -- <command...>
   nx --pkgs \"<system packages>\" [--python \"<python packages>\"] <command...>
 
@@ -91,31 +102,33 @@ Options:
   -p, --python     Python packages, space separated
   -v, --verbose    Print the generated Nix expression
   -h, --help       Show this help"
-        return
-    }
-
-    mut sys_list = (split_words $pkgs)
-    mut cmd_list = []
-
-    if ($sys_list | is-not-empty) {
-        # An explicit package flag removes the package/command ambiguity. Keep a
-        # separator optional, but discard it when callers include one for clarity.
-        $cmd_list = if (($args | first | default "") == "--") {
-            $args | skip 1
-        } else {
-            $args
-        }
-    } else {
-        mut parsing_cmd = false
-        for arg in $args {
-            if $parsing_cmd {
-                $cmd_list = ($cmd_list | append $arg)
-            } else if $arg == "--" {
-                $parsing_cmd = true
-            } else {
-                $sys_list = ($sys_list | append (split_words $arg))
+            return
+        } else if $arg in ["-s", "--pkgs"] {
+            $index += 1
+            if $index >= ($raw_args | length) {
+                error make { msg: $"Missing value for ($arg)" }
             }
+            $sys_list = ($sys_list | append (split_words ($raw_args | get $index)))
+            $explicit_pkgs = true
+        } else if $arg in ["-p", "--python"] {
+            $index += 1
+            if $index >= ($raw_args | length) {
+                error make { msg: $"Missing value for ($arg)" }
+            }
+            $python = ($raw_args | get $index)
+        } else if $arg in ["-v", "--verbose"] {
+            $verbose = true
+        } else if $explicit_pkgs {
+            # The first non-nx argument starts the command. From here on every
+            # argument, including strings beginning with '-', is passed unchanged.
+            $parsing_cmd = true
+            $cmd_list = ($cmd_list | append $arg)
+        } else {
+            # In positional mode, everything before -- names packages.
+            $sys_list = ($sys_list | append (split_words $arg))
         }
+
+        $index += 1
     }
 
     nx --pkgs $sys_list --python-pkgs (split_words $python) --verbose=$verbose ...$cmd_list
