@@ -37,7 +37,7 @@ in
           "-/run/wrappers/bin/fusermount -uz ${cfg.mountPath}"
           "${pkgs.coreutils}/bin/mkdir -p ${cfg.mountPath}"
         ];
-        ExecStart = "${cfg.package}/bin/rclone mount onedrive: ${cfg.mountPath} --vfs-cache-mode full";
+        ExecStart = "${cfg.package}/bin/rclone mount onedrive: ${cfg.mountPath} --vfs-cache-mode full --rc --rc-no-auth";
         ExecStop = "fusermount -u ${cfg.mountPath}"; # Dismounts
         Restart = "on-failure";
         RestartSec = "10s";
