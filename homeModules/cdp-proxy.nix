@@ -39,6 +39,19 @@ in
       description = "Port for the local headless browser (last-resort fallback).";
     };
 
+    localCdpHost = mkOption {
+      type = types.str;
+      default = "[::1]";
+      description = ''
+        Host the proxy uses to reach the local headless browser.
+
+        Headless Chrome ignores --remote-debugging-address and binds the IPv6
+        loopback only, so probing 127.0.0.1 gets ECONNREFUSED even though the
+        endpoint is up. Verified on google-chrome 150.0.7871.186: ss shows
+        `LISTEN [::1]:9222` while --remote-debugging-address=127.0.0.1 was passed.
+      '';
+    };
+
     browserPackage = mkOption {
       type = types.package;
       default = pkgs.google-chrome;
@@ -115,7 +128,7 @@ in
           "${cdpProxyScript}/bin/cdp-proxy"
           "--port" (toString cfg.listenPort)
         ] ++ lib.concatMap (u: [ "--upstream" u ]) cfg.upstreams ++ [
-          "--local" "http://127.0.0.1:${toString cfg.localCdpPort}"
+          "--local" "http://${cfg.localCdpHost}:${toString cfg.localCdpPort}"
           "--probe-timeout" (toString cfg.probeTimeout)
         ]);
         Restart = "on-failure";
