@@ -15,6 +15,14 @@ in
       default = "${config.home.homeDirectory}/OneDrive";
       description = "Path to mount";
     };
+    allowOther = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        Pass --allow-other so other users (and root) can traverse the mount.
+        Requires programs.fuse.userAllowOther = true on the host.
+      '';
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -37,7 +45,8 @@ in
           "-/run/wrappers/bin/fusermount -uz ${cfg.mountPath}"
           "${pkgs.coreutils}/bin/mkdir -p ${cfg.mountPath}"
         ];
-        ExecStart = "${cfg.package}/bin/rclone mount onedrive: ${cfg.mountPath} --vfs-cache-mode full --rc --rc-no-auth";
+        ExecStart = "${cfg.package}/bin/rclone mount onedrive: ${cfg.mountPath} --vfs-cache-mode full --rc --rc-no-auth"
+          + lib.optionalString cfg.allowOther " --allow-other";
         ExecStop = "fusermount -u ${cfg.mountPath}"; # Dismounts
         Restart = "on-failure";
         RestartSec = "10s";
