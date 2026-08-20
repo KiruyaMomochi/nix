@@ -12,6 +12,16 @@ let
       flakeIgnore = [ "E501" "W503" ];
     }
     (builtins.readFile ./cdp-proxy.py);
+
+  cdpCtlScript = pkgs.writers.writePython3Bin "cdp-ctl"
+    {
+      libraries = [ pkgs.python3Packages.aiohttp ];
+      flakeIgnore = [ "E501" "W503" ];
+    }
+    (builtins.replaceStrings
+      [ "http://127.0.0.1:9224" ]
+      [ "http://127.0.0.1:${toString cfg.listenPort}" ]
+      (builtins.readFile ./cdp-ctl.py));
 in
 {
   options.services.cdp-proxy = with lib; {
@@ -84,6 +94,10 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    # The control plane is intentionally unauthenticated and loopback-only.
+    # cdp-ctl is installed with the same configured port as the service.
+    home.packages = [ cdpCtlScript ];
+
     # Headless browser service
     systemd.user.services.headless-browser = {
       Unit = {
