@@ -25,17 +25,6 @@
 
   zramSwap.enable = true;
 
-  # Redis for grist (sessions, pub/sub, webhook job queue). Reachable from the
-  # podman bridge gateway so the container can connect without host networking.
-  services.redis.servers.grist = {
-    enable = true;
-    bind = "127.0.0.1 10.88.0.1";
-    port = 6379;
-  };
-  # podman0 (and its 10.88.0.1 address) only exists once netavark has started a
-  # container, which may be after redis. Allow binding the address regardless.
-  boot.kernel.sysctl."net.ipv4.ip_nonlocal_bind" = 1;
-
   virtualisation.oci-containers.containers = {
     grist = {
       image = "gristlabs/grist:latest";
@@ -44,7 +33,6 @@
       volumes = [ "grist:/persist" ];
       environment = {
         TZ = "Asia/Shanghai";
-        REDIS_URL = "redis://10.88.0.1:6379";
       };
     };
   };
