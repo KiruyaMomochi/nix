@@ -41,14 +41,13 @@ in
 
     localCdpHost = mkOption {
       type = types.str;
-      default = "[::1]";
+      default = "127.0.0.1";
       description = ''
         Host the proxy uses to reach the local headless browser.
 
-        Headless Chrome ignores --remote-debugging-address and binds the IPv6
-        loopback only, so probing 127.0.0.1 gets ECONNREFUSED even though the
-        endpoint is up. Verified on google-chrome 150.0.7871.186: ss shows
-        `LISTEN [::1]:9222` while --remote-debugging-address=127.0.0.1 was passed.
+        Chrome 151+ respects --remote-debugging-address and binds the specified
+        address (127.0.0.1 for IPv4, [::1] for IPv6). Earlier versions (≤150)
+        ignored the flag and always bound IPv6 [::1].
       '';
     };
 
