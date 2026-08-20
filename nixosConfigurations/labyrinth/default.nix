@@ -31,8 +31,10 @@
       pull = "newer";
       ports = [ "127.0.0.1:8484:8484" ];
       volumes = [ "grist:/persist" ];
+      extraOptions = [ "--network=host" ];
       environment = {
         TZ = "Asia/Shanghai";
+        REDIS_URL = "redis://127.0.0.1:6379/0";
       };
     };
   };
@@ -62,6 +64,10 @@
         }
       ];
     };
+  };
+
+  services.dragonflydb = {
+    enable = true;
   };
 
   # This value determines the NixOS release from which the default
