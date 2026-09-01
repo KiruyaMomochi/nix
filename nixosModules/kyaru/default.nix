@@ -89,6 +89,8 @@ in
 
     # Run prebuilt binaries on NixOS with ease
     programs.nix-ld.enable = true;
+    # https://discourse.nixos.org/t/fix-ssl-sslcertverificationerror-with-uvs-standalone-python/71138
+    environment.etc."ssl/cert.pem".source = "/etc/ssl/certs/ca-certificates.crt";
 
     programs.fish.enable = true;
 
@@ -98,7 +100,7 @@ in
     services.openssh.enable = true;
     services.fail2ban.enable = true;
     services.fail2ban.ignoreIP = [
-      "100.64.0.0/10"  # Tailscale CGNAT range
+      "100.64.0.0/10" # Tailscale CGNAT range
     ];
     # envfs crash will lead to lots of unexpected crash like broken xkbcomp
     services.envfs.enable = false;
