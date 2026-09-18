@@ -21,8 +21,8 @@ let
 
   src = fetchgit {
     url = "https://github.com/SagerNet/cronet-go.git";
-    rev = "7e27f60f7f04a1c762b6bb69b4a44d7b24cd7a5d";
-    hash = "sha256-dTKKl32saIIVt8ue105Xw643TBNEf09H38GbSdEcmKQ=";
+    rev = "45832ab074849607406baa3e3a2c4660274602ed";
+    hash = "sha256-jh0+3+wQ/y75K2XPgp6CJOVzQqntkvp+myEQ9XcO7xk=";
     fetchSubmodules = true;
   };
 
