@@ -1,21 +1,25 @@
-{ caddy }:
+{ caddy, lib }:
 let
-  caddy-naive = caddy.overrideAttrs (oldAttrs: {
+  forwardproxy = "github.com/caddyserver/forwardproxy=github.com/klzgrad/forwardproxy@v0.0.0-20250118002110-d62c80d3dd2c";
+
+  caddy-naive = (caddy.withPlugins {
+    plugins = [ forwardproxy ];
+    hash = "sha256-4y62pkDnDFstlejBOyml+ZW0l/fCq7Mok+2TqLC+yZk=";
+  }).overrideAttrs (oldAttrs: {
     pname = "caddy-naive";
-    vendorHash = "sha256-PzQln1pGilKZybwbh195kNf2Tl3MFBwuVEYzGRzcb6c=";
-
-    prePatch = ''
-      sed -i -e '\!// plug in Caddy modules here!a _ "github.com/caddyserver/forwardproxy"' ./cmd/caddy/main.go
-      cp ${./go.mod} go.mod
-      cp ${./go.sum} go.sum
-    '';
-
-    # File permission test fails in sandbox due to different umask behavior
-    doCheck = false;
 
     passthru = oldAttrs.passthru // {
       updateScript = ./update.sh;
-      withPlugins = oldAttrs.passthru.withPlugins.override { caddy = caddy-naive; };
+      withPlugins =
+        {
+          plugins,
+          hash ? lib.fakeHash,
+          doInstallCheck ? true,
+        }:
+        caddy.withPlugins {
+          plugins = [ forwardproxy ] ++ plugins;
+          inherit hash doInstallCheck;
+        };
     };
   });
 in
