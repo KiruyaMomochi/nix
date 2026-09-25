@@ -1,7 +1,7 @@
 { lib
 , stdenv
 , patch
-, python312
+, python314
 , inputs
 , hermesAgent ? inputs.hermes-agent.packages.${stdenv.hostPlatform.system}.default
 , hermesAgentSrc ? inputs.hermes-agent
@@ -17,7 +17,7 @@ let
     then hermesAgent
     else hermesAgent.override { inherit extraDependencyGroups; };
 
-  sitePackages = python312.sitePackages;
+  sitePackages = python314.sitePackages;
   localesSrc = lib.cleanSource (hermesAgentSrc + "/locales");
 
   origVenv = base.passthru.hermesVenv;
