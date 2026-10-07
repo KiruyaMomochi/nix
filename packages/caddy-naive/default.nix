@@ -1,10 +1,10 @@
 { caddy, lib }:
 let
-  forwardproxy = "github.com/caddyserver/forwardproxy=github.com/klzgrad/forwardproxy@v0.0.0-20250118002110-d62c80d3dd2c";
+  forwardproxy = "github.com/caddyserver/forwardproxy=github.com/klzgrad/forwardproxy@v0.0.0-20261006113151-c096d6a00cb2";
 
   caddy-naive = (caddy.withPlugins {
     plugins = [ forwardproxy ];
-    hash = "sha256-4y62pkDnDFstlejBOyml+ZW0l/fCq7Mok+2TqLC+yZk=";
+    hash = "sha256-IbcMwA7ignwcgbYealJWERRvGuC3vnbhNjMmcq9s79A=";
   }).overrideAttrs (oldAttrs: {
     pname = "caddy-naive";
 
