@@ -14,10 +14,10 @@
 with luaPackages; stdenv.mkDerivation rec {
   name = "Lmod-${version}";
 
-  version = "9.4.2";
+  version = "9.4.3";
   src = fetchurl {
     url = "https://github.com/TACC/Lmod/archive/${version}.tar.gz";
-    sha256 = "sha256-MMninWq5QqGU6cj3x4Qw9OJiadlDmmj0Uf4cpAY9p3Q=";
+    sha256 = "sha256-HT//ev05gRa6XbC9JjtlIZSJhD5R4BHr1fH5nLiOwpI=";
   };
 
   nativeBuildInputs = [ pkg-config ];
