@@ -130,6 +130,10 @@ in
     services.opentelemetry-collector = {
       enable = true;
       package = pkgs.opentelemetry-collector-contrib;
+      # LoadCredential files exist only at runtime; keep build-time validation.
+      validateConfigOverrides = optionals cfg.basicAuth.enable [
+        "extensions::basicauth/monitor::client_auth={username: validation, password: validation}"
+      ];
       settings = {
         extensions = mkIf cfg.basicAuth.enable {
           "basicauth/monitor".client_auth = "\${file:/run/credentials/opentelemetry-collector.service/${cfg.basicAuth.credentialName}}";
