@@ -7,18 +7,20 @@
 , luaPackages
 , rsync
 , procps
+, pkg-config
 }:
 
 # https://github.com/ComputeCanada/nixpkgs/blob/f6daa33900a71529aa7835cb5dbed5ddf854ec32/pkgs/tools/misc/lmod/default.nix#L4
 with luaPackages; stdenv.mkDerivation rec {
   name = "Lmod-${version}";
 
-  version = "8.7.20";
+  version = "9.4.2";
   src = fetchurl {
-    url = "http://github.com/TACC/Lmod/archive/${version}.tar.gz";
-    sha256 = "sha256-wE3v99LKNUYQo2JFmnqpocZCoJXkWksLskcbsyVOhfQ=";
+    url = "https://github.com/TACC/Lmod/archive/${version}.tar.gz";
+    sha256 = "sha256-MMninWq5QqGU6cj3x4Qw9OJiadlDmmj0Uf4cpAY9p3Q=";
   };
 
+  nativeBuildInputs = [ pkg-config ];
   buildInputs = [ lua tcl perl rsync procps bc ];
   propagatedBuildInputs = [ luaposix luafilesystem ];
   # set custom LD_LIBRARY_PATH so capture("groups") works properly
@@ -26,6 +28,10 @@ with luaPackages; stdenv.mkDerivation rec {
   #   makeFlags="PREFIX=$out"
   # '';
   configureFlags = [ "--with-duplicatePaths=yes --with-caseIndependentSorting=yes --with-redirect=yes" ];
+
+  preConfigure = ''
+    patchShebangs proj_mgmt/
+  '';
 
   preBuild = ''
     patchShebangs proj_mgmt/
