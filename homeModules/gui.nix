@@ -18,7 +18,8 @@ in
     fonts.fontconfig.enable = true;
     home.packages = with pkgs; [
       font-awesome
-      zotero
+      # zotero 10.0.4 fails to build on nixpkgs 2026-10-07 (NixOS/nixpkgs#569006); unused for now
+      # zotero
       microsoft-edge
       keepassxc
       (google-chrome.override {
