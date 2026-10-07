@@ -42,9 +42,7 @@ jobs:
       fail-fast: false
       matrix:
         package:
-          - naiveproxy
           - caddy-naive
-          - sing-box-naive
           - vlmcsd
           - hermes-agent
     steps:

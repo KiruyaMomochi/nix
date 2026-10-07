@@ -45,7 +45,6 @@ jobs:
               return
             fi
             echo "::group::Updating $pkg"
-            # libcronet-naive must be updated before sing-box-naive
             if bash "$script"; then
               echo "::endgroup::"
               if ! git diff --quiet; then
@@ -64,10 +63,6 @@ jobs:
           if [ -n "${{ inputs.package }}" ]; then
             run_update "${{ inputs.package }}"
           else
-            # Order matters: libcronet-naive before sing-box-naive
-            run_update "naiveproxy"
-            run_update "libcronet-naive"
-            run_update "sing-box-naive"
             run_update "caddy-naive"
           fi
 

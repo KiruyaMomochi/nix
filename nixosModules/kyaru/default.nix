@@ -24,7 +24,6 @@ in
     ../dendrite.nix
     ../desktop.nix
     ../hysteria.nix
-    ../naiveproxy.nix
     ../networking.nix
     ../vlmcsd.nix
     ./opentelemetry.nix
