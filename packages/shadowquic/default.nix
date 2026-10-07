@@ -5,16 +5,16 @@
 
 rustPlatform.buildRustPackage (finalAttrs: {
   pname = "shadowquic";
-  version = "0.3.13";
+  version = "0.4.2";
 
   src = fetchFromGitHub {
     owner = "spongebob888";
     repo = "shadowquic";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-/EhbUtahn6/IXZKF5CgWifYI2fDB9elPE3C16B1oMOM=";
+    hash = "sha256-bS0KGYQMH8TGeEnxob9N7nKlvXwNfXL5YZxqiDeDITg=";
   };
 
-  cargoHash = "sha256-usHhuwpQ/ERiu4Eo7Fv1l8UmLH7jkETQMAvnSfyHlvg=";
+  cargoHash = "sha256-wDRMAk96BWwsxiQDqxpQJxa58ijykCbOIenrt6rq0Ek=";
 
   # workspace default-members = [ "shadowquic" ]
   cargoBuildFlags = [ "-p" "shadowquic" ];
