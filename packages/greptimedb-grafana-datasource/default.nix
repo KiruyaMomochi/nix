@@ -40,12 +40,12 @@ buildGoModule (
   in
   {
     pname = "info8fcc-greptimedb-datasource";
-    version = "3.0.3";
+    version = "3.0.4";
     src = fetchFromGitHub {
       owner = "GreptimeTeam";
       repo = "greptimedb-grafana-datasource";
       rev = "v${finalAttrs.version}";
-      hash = "sha256-OoiGx5ofqIzclXPa3fX5xGDlLCfHBIjEbfnk47qNIiI=";
+      hash = "sha256-esJIbydSg1py05NihGB6r0uK128guNeZSKiBJ3JuG8Q=";
     };
     nativeBuildInputs = [
       mage
