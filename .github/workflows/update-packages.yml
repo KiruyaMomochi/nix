@@ -14,6 +14,10 @@ on:
 jobs:
   update-packages:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
     steps:
       - uses: actions/checkout@v4
 
@@ -78,6 +82,7 @@ jobs:
           fi
 
       - name: Create Pull Request
+        id: cpr
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -89,3 +94,9 @@ jobs:
           branch: update-packages
           delete-branch: true
           base: main
+
+      - name: Run CI on PR branch
+        if: steps.cpr.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run ci.yml --ref update-packages
