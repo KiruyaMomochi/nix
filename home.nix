@@ -79,6 +79,7 @@
       gitui
       shellcheck
       shfmt
+      tombi
 
       # others
       android-tools # adb for phone CDP/automation
