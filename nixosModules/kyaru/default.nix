@@ -106,6 +106,17 @@ in
 
     security.sudo-rs.enable = true;
 
+    # eMudhra intermediates shipped 3-8 bit private keys (2026-10-20).
+    # Browsers block the intermediates via CRLSets/OneCRL; system TLS has no such list,
+    # so distrust the whole emSign hierarchy until the roots are pulled upstream.
+    # https://arstechnica.com/security/2026/10/the-internet-goes-on-high-alert-after-discovery-of-8-compromised-tls-certs/
+    security.pki.caCertificateBlacklist = [
+      "emSign Root CA - G1"
+      "emSign Root CA - C1"
+      "emSign ECC Root CA - G3"
+      "emSign ECC Root CA - C3"
+    ];
+
     # Nspawn
     systemd.services."container-getty@" = {
       environment = {
