@@ -49,6 +49,10 @@ let
         cp -r ${localesSrc} $out/${sitePackages}/locales
       ''}
 
+      # pm treats site-packages as the repo root and seeds plugin venvs from its
+      # uv.lock; the wheel ships neither file, so enabling a plugin fails.
+      cp ${hermesAgentSrc + "/pyproject.toml"} ${hermesAgentSrc + "/uv.lock"} $out/${sitePackages}/
+
       ${lib.concatMapStringsSep "\n" (p: ''
         patch -p1 -d $out/${sitePackages} < ${p}
       '') patches}
