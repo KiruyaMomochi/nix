@@ -12,10 +12,13 @@
 }:
 
 let
-  base =
-    if extraDependencyGroups == [ ]
-    then hermesAgent
-    else hermesAgent.override { inherit extraDependencyGroups; };
+  # The flake source has no .git, so upstream stamps the placeholder "0.0.0" and
+  # plugins with requires_hermes refuse to load. "unknown" is unparseable, which
+  # the version gate treats as permissive. Upstream issue #130070.
+  base = hermesAgent.override (
+    { version = "unknown"; }
+    // lib.optionalAttrs (extraDependencyGroups != [ ]) { inherit extraDependencyGroups; }
+  );
 
   sitePackages = python314.sitePackages;
   localesSrc = lib.cleanSource (hermesAgentSrc + "/locales");
