@@ -26,6 +26,10 @@
   hardware.graphics.enable = true;
   hardware.bluetooth.enable = true;
 
+  users.users.kyaru.openssh.authorizedKeys.keys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHt7EEGFGu0Yg/XlowRZugaAWaHtdwOwx52VH6/5Yzn9 kyaru@caon"
+  ];
+
   time.timeZone = "Asia/Taipei";
   environment.systemPackages = with pkgs; [ nushell ];
   programs.kdeconnect.enable = true;

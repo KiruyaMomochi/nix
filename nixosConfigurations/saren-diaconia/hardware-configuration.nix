@@ -2,7 +2,7 @@
 # 分區：Windows 縮完後新建
 #   1G  vfat  label=NIXBOOT  （Windows 那個 100M ESP 塞不下幾代內核，另開一個）
 #   剩下 btrfs label=nixos，subvol: root nix home swap
-{ lib, modulesPath, ... }:
+{ config, lib, modulesPath, ... }:
 let
   btrfs = subvol: {
     device = "/dev/disk/by-label/nixos";
@@ -13,7 +13,7 @@ in
 {
   imports = [ (modulesPath + "/installer/scan/not-detected.nix") ];
 
-  boot.initrd.availableKernelModules = [ "nvme" "xhci_pci" "thunderbolt" "usb_storage" "sd_mod" ];
+  boot.initrd.availableKernelModules = [ "nvme" "xhci_pci" "thunderbolt" "usbhid" "usb_storage" "sd_mod" ];
   boot.kernelModules = [ "kvm-amd" ];
 
   fileSystems."/" = btrfs "root";
@@ -28,4 +28,5 @@ in
 
   networking.useDHCP = lib.mkDefault true;
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+  hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
 }
