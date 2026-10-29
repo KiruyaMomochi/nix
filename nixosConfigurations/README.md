@@ -8,6 +8,8 @@ I use [guild names](https://princess-connect.fandom.com/wiki/Guilds) from the ga
   - Custom ITX
 - **[伊莉莎白牧場](./elizabeth/default.nix)** - Laptop:
   - Lenovo XiaoXin 13 Air 2020 (82DM)
+- **[莎蓮救護院](./saren-diaconia/default.nix)** - Pocket:
+  - GPD Pocket 4 (Ryzen AI 9 HX 370)
 
 ### Removed
 
