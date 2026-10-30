@@ -27,22 +27,20 @@
   services.avahi.enable = true;
 
   # services.avahi.ipv6 = false;
-  services.avahi.extraConfig = ''
-    [publish]
-    publish-aaaa-on-ipv4=no
-    add-service-cookie=yes
-  '';
 
   services.avahi.nssmdns4 = true;
 
   # for a WiFi printer
   services.avahi.openFirewall = true;
-  services.avahi.publish = {
-    enable = true;
-    userServices = true;
-    hinfo = true;
-    workstation = true;
-    domain = true;
+  services.avahi.settings.publish = {
+    disable-publishing = false;
+    disable-user-service-publishing = false;
+    publish-addresses = true;
+    publish-hinfo = true;
+    publish-workstation = true;
+    publish-domain = true;
+    publish-aaaa-on-ipv4 = false;
+    add-service-cookie = true;
   };
   services.printing = {
     browsing = true;

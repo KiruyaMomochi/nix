@@ -83,12 +83,11 @@ in
 
       (mkIf config.virtualisation.containers.enable {
         virtualisation.containers = {
-          storage.settings = {
-            storage = {
-              driver = mkDefault "overlay";
-              graphroot = "/var/lib/containers/storage";
-              runroot = "/run/containers/storage";
-            };
+          storage.settings.storage.driver = mkDefault "overlay";
+          # Root's store only; rootless keeps its per-user default.
+          storage.rootful.settings.storage = {
+            graphroot = "/var/lib/containers/storage";
+            runroot = "/run/containers/storage";
           };
         };
       })
