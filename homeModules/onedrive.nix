@@ -45,7 +45,9 @@ in
           "-/run/wrappers/bin/fusermount -uz ${cfg.mountPath}"
           "${pkgs.coreutils}/bin/mkdir -p ${cfg.mountPath}"
         ];
-        ExecStart = "${cfg.package}/bin/rclone mount onedrive: ${cfg.mountPath} --vfs-cache-mode full --rc --rc-no-auth"
+        # OneDrive supports ChangeNotify, so polling keeps the dir cache fresh
+        # and it can live ~forever instead of re-listing every 5 minutes.
+        ExecStart = "${cfg.package}/bin/rclone mount onedrive: ${cfg.mountPath} --vfs-cache-mode full --dir-cache-time 1000h --poll-interval 1m --rc --rc-no-auth"
           + lib.optionalString cfg.allowOther " --allow-other";
         ExecStop = "fusermount -u ${cfg.mountPath}"; # Dismounts
         Restart = "on-failure";
