@@ -6,7 +6,9 @@
         "nixpkgs": [
           "nixpkgs"
         ],
-        "stable": "stable",
+        "stable": [
+          "nixpkgs"
+        ],
         "systems": "systems"
       },
       "locked": {
@@ -575,22 +577,6 @@
       "original": {
         "owner": "Mic92",
         "repo": "sops-nix",
-        "type": "github"
-      }
-    },
-    "stable": {
-      "locked": {
-        "lastModified": 1790608446,
-        "narHash": "sha256-CYsYyk0zInkpQ6ojuCpvb9MahlhFXkeZpzjOU9Lxkpk=",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "c619be20e3508300c88af8aeafeaa7017559313f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nixos",
-        "ref": "release-26.05",
-        "repo": "nixpkgs",
         "type": "github"
       }
     },

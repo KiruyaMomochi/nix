@@ -52,6 +52,8 @@
     colmena = {
       url = "github:zhaofengli/colmena";
       inputs.nixpkgs.follows = "nixpkgs";
+      # Only colmena's own integration tests use it.
+      inputs.stable.follows = "nixpkgs";
     };
 
     fenix = {
