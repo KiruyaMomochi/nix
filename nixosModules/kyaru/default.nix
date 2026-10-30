@@ -110,11 +110,9 @@ in
     # Browsers block the intermediates via CRLSets/OneCRL; system TLS has no such list,
     # so distrust the whole emSign hierarchy until the roots are pulled upstream.
     # https://arstechnica.com/security/2026/10/the-internet-goes-on-high-alert-after-discovery-of-8-compromised-tls-certs/
+    # nss-cacert 3.131.1 already dropped C1/ECC G3/ECC C3 (and errors if we list them); only G1 remains.
     security.pki.caCertificateBlacklist = [
       "emSign Root CA - G1"
-      "emSign Root CA - C1"
-      "emSign ECC Root CA - G3"
-      "emSign ECC Root CA - C3"
     ];
 
     # Nspawn
