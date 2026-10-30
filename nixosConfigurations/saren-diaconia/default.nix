@@ -17,7 +17,7 @@
   };
   swapDevices = [{ device = "/swap/swapfile"; size = 16 * 1024; }];
 
-  # 先用普通 systemd-boot 開起來，Secure Boot 之後再換 lanzaboote
+  # Plain systemd-boot for now; switch to lanzaboote once Secure Boot is set up.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.kernelPackages = pkgs.linuxPackages_latest;
@@ -26,6 +26,8 @@
   hardware.graphics.enable = true;
   hardware.bluetooth.enable = true;
 
+  # Pinned to what the installer assigned, so other modules can refer to it.
+  users.users.kyaru.uid = 1000;
   users.users.kyaru.openssh.authorizedKeys.keys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHt7EEGFGu0Yg/XlowRZugaAWaHtdwOwx52VH6/5Yzn9 kyaru@caon"
   ];
