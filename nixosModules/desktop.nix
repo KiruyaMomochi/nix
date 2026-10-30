@@ -69,7 +69,6 @@ in
         programs.firejail.wrappedBinaries = { };
 
         environment.systemPackages = with pkgs; [
-          firefox
           telegram-desktop
           librime
           ddcutil

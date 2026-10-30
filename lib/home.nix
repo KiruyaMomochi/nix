@@ -22,6 +22,7 @@ in
         }
         inputs.vscode-server.homeModules.default
         inputs.nix-index-database.homeModules.nix-index
+        inputs.zen-browser.homeModules.beta
         (filterAttrs (name: value: name != "pkgs") attrs)
         ../home.nix
       ] ++ (inputs.nixpkgs.lib.attrValues inputs.self.homeModules);

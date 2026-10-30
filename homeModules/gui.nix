@@ -47,6 +47,10 @@ in
       xsel
     ];
 
+    # Beta: the release channel. If an update 404s (Zen pulled that beta),
+    # keep the old lock for this input until the flake's CI catches up.
+    programs.zen-browser.enable = true;
+
     programs.vscode =
       {
         package = pkgs.vscode.fhs;
