@@ -141,6 +141,9 @@ in
 
         programs.nix-ld.enable = true;
 
+        # rclone mounts (onedrive-rclone allowOther) need this
+        programs.fuse.userAllowOther = true;
+
         programs.localsend.enable = true;
 
         # Unified user configuration for desktop environment
