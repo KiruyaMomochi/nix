@@ -47,8 +47,7 @@ in
       xsel
     ];
 
-    # Beta: the release channel. If an update 404s (Zen pulled that beta),
-    # keep the old lock for this input until the flake's CI catches up.
+    # Twilight: the flake re-hosts these artifacts, so old locks keep building.
     programs.zen-browser.enable = true;
 
     programs.vscode =
