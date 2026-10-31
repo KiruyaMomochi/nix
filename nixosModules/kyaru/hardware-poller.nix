@@ -97,6 +97,37 @@ let
       PrivateTmp = true;
     };
   };
+
+  # --- sysfs source (battery + hwmon) ---
+  sysfsCfg = cfg.sysfs;
+  sysfsConfigFile = pkgs.writeText "hardware-poller-sysfs-config.json" (builtins.toJSON {
+    source_type = "sysfs";
+    service_name = "hardware-poller-sysfs";
+    description = "Battery and hwmon sensors from sysfs";
+    interval = sysfsCfg.interval;
+    otlp_endpoint = sysfsCfg.otlpEndpoint;
+    exportInterval = sysfsCfg.exportInterval;
+    host_name = config.networking.hostName;
+    credentials = [ ];
+  });
+
+  sysfsService = {
+    description = "Hardware poller: battery and hwmon sensors → OTLP";
+    after = [ "opentelemetry-collector.service" ];
+    wantedBy = [ "multi-user.target" ];
+
+    serviceConfig = {
+      ExecStart = "${python}/bin/python ${pollerSrc}/poller.py --config ${sysfsConfigFile} --source sysfs";
+      Restart = "on-failure";
+      RestartSec = 10;
+
+      DynamicUser = true;
+      NoNewPrivileges = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      PrivateTmp = true;
+    };
+  };
 in
 {
   options.kyaru.services.hardware-poller = {
@@ -205,6 +236,31 @@ in
         '';
       };
     };
+
+    sysfs = {
+      enable = mkEnableOption "battery and hwmon (temperature, fan, pwm) poller from sysfs (OTLP metrics)";
+
+      interval = mkOption {
+        type = types.int;
+        default = 30;
+        description = "Polling interval in seconds.";
+      };
+
+      otlpEndpoint = mkOption {
+        type = types.str;
+        default = "http://127.0.0.1:4318";
+        description = ''
+          OTLP/HTTP endpoint to push metrics to.
+          Default is the local OpenTelemetry Collector.
+        '';
+      };
+
+      exportInterval = mkOption {
+        type = types.int;
+        default = 60;
+        description = "How often (in seconds) to export metrics to OTLP.";
+      };
+    };
   };
 
   config = mkMerge [
@@ -214,6 +270,10 @@ in
 
     (mkIf cfg.smart.enable {
       systemd.services.hardware-poller-smart = smartService;
+    })
+
+    (mkIf cfg.sysfs.enable {
+      systemd.services.hardware-poller-sysfs = sysfsService;
     })
   ];
 }

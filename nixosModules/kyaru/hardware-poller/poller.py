@@ -228,6 +228,9 @@ def main():
     elif args.source == "smart":
         from source_smart import SmartSource
         source = SmartSource()
+    elif args.source == "sysfs":
+        from source_sysfs import SysfsSource
+        source = SysfsSource()
     else:
         log.error(f"Unknown source: {args.source}")
         sys.exit(1)
