@@ -6,7 +6,9 @@ in
   # On-screen keyboard that types through fcitx5, for tablet mode.
   # Pick "Fcitx 5 Osk Kwin Launcher" in System Settings > Keyboard >
   # Virtual Keyboard (it replaces the plain Fcitx 5 entry there).
-  environment.systemPackages = [ osk ];
+  # The KWin effect pops the keyboard when a finger taps a text field
+  # (mouse clicks don't count, so ignore_fcitx_show can stay on).
+  environment.systemPackages = [ osk pkgs.kyaru.fcitx5-osk-kwin-effect ];
   services.dbus.packages = [ osk ];
 
   # Root helper that presses Ctrl/Shift/Alt through uinput, working around
