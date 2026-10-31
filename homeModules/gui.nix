@@ -5,6 +5,12 @@
 }:
 let
   cfg = config.programs.kyaru.desktop;
+
+  # Native Wayland with fcitx5 through text-input. KWin works better with
+  # text-input-v1 than v3 (https://fcitx-im.org/wiki/Using_Fcitx_5_on_Wayland),
+  # and this also lets KWin know when a text field is focused, which the
+  # on-screen keyboard's touch-to-show relies on.
+  chromiumWayland = "--ozone-platform=wayland --enable-wayland-ime --wayland-text-input-version=1";
 in
 {
   options.programs.kyaru.desktop = {
@@ -20,10 +26,12 @@ in
       font-awesome
       # zotero 10.0.4 fails to build on nixpkgs 2026-10-07 (NixOS/nixpkgs#569006); unused for now
       # zotero
-      microsoft-edge
+      (microsoft-edge.override {
+        commandLineArgs = chromiumWayland;
+      })
       keepassxc
       (google-chrome.override {
-        commandLineArgs = "--enable-features=WebUIDarkMode --force-dark-mode --disable-features=UserAgentClientHint";
+        commandLineArgs = "--enable-features=WebUIDarkMode --force-dark-mode --disable-features=UserAgentClientHint ${chromiumWayland}";
       })
       # goldendict-ng
       ddcui
