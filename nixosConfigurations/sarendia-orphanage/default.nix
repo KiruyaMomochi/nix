@@ -3,6 +3,7 @@
   imports = [
     ./hardware-configuration.nix
     ./fan.nix
+    ./osk.nix
     inputs.nixos-hardware.nixosModules.gpd-pocket-4
   ];
 

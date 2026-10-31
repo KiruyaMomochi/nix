@@ -41,9 +41,17 @@ let
           pwm=$(( MIN_PWM + (255 - MIN_PWM) * (t > ON_AT ? t - ON_AT : 0) / span ))
         fi
 
-        # Re-assert manual mode every round: the EC may take over after resume.
-        [ "$(cat "$fan/pwm1_enable")" = 1 ] || echo 1 > "$fan/pwm1_enable"
-        echo "$pwm" > "$fan/pwm1"
+        # Only touch the EC when something changed. Re-check the mode each
+        # round in case the EC took over (e.g. after resume); going back to
+        # manual also resets pwm to 255, so force a pwm write then.
+        if [ "$(cat "$fan/pwm1_enable")" != 1 ]; then
+          echo 1 > "$fan/pwm1_enable"
+          last=
+        fi
+        if [ "$pwm" != "''${last:-}" ]; then
+          echo "$pwm" > "$fan/pwm1"
+          last=$pwm
+        fi
         sleep 3
       done
     '';
