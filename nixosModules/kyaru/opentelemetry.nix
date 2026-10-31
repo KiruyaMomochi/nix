@@ -34,6 +34,18 @@ let
     auth = mkIf cfg.basicAuth.enable {
       authenticator = "basicauth/monitor";
     };
+    # Keep unsent batches on disk and retry until the backend is reachable
+    # again, so a laptop that's offline for a while (or restarts meanwhile)
+    # backfills instead of dropping everything older than 5 minutes.
+    sending_queue = {
+      storage = "file_storage/queue";
+      # Cap each exporter's queue at 1 GiB of serialized data (days of
+      # metrics on a laptop); past that new data is dropped instead of
+      # filling the disk.
+      sizer = "bytes";
+      queue_size = 1024 * 1024 * 1024;
+    };
+    retry_on_failure.max_elapsed_time = "0s";
   };
 in
 {
@@ -135,8 +147,21 @@ in
         "extensions::basicauth/monitor::client_auth={username: validation, password: validation}"
       ];
       settings = {
-        extensions = mkIf cfg.basicAuth.enable {
-          "basicauth/monitor".client_auth = "\${file:/run/credentials/opentelemetry-collector.service/${cfg.basicAuth.credentialName}}";
+        extensions = {
+          "basicauth/monitor" = mkIf cfg.basicAuth.enable {
+            client_auth = "\${file:/run/credentials/opentelemetry-collector.service/${cfg.basicAuth.credentialName}}";
+          };
+          # One bbolt file per exporter under the unit's StateDirectory.
+          "file_storage/queue" = {
+            directory = "/var/lib/opentelemetry-collector/queue";
+            create_directory = true;
+            # Give the space back after a long outage has drained.
+            compaction = {
+              on_start = true;
+              on_rebound = true;
+              directory = "/var/lib/opentelemetry-collector/queue";
+            };
+          };
         };
         receivers = {
           hostmetrics = mkIf cfg.metrics.enable {
@@ -238,7 +263,8 @@ in
           "otlphttp/metrics" = mkIf cfg.metrics.enable (mkExporter metricsHeaders);
         };
         service = {
-          extensions = optionals cfg.basicAuth.enable [ "basicauth/monitor" ];
+          extensions = [ "file_storage/queue" ]
+            ++ optionals cfg.basicAuth.enable [ "basicauth/monitor" ];
           pipelines = {
             metrics = mkIf cfg.metrics.enable {
               # OTLP receiver is always wired in when metrics.enable is on,
