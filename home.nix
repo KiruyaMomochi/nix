@@ -363,6 +363,12 @@
               "schema" = "double_pinyin_flypy";
             }
           ];
+          # 中英只靠 fcitx 的 Win+Space 切，rime 自己的 ascii 模式不让按键进
+          "ascii_composer/switch_key" = {
+            Shift_L = "noop";
+            Shift_R = "noop";
+            Caps_Lock = "noop";
+          };
         };
       };
 
