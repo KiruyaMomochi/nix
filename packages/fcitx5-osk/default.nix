@@ -28,6 +28,21 @@ rustPlatform.buildRustPackage rec {
 
   cargoHash = "sha256-Zx3wPuIrvWbLsMWtCP0efq1rLolVMS94xlKaaFqgJeA=";
 
+  # KWin 6.8 drops input-method-v1 key requests without a keyboard grab, so
+  # the lock screen keyboard typed nothing. Send keysyms instead.
+  patches = [ ./lockscreen-keysym.patch ];
+
+  # On unlock KWin closes the lock screen keyboard's connection, sometimes
+  # while it is creating its compositor; the expect then aborts with a core
+  # dump. Exit like the other disconnect paths do.
+  postPatch = ''
+    f=$cargoDepsCopy/source-registry-0/iced_layershell-0.16.0/src/multi_window.rs
+    chmod u+w $f
+    substituteInPlace $f --replace-fail \
+      '.expect("Cannot create compositer");' \
+      '.unwrap_or_else(|e| { eprintln!("Cannot create compositor: {e}"); std::process::exit(1) });'
+  '';
+
   nativeBuildInputs = [ pkg-config makeWrapper ];
   buildInputs = [ openssl wayland libxkbcommon ];
 
