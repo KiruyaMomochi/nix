@@ -36,6 +36,11 @@ rustPlatform.buildRustPackage rec {
   # while it is creating its compositor; the expect then aborts with a core
   # dump. Exit like the other disconnect paths do.
   postPatch = ''
+    f=$cargoDepsCopy/source-registry-0/iced_tiny_skia-0.14.0/src/window/compositor.rs
+    chmod u+w $f
+    substituteInPlace $f --replace-fail \
+      '.expect("Create softbuffer context");' \
+      '.unwrap_or_else(|e| { eprintln!("Create softbuffer context: {e}"); std::process::exit(1) });'
     f=$cargoDepsCopy/source-registry-0/iced_layershell-0.16.0/src/multi_window.rs
     chmod u+w $f
     substituteInPlace $f --replace-fail \
