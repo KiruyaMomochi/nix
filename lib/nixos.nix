@@ -92,5 +92,6 @@ in
 
   systemOverride = hostname: {
     "lucent-academy" = "aarch64-linux";
+    "lucent-wsl" = "aarch64-linux";
   }.${hostname} or "x86_64-linux";
 }

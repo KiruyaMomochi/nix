@@ -519,6 +519,7 @@
         "nixpkgs": "nixpkgs",
         "sops-nix": "sops-nix",
         "systems": "systems_2",
+        "vivobook-s15-fedora": "vivobook-s15-fedora",
         "vscode-server": "vscode-server",
         "zen-browser": "zen-browser"
       }
@@ -633,6 +634,22 @@
       "original": {
         "owner": "pyproject-nix",
         "repo": "uv2nix",
+        "type": "github"
+      }
+    },
+    "vivobook-s15-fedora": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792168805,
+        "narHash": "sha256-p7yZnP4Q/MXopht4hP9GmomPgt9xTiYlUdgHBKkzDUo=",
+        "owner": "BurninChrome",
+        "repo": "vivobook-s15-fedora",
+        "rev": "c35ad9447dcc0883127de50edab1fb3e54f05334",
+        "type": "github"
+      },
+      "original": {
+        "owner": "BurninChrome",
+        "repo": "vivobook-s15-fedora",
         "type": "github"
       }
     },

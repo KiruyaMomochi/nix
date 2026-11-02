@@ -54,6 +54,12 @@
       url = "github:NixOS/nixos-hardware/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Kernel patches and DT overlay fragments for lucent-academy (ASUS Vivobook S 15, X1E).
+    # Bump with `nix flake update vivobook-s15-fedora`.
+    vivobook-s15-fedora = {
+      url = "github:BurninChrome/vivobook-s15-fedora";
+      flake = false;
+    };
 
     colmena = {
       url = "github:zhaofengli/colmena";
