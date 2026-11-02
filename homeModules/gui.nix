@@ -23,7 +23,8 @@ in
       # NIXOS_OZONE_WL = 1;
     };
     fonts.fontconfig.enable = true;
-    home.packages = with pkgs; [
+    # Drops what has no build for this platform (Edge and Spotify on aarch64).
+    home.packages = lib.filter (lib.meta.availableOn pkgs.stdenv.hostPlatform) (with pkgs; [
       font-awesome
       # zotero 10.0.4 fails to build on nixpkgs 2026-10-07 (NixOS/nixpkgs#569006); unused for now
       # zotero
@@ -54,7 +55,7 @@ in
       wl-clipboard
       xclip
       xsel
-    ];
+    ]);
 
     # Twilight: the flake re-hosts these artifacts, so old locks keep building.
     programs.zen-browser.enable = true;
