@@ -26,9 +26,6 @@ mkdir -p "$esp/EFI/systemd" "$esp/EFI/BOOT" "$esp/loader" "$xbl/EFI/nixos" "$xbl
 install_efi "$SDBOOT" "$esp/EFI/systemd/systemd-bootaa64.efi"
 install_efi "$SDBOOT" "$esp/EFI/BOOT/BOOTAA64.EFI"
 
-machine_id=""
-if [ -s /etc/machine-id ]; then machine_id=$(cat /etc/machine-id); fi
-
 current=$(readlink -f "$1")
 default=""
 wanted=()
@@ -65,14 +62,10 @@ for g in "${gens[@]}"; do
     echo "title NixOS"
     echo "version Generation $g $label, built on $built"
     echo "uki /EFI/nixos/$uki"
-    if [ -n "$machine_id" ]; then echo "machine-id $machine_id"; fi
     echo "sort-key nixos"
   } > "$xbl/loader/entries/$entry.tmp"
   mv "$xbl/loader/entries/$entry.tmp" "$xbl/loader/entries/$entry"
 done
-
-# UKIs from before the entries pointed at EFI/nixos.
-rm -f "$xbl"/EFI/Linux/nixos-generation-*.efi
 
 for f in "$xbl"/EFI/nixos/nixos-generation-*.efi "$xbl"/loader/entries/nixos-generation-*.conf; do
   [ -e "$f" ] || continue
