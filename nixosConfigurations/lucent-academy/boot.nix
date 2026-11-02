@@ -5,7 +5,8 @@
 # stub loads the .dtb embedded in a UKI either way. lanzaboote has no DT support yet
 # (nix-community/lanzaboote#369).
 #
-# /efi is the Windows ESP (systemd-boot, loader.conf); /boot is XBOOTLDR (EFI/Linux/*.efi).
+# /efi is the Windows ESP (systemd-boot, loader.conf); /boot is XBOOTLDR: UKIs in EFI/nixos,
+# and Type 1 entries that point at them (`uki`), so the menu reads like nixpkgs' builder.
 # Everything is signed once `sbctl create-keys` has been run; before that it stays unsigned.
 # Never writes EFI variables: the firmware entry was made from Windows with bcdedit.
 let
@@ -16,6 +17,7 @@ let
       findutils
       gnugrep
       gnused
+      jq
       util-linux
       sbsigntool
       systemdUkify

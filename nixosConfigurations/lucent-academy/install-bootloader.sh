@@ -22,9 +22,12 @@ install_efi() {
   mv "$2.tmp" "$2"
 }
 
-mkdir -p "$esp/EFI/systemd" "$esp/EFI/BOOT" "$esp/loader" "$xbl/EFI/Linux"
+mkdir -p "$esp/EFI/systemd" "$esp/EFI/BOOT" "$esp/loader" "$xbl/EFI/nixos" "$xbl/loader/entries"
 install_efi "$SDBOOT" "$esp/EFI/systemd/systemd-bootaa64.efi"
 install_efi "$SDBOOT" "$esp/EFI/BOOT/BOOTAA64.EFI"
+
+machine_id=""
+if [ -s /etc/machine-id ]; then machine_id=$(cat /etc/machine-id); fi
 
 current=$(readlink -f "$1")
 default=""
@@ -34,38 +37,44 @@ mapfile -t gens < <(find /nix/var/nix/profiles -maxdepth 1 -name 'system-*-link'
 
 for g in "${gens[@]}"; do
   top=$(readlink -f "$profile-$g-link")
-  name="nixos-generation-$g-$(basename "$top" | cut -c1-8).efi"
-  wanted+=("$name")
-  if [ "$top" = "$current" ]; then default=$name; fi
-  out="$xbl/EFI/Linux/$name"
+  uki="nixos-generation-$g-$(basename "$top" | cut -c1-8).efi"
+  entry="nixos-generation-$g.conf"
+  wanted+=("$uki" "$entry")
+  if [ "$top" = "$current" ]; then default=$entry; fi
+  out="$xbl/EFI/nixos/$uki"
 
-  # Already there, and signed if we sign: nothing to do.
-  if [ -e "$out" ]; then
-    if [ ${#sign[@]} -eq 0 ] || sbverify --cert "$KEYS/db.pem" "$out" >/dev/null 2>&1; then
-      continue
-    fi
+  # Already there, and signed if we sign: keep it.
+  if ! { [ -e "$out" ] && { [ ${#sign[@]} -eq 0 ] || sbverify --cert "$KEYS/db.pem" "$out" >/dev/null 2>&1; }; }; then
+    ukify build \
+      --linux="$top/kernel" \
+      --initrd="$top/initrd" \
+      --devicetree="$top/dtbs/$DTB_NAME" \
+      --cmdline="init=$top/init $(cat "$top/kernel-params")" \
+      --os-release="@$top/etc/os-release" \
+      "${sign[@]}" \
+      --output="$out.tmp" >/dev/null 2>&1
+    mv "$out.tmp" "$out"
+    echo "installed $uki${sign:+ (signed)}"
   fi
 
-  osr=$(mktemp)
+  # Same title/version/sort-key as nixpkgs' systemd-boot builder writes, but the
+  # entry points at the UKI instead of linux/initrd/devicetree.
+  label=$(jq -r '."org.nixos.bootspec.v1".label' "$top/boot.json")
+  built=$(date -d "@$(stat -L -c %Z "$profile-$g-link")" +%F)
   {
-    grep -vE '^(PRETTY_NAME|IMAGE_VERSION)=' "$top/etc/os-release"
-    echo "PRETTY_NAME=\"NixOS generation $g\""
-    echo "IMAGE_VERSION=$g"
-  } > "$osr"
-  ukify build \
-    --linux="$top/kernel" \
-    --initrd="$top/initrd" \
-    --devicetree="$top/dtbs/$DTB_NAME" \
-    --cmdline="init=$top/init $(cat "$top/kernel-params")" \
-    --os-release="@$osr" \
-    "${sign[@]}" \
-    --output="$out.tmp" >/dev/null
-  rm -f "$osr"
-  mv "$out.tmp" "$out"
-  echo "installed $name${sign:+ (signed)}"
+    echo "title NixOS"
+    echo "version Generation $g $label, built on $built"
+    echo "uki /EFI/nixos/$uki"
+    if [ -n "$machine_id" ]; then echo "machine-id $machine_id"; fi
+    echo "sort-key nixos"
+  } > "$xbl/loader/entries/$entry.tmp"
+  mv "$xbl/loader/entries/$entry.tmp" "$xbl/loader/entries/$entry"
 done
 
-for f in "$xbl"/EFI/Linux/nixos-generation-*.efi; do
+# UKIs from before the entries pointed at EFI/nixos.
+rm -f "$xbl"/EFI/Linux/nixos-generation-*.efi
+
+for f in "$xbl"/EFI/nixos/nixos-generation-*.efi "$xbl"/loader/entries/nixos-generation-*.conf; do
   [ -e "$f" ] || continue
   found=0
   for w in "${wanted[@]}"; do
