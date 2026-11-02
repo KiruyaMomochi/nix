@@ -137,6 +137,9 @@ in
       serviceConfig.LoadCredential = cfg.loadCredential;
       # Allow reading /home for filesystem metrics
       serviceConfig.ProtectHome = "read-only";
+      # At shutdown the network is often gone first and the exporters keep retrying
+      # until systemd kills them (~20s). The queue is on disk, so unsent data survives.
+      serviceConfig.TimeoutStopSec = "5s";
     };
 
     services.opentelemetry-collector = {
