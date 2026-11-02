@@ -76,6 +76,11 @@ in
       "dm_mod"
     ];
 
+    # With the EC driver fed, the EC hard-resets ~2 min after Tj reports stop.
+    # allow_suspend makes the driver disarm that around sleep; upstream only tested s2idle.
+    boot.extraModprobeConfig = lib.mkIf cfg.experimentalEC "options qcom_hamoa_ec allow_suspend=1";
+    systemd.sleep.settings.Sleep.MemorySleepMode = lib.mkIf cfg.experimentalEC "s2idle";
+
     boot.kernelParams = [
       "pd_ignore_unused"
       "clk_ignore_unused"

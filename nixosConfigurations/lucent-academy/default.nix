@@ -5,6 +5,9 @@
     ./vivobook.nix
   ];
 
+  # Fan control via the EC. Read vivobook-s15-fedora docs/ec-fan-control.md first.
+  hardware.vivobook-s15.experimentalEC = true;
+
   kyaru.enable = true;
   kyaru.desktop.enable = true;
 
@@ -18,6 +21,9 @@
   # The firmware entry was made from Windows with bcdedit. EFI runtime services on X1E
   # are unreliable (justririll/x1e-sleep runs with efi=noruntime), so never write efivars.
   boot.loader.efi.canTouchEfiVariables = false;
+
+  # Built-in numpad.
+  services.displayManager.sddm.autoNumlock = true;
 
   hardware.graphics.enable = true;
   hardware.bluetooth.enable = true;
