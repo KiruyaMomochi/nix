@@ -1,7 +1,10 @@
 """
 Redfish BMC source for hardware poller.
 
-Polls /Sensors and /LogServices from a Supermicro (or compatible) BMC.
+Polls /Thermal, /Power and /LogServices from a Supermicro (or compatible) BMC.
+
+Three requests per cycle. Walking /Sensors one GET per sensor (~40 req/min)
+wedged the Supermicro Redfish service into 503 every week or two.
 """
 
 import logging
@@ -88,15 +91,6 @@ class RedfishSource:
             session.mount("https://", adapter)
             session.mount("http://", adapter)
         
-        # Discover sensors
-        url = f"{config['bmc_url']}/redfish/v1/Chassis/{config['chassis_id']}/Sensors"
-        resp = session.get(url, timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
-        sensor_uris = [m["@odata.id"] for m in data.get("Members", [])]
-        
-        log.info(f"Discovered {len(sensor_uris)} sensors")
-        
         # Load last event ID
         last_event_id = 0
         try:
@@ -112,67 +106,53 @@ class RedfishSource:
         return {
             "session": session,
             "config": config,
-            "sensor_uris": sensor_uris,
             "session_state": session_state,
-            "rediscovery_counter": 0,
         }
 
+    # (collection, array, value key, ReadingType as /Sensors reports it)
+    ARRAYS = [
+        ("Thermal", "Temperatures", "ReadingCelsius", "Temperature"),
+        ("Thermal", "Fans", "Reading", "Rotational"),
+        ("Power", "Voltages", "ReadingVolts", "Voltage"),
+    ]
+
     def poll(self, context: dict) -> list[tuple[str, float, dict[str, str], str]]:
-        """Poll all sensors and return metric readings."""
+        """Read Thermal and Power, return metric readings."""
         session = context["session"]
         cfg = context["config"]
-        sensor_uris = context["sensor_uris"]
-        
+        base = f"{cfg['bmc_url']}/redfish/v1/Chassis/{cfg['chassis_id']}"
+
+        docs = {}
+        for collection in ("Thermal", "Power"):
+            try:
+                resp = session.get(f"{base}/{collection}", timeout=15)
+                resp.raise_for_status()
+                docs[collection] = resp.json()
+            except Exception as e:
+                log.warning(f"Failed to read {collection}: {e}")
+
         readings = []
-        for uri in sensor_uris:
-            try:
-                resp = session.get(f"{cfg['bmc_url']}{uri}", timeout=10)
-                resp.raise_for_status()
-                data = resp.json()
-            except Exception as e:
-                log.warning(f"Failed to read {uri}: {e}")
-                continue
-            
-            reading = data.get("Reading")
-            if reading is None:
-                continue
-            
-            reading_type = data.get("ReadingType", "")
-            sensor_id = data.get("Id", uri.split("/")[-1])
-            sensor_name = data.get("Name", sensor_id)
-            status_health = data.get("Status", {}).get("Health", "Unknown")
-            status_state = data.get("Status", {}).get("State", "Unknown")
-            
-            metric_name = METRIC_NAMES.get(reading_type, "redfish.sensor.reading")
-            unit = UNITS.get(reading_type, "")
-            
-            readings.append((
-                metric_name,
-                float(reading),
-                {
-                    "sensor.id": sensor_id,
-                    "sensor.name": sensor_name,
-                    "sensor.reading_type": reading_type,
-                    "sensor.health": status_health,
-                    "sensor.state": status_state,
-                    "chassis.id": cfg["chassis_id"],
-                },
-                unit,
-            ))
-        
-        # Rediscover sensors periodically
-        context["rediscovery_counter"] += 1
-        if context["rediscovery_counter"] >= 10:
-            try:
-                url = f"{cfg['bmc_url']}/redfish/v1/Chassis/{cfg['chassis_id']}/Sensors"
-                resp = session.get(url, timeout=10)
-                resp.raise_for_status()
-                data = resp.json()
-                context["sensor_uris"] = [m["@odata.id"] for m in data.get("Members", [])]
-                context["rediscovery_counter"] = 0
-            except Exception as e:
-                log.warning(f"Sensor rediscovery failed: {e}")
-        
+        for collection, array, key, reading_type in self.ARRAYS:
+            for item in docs.get(collection, {}).get(array, []):
+                reading = item.get(key)
+                if reading is None:
+                    continue
+                name = item.get("Name", "")
+                status = item.get("Status", {})
+                readings.append((
+                    METRIC_NAMES[reading_type],
+                    float(reading),
+                    {
+                        # same Id the /Sensors collection used, keeps old series continuous
+                        "sensor.id": name.replace(" ", ""),
+                        "sensor.name": name,
+                        "sensor.reading_type": reading_type,
+                        "sensor.health": status.get("Health", "Unknown"),
+                        "sensor.state": status.get("State", "Unknown"),
+                        "chassis.id": cfg["chassis_id"],
+                    },
+                    UNITS[reading_type],
+                ))
         return readings
 
     def poll_logs(self, context: dict) -> list[tuple[str, str, dict[str, str], int | None]]:
@@ -182,9 +162,10 @@ class RedfishSource:
         session_state = context["session_state"]
         last_id = session_state["last_event_id"]
         
-        url = f"{cfg['bmc_url']}/redfish/v1/Systems/1/LogServices/Log1/Entries"
+        # Ids are sequential; ask only for what is new. The trailing slash avoids a 301.
+        url = f"{cfg['bmc_url']}/redfish/v1/Systems/1/LogServices/Log1/Entries/"
         try:
-            resp = session.get(url, timeout=15)
+            resp = session.get(url, params={"$skip": str(last_id)}, timeout=15)
             resp.raise_for_status()
             data = resp.json()
         except Exception as e:
