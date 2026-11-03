@@ -47,10 +47,6 @@ in
 
     home.packages = with pkgs; [ ghostty ];
 
-    programs.vicinae = {
-      enable = true;
-      systemd.enable = true;
-    };
     services.hyprpolkitagent.enable = true;
     services.hyprsunset.enable = true;
   };
