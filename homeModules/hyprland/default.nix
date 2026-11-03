@@ -45,7 +45,7 @@ in
       }
     '';
 
-    home.packages = with pkgs; [ ghostty ];
+    home.packages = with pkgs; [ ghostty hyprshot ];
 
     # combi = apps + run: text that matches no app runs as a command,
     # so `zen-twilight -P` + Enter just works (Ctrl+Enter forces it).

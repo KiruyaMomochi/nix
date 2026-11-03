@@ -276,6 +276,12 @@ hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen())
 hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(menu))
+
+-- Screenshots: copied to clipboard and saved to ~/Pictures/Screenshots
+local shot = "hyprshot -o ~/Pictures/Screenshots -m "
+hl.bind("Print", hl.dsp.exec_cmd(shot .. "region"))
+hl.bind(mainMod .. " + Print", hl.dsp.exec_cmd(shot .. "window"))
+hl.bind("SHIFT + Print", hl.dsp.exec_cmd(shot .. "output"))
 hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
 hl.bind(mainMod .. " + J", hl.dsp.layout("togglesplit"))    -- dwindle only
 
