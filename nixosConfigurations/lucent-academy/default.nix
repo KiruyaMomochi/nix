@@ -11,6 +11,7 @@
 
   kyaru.enable = true;
   kyaru.desktop.enable = true;
+  kyaru.desktop.hyprland.enable = true;
 
   # Built-in numpad. The Wayland greeter is KWin, which ignores sddm.conf's
   # Numlock and reads kcminputrc from sddm's home instead (NumLock=0 means on).
@@ -39,6 +40,7 @@
   time.timeZone = "Asia/Taipei";
   environment.systemPackages = with pkgs; [ nushell ];
   programs.kdeconnect.enable = true;
+  virtualisation.waydroid.enable = true;
 
   system.stateVersion = "26.05";
 }

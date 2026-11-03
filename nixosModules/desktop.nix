@@ -15,6 +15,8 @@ in
       default = "kde";
       description = "Environment to use";
     };
+    # Installed next to `environment`, picked at the SDDM session menu.
+    hyprland.enable = mkEnableOption "Hyprland session (UWSM)";
   };
 
   config =
@@ -178,6 +180,12 @@ in
 
         services.xrdp.defaultWindowManager = mkDefault
           "startplasma-x11";
+      })
+      (mkIf cfg.hyprland.enable {
+        programs.hyprland = {
+          enable = true;
+          withUWSM = true;
+        };
       })
     ]);
 }

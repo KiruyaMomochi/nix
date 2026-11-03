@@ -33,7 +33,8 @@ in
       })
       keepassxc
       (google-chrome.override {
-        commandLineArgs = "--enable-features=WebUIDarkMode --force-dark-mode --disable-features=UserAgentClientHint ${chromiumWayland}";
+        # Pinned so cookies stay readable outside Plasma (Hyprland would pick basic).
+        commandLineArgs = "--enable-features=WebUIDarkMode --force-dark-mode --disable-features=UserAgentClientHint --password-store=kwallet6 ${chromiumWayland}";
       })
       # goldendict-ng
       ddcui

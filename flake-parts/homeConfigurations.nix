@@ -15,7 +15,15 @@ let
         };
       }];
     });
-    "kyaru@lucent-academy" = mkHome { pkgs = pkgsOf "aarch64-linux"; };
+    "kyaru@lucent-academy" = (mkHome { pkgs = pkgsOf "aarch64-linux"; }).override (oldConfig: {
+      modules = oldConfig.modules ++ [{
+        programs.kyaru.hyprland = {
+          enable = true;
+          scale = 1.25;
+          softwareCursor = true;
+        };
+      }];
+    });
   };
 
   # Per-machine overrides from homeConfigurations/ directory
