@@ -41,7 +41,7 @@ hl.monitor({
 -- Set programs that you use
 local terminal    = "ghostty"
 local fileManager = "dolphin"
-local menu        = "krunner"
+local menu        = "rofi -show combi"
 
 
 -------------------
@@ -377,8 +377,6 @@ hl.config({
 })
 
 hl.on("hyprland.start", function ()
-    -- stays resident so Super+R pops up instantly
-    hl.exec_cmd("krunner --daemon")
     -- unlock kwallet with the login password so Chrome finds its cookies
     hl.exec_cmd("/run/current-system/sw/libexec/pam_kwallet_init")
 end)

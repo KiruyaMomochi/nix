@@ -47,6 +47,22 @@ in
 
     home.packages = with pkgs; [ ghostty ];
 
+    # combi = apps + run: text that matches no app runs as a command,
+    # so `zen-twilight -P` + Enter just works (Ctrl+Enter forces it).
+    programs.rofi = {
+      enable = true;
+      font = "Sarasa UI SC 12";
+      terminal = "ghostty";
+      extraConfig = {
+        modi = "combi,drun,run";
+        combi-modes = "drun,run";
+        combi-hide-mode-prefix = true;
+        show-icons = true;
+        drun-display-format = "{name}";
+      };
+      theme = ./rofi.rasi;
+    };
+
     services.hyprpolkitagent.enable = true;
     services.hyprsunset.enable = true;
   };
