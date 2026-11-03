@@ -63,7 +63,18 @@ in
       theme = ./rofi.rasi;
     };
 
+    # Bind the hypr* user services to the uwsm Hyprland session only.
+    # The default graphical-session.target is also up under Plasma.
+    wayland.systemd.target = "wayland-session@hyprland.desktop.target";
+
     services.hyprpolkitagent.enable = true;
-    services.hyprsunset.enable = true;
+    services.swayosd.enable = true;
+    services.hyprsunset = {
+      enable = true;
+      settings.profile = [
+        { time = "7:00"; identity = true; }
+        { time = "19:00"; temperature = 4000; }
+      ];
+    };
   };
 }
