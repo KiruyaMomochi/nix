@@ -277,8 +277,8 @@ hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen())
-hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(menu))
-hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("dms ipc call spotlight toggle"))
+hl.bind(mainMod .. " + R", hl.dsp.exec_cmd("dms ipc call spotlight toggle"))
+hl.bind(mainMod .. " + SHIFT + R", hl.dsp.exec_cmd(menu))
 
 -- Screenshots: copied to clipboard and saved to ~/Pictures/Screenshots
 local shot = "hyprshot -o ~/Pictures/Screenshots -m "
@@ -393,3 +393,5 @@ end)
 -- Border colors follow DMS's wallpaper palette (matugen writes ~/.config/hypr/dms/colors.lua).
 -- pcall: the file only exists once DMS has run.
 pcall(require, "dms.colors")
+-- Gaps, rounding and blur from DMS so windows match its panels.
+pcall(require, "dms.layout")
