@@ -94,6 +94,19 @@ in
     wayland.systemd.target = "wayland-session@hyprland.desktop.target";
 
     services.hyprpolkitagent.enable = true;
+
+    # XDG_CURRENT_DESKTOP is Hyprland:KDE, so this KDE-only autostart also runs here and
+    # reopens whatever was open at the last Plasma logout (Remmina, plasmashell).
+    xdg.configFile."autostart/org.kde.plasma-fallback-session-restore.desktop".text = ''
+      [Desktop Entry]
+      Type=Application
+      Name=Plasma Session Restore
+      Exec=${pkgs.kdePackages.plasma-workspace}/libexec/plasma-fallback-session-restore
+      OnlyShowIn=KDE;
+      NotShowIn=Hyprland;
+      NoDisplay=true
+      X-KDE-StartupNotify=false
+    '';
     # Volume/brightness OSD and night light come from DMS now (see programs.dux-shell).
   };
 }
