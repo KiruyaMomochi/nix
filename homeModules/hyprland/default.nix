@@ -68,13 +68,6 @@ in
     wayland.systemd.target = "wayland-session@hyprland.desktop.target";
 
     services.hyprpolkitagent.enable = true;
-    services.swayosd.enable = true;
-    services.hyprsunset = {
-      enable = true;
-      settings.profile = [
-        { time = "7:00"; identity = true; }
-        { time = "19:00"; temperature = 4000; }
-      ];
-    };
+    # Volume/brightness OSD and night light come from DMS now (see programs.dux-shell).
   };
 }
