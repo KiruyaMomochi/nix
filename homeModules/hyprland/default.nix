@@ -73,9 +73,10 @@ in
       input_path = '${./btop.theme}'
       output_path = '${config.xdg.configHome}/btop/themes/matugen.theme'
 
-      # Linked into /etc/opt/chrome/policies/managed by the NixOS desktop module.
+      # Linked into /etc/opt/chrome/policies/managed by the NixOS desktop module. Chrome tints the
+      # toolbar with the seed itself, so it gets the dark container tone, not the pale primary.
       [templates.chrome]
-      input_path = '${pkgs.writeText "chrome-policy.json" ''{ "BrowserThemeColor": "{{colors.primary.default.hex}}" }''}'
+      input_path = '${pkgs.writeText "chrome-policy.json" ''{ "BrowserThemeColor": "{{colors.primary_container.default.hex}}" }''}'
       output_path = '${config.xdg.configHome}/dms/chrome-policy.json'
     '';
 
