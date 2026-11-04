@@ -66,6 +66,11 @@ in
       [templates.telegram]
       input_path = '${./telegram.tdesktop-theme}'
       output_path = '${config.xdg.configHome}/telegram/matugen.tdesktop-theme'
+
+      # Pick "matugen" in btop's options; btop.conf stays btop's own so it can save settings.
+      [templates.btop]
+      input_path = '${./btop.theme}'
+      output_path = '${config.xdg.configHome}/btop/themes/matugen.theme'
     '';
 
     # combi = apps + run: text that matches no app runs as a command,
