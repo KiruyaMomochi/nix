@@ -4,6 +4,7 @@
     ./hardware-configuration.nix
     ./vivobook.nix
     ./boot.nix
+    ./face-unlock.nix
   ];
 
   # Fan control via the EC. Read vivobook-s15-fedora docs/ec-fan-control.md first.

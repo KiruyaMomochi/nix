@@ -1,0 +1,13 @@
+--- a/recorders/video_capture.py	2026-11-05 01:05:48.459873307 +0800
++++ b/recorders/video_capture.py	2026-11-05 01:05:48.472515640 +0800
+@@ -110,6 +110,10 @@
+ 				self.config.get("video", "device_format", fallback="v4l2")
+ 			)
+ 
++		elif recording_plugin == "hm1092":
++			from recorders.ir_reader import ir_reader
++			self.internal = ir_reader()
++
+ 		elif recording_plugin == "pyv4l2":
+ 			# Set the capture source for pyv4l2
+ 			from recorders.pyv4l2_reader import pyv4l2_reader
