@@ -14,20 +14,18 @@
   kyaru.desktop.enable = true;
   kyaru.desktop.hyprland.enable = true;
 
-  # Built-in numpad. The Wayland greeter is KWin, which ignores sddm.conf's
-  # Numlock and reads kcminputrc from sddm's home instead (NumLock=0 means on).
-  services.displayManager.sddm.autoNumlock = true;
-  systemd.tmpfiles.settings."10-sddm-numlock" = {
-    "/var/lib/sddm/.config".d = {
-      user = "sddm";
-      group = "sddm";
-      mode = "0755";
-    };
-    "/var/lib/sddm/.config/kcminputrc"."L+".argument = "${pkgs.writeText "sddm-kcminputrc" ''
-      [Keyboard]
-      NumLock=0
-    ''}";
-  };
+  # The greeter's own Hyprland: built-in numpad on, same scale and cursor as the session
+  # (homeConfigurations "kyaru@lucent-academy"). Replaces the greeter's default config,
+  # so its two lines are repeated here.
+  services.displayManager.dux-greeter.compositor.customConfig = ''
+    hl.env("DMS_RUN_GREETER", "1")
+    hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1.25 })
+    hl.config({
+      misc = { disable_hyprland_logo = true },
+      input = { numlock_by_default = true, touchpad = { natural_scroll = true } },
+      cursor = { no_hardware_cursors = true },
+    })
+  '';
 
   hardware.graphics.enable = true;
   hardware.bluetooth.enable = true;

@@ -196,10 +196,17 @@ in
         };
         # The Hyprland portal only does screenshots/screencast; file chooser etc. come from KDE's.
         xdg.portal.config.hyprland.default = [ "hyprland" "kde" ];
+        # DMS's own greeter instead of SDDM, so login matches the desktop (wallpaper, colours).
+        services.displayManager.sddm.enable = mkForce false;
+        services.displayManager.dux-greeter = {
+          enable = true;
+          compositor.name = "hyprland";
+          configHome = config.users.users.kyaru.home;
+        };
         # Chrome's accent is its own Material You seed, not GTK's. DMS writes the seed through
         # a matugen template (homeModules/hyprland); Chrome reads it on start or chrome://policy reload.
         systemd.tmpfiles.rules = [
-          "L+ /etc/opt/chrome/policies/managed/dms-theme.json - - - - /home/kyaru/.config/dms/chrome-policy.json"
+          "L+ /etc/opt/chrome/policies/managed/dms-theme.json - - - - ${config.users.users.kyaru.home}/.config/dms/chrome-policy.json"
         ];
       })
     ]);
