@@ -56,6 +56,18 @@ in
       };
     };
 
+    # DMS runs custom matugen templates from here alongside its own.
+    # Telegram Desktop reloads an imported local theme when the file changes;
+    # import it once via Chat settings > ⋮ > Create new theme > Import.
+    # Template: github.com/InioX/matugen-themes templates/telegram.tdesktop-theme
+    xdg.configFile."matugen/config.toml".text = ''
+      [config]
+
+      [templates.telegram]
+      input_path = '${./telegram.tdesktop-theme}'
+      output_path = '${config.xdg.configHome}/telegram/matugen.tdesktop-theme'
+    '';
+
     # combi = apps + run: text that matches no app runs as a command,
     # so `zen-twilight -P` + Enter just works (Ctrl+Enter forces it).
     programs.rofi = {
