@@ -190,7 +190,9 @@ in
         # Started only in the uwsm Hyprland session, not under Plasma.
         programs.dux-shell = {
           enable = true;
-          systemd.target = "wayland-session@hyprland.desktop.target";
+          # Not wayland-session@: that target is ordered before graphical-session.target,
+          # while dms.service is After=graphical-session.target -> ordering cycle, job dropped.
+          systemd.target = "wayland-session-xdg-autostart@hyprland.desktop.target";
         };
       })
     ]);

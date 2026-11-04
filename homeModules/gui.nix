@@ -58,6 +58,16 @@ in
       xsel
     ]);
 
+    # Remmina rewrites this on every start if it is missing (Hidden=false, i.e. tray applet
+    # autostarts). Keeping our own copy stops that; it only writes the file when absent.
+    xdg.configFile."autostart/remmina-applet.desktop".text = ''
+      [Desktop Entry]
+      Type=Application
+      Name=Remmina Applet
+      Exec=remmina -i
+      Hidden=true
+    '';
+
     # Twilight: the flake re-hosts these artifacts, so old locks keep building.
     programs.zen-browser.enable = true;
 
