@@ -278,6 +278,7 @@ hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen())
 hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(menu))
+hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("dms ipc call spotlight toggle"))
 
 -- Screenshots: copied to clipboard and saved to ~/Pictures/Screenshots
 local shot = "hyprshot -o ~/Pictures/Screenshots -m "
@@ -388,3 +389,7 @@ hl.on("hyprland.start", function ()
     -- unlock kwallet with the login password so Chrome finds its cookies
     hl.exec_cmd("/run/current-system/sw/libexec/pam_kwallet_init")
 end)
+
+-- Border colors follow DMS's wallpaper palette (matugen writes ~/.config/hypr/dms/colors.lua).
+-- pcall: the file only exists once DMS has run.
+pcall(require, "dms.colors")
