@@ -72,6 +72,11 @@ in
       [templates.btop]
       input_path = '${./btop.theme}'
       output_path = '${config.xdg.configHome}/btop/themes/matugen.theme'
+
+      # Linked into /etc/opt/chrome/policies/managed by the NixOS desktop module.
+      [templates.chrome]
+      input_path = '${pkgs.writeText "chrome-policy.json" ''{ "BrowserThemeColor": "{{colors.primary.default.hex}}" }''}'
+      output_path = '${config.xdg.configHome}/dms/chrome-policy.json'
     '';
 
     # combi = apps + run: text that matches no app runs as a command,
