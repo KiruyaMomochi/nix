@@ -186,6 +186,12 @@ in
           enable = true;
           withUWSM = true;
         };
+        # Bar, notifications, launcher and control center (formerly DankMaterialShell).
+        # Started only in the uwsm Hyprland session, not under Plasma.
+        programs.dux-shell = {
+          enable = true;
+          systemd.target = "wayland-session@hyprland.desktop.target";
+        };
       })
     ]);
 }
