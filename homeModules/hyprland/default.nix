@@ -45,7 +45,8 @@ in
       }
     '';
 
-    home.packages = with pkgs; [ hyprshot qtengine ];
+    # adw-gtk3: DMS copies it and patches in its colors (Apply GTK colors); Chrome in GTK mode reads that.
+    home.packages = with pkgs; [ hyprshot qtengine adw-gtk3 ];
 
     # dankcolors is written by DMS on every wallpaper/theme change; it signals ghostty to reload.
     programs.ghostty = {
