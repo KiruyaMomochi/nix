@@ -194,6 +194,8 @@ in
           # while dms.service is After=graphical-session.target -> ordering cycle, job dropped.
           systemd.target = "wayland-session-xdg-autostart@hyprland.desktop.target";
         };
+        # The Hyprland portal only does screenshots/screencast; file chooser etc. come from KDE's.
+        xdg.portal.config.hyprland.default = [ "hyprland" "kde" ];
         # Chrome's accent is its own Material You seed, not GTK's. DMS writes the seed through
         # a matugen template (homeModules/hyprland); Chrome reads it on start or chrome://policy reload.
         systemd.tmpfiles.rules = [

@@ -73,7 +73,8 @@ in
 
     programs.vscode =
       {
-        package = pkgs.vscode.fhs;
+        # Same as Chrome: Electron only picks KWallet on its own when XDG_CURRENT_DESKTOP says KDE.
+        package = (pkgs.vscode.override { commandLineArgs = "--password-store=kwallet6"; }).fhs;
         enable = true;
       };
   };

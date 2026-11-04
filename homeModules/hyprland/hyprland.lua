@@ -225,8 +225,6 @@ hl.config({
         disable_hyprland_logo   = true,
         disable_splash_rendering = true,
         background_color        = 0xff0e1416,
-        -- XDG_CURRENT_DESKTOP is Hyprland:KDE on purpose (uwsm env-hyprland), so Chromium picks KWallet.
-        disable_xdg_env_checks  = true,
     },
 })
 
