@@ -68,8 +68,9 @@ local menu        = "rofi -show combi"
 
 hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_SIZE", "24")
--- Qt apps read KDE's kdeglobals (Breeze Dark) like under Plasma.
-hl.env("QT_QPA_PLATFORMTHEME", "kde")
+-- qtengine hands Qt apps (Dolphin too) the color scheme DMS generates from the wallpaper
+-- and repaints them live. Only in this session, so Plasma keeps kdeglobals.
+hl.env("QT_QPA_PLATFORMTHEME", "qtengine")
 hl.env("XMODIFIERS", "@im=fcitx")
 
 

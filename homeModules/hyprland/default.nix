@@ -45,7 +45,16 @@ in
       }
     '';
 
-    home.packages = with pkgs; [ ghostty hyprshot ];
+    home.packages = with pkgs; [ hyprshot qtengine ];
+
+    # dankcolors is written by DMS on every wallpaper/theme change; it signals ghostty to reload.
+    programs.ghostty = {
+      enable = true;
+      settings = {
+        theme = "dankcolors";
+        app-notifications = "no-clipboard-copy,no-config-reload";
+      };
+    };
 
     # combi = apps + run: text that matches no app runs as a command,
     # so `zen-twilight -P` + Enter just works (Ctrl+Enter forces it).
