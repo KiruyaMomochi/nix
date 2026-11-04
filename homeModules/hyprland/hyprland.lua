@@ -278,9 +278,6 @@ hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen())
 hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(menu))
--- noctalia's own launcher and control center, to compare with rofi
-hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("noctalia msg panel-toggle launcher"))
-hl.bind(mainMod .. " + N", hl.dsp.exec_cmd("noctalia msg panel-toggle control-center"))
 
 -- Screenshots: copied to clipboard and saved to ~/Pictures/Screenshots
 local shot = "hyprshot -o ~/Pictures/Screenshots -m "

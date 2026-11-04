@@ -67,13 +67,6 @@ in
     # The default graphical-session.target is also up under Plasma.
     wayland.systemd.target = "wayland-session@hyprland.desktop.target";
 
-    # Bar, notifications, launcher and control center in one shell.
-    # Settings stay runtime-editable from its own settings window.
-    programs.noctalia = {
-      enable = true;
-      systemd.enable = true;
-    };
-
     services.hyprpolkitagent.enable = true;
     services.swayosd.enable = true;
     services.hyprsunset = {
