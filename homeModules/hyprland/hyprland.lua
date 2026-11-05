@@ -397,3 +397,8 @@ end)
 pcall(require, "dms.colors")
 -- Gaps, rounding and blur from DMS so windows match its panels.
 pcall(require, "dms.layout")
+-- Cursor, input and binds DMS writes from its settings UI.
+pcall(require, "dms.cursor")
+pcall(require, "dms.input")
+pcall(require, "dms.binds")
+pcall(require, "dms.binds-user")
