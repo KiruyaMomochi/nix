@@ -41,6 +41,10 @@
   };
   # Created at install time with `btrfs filesystem mkswapfile`.
   swapDevices = [ { device = "/swap/swapfile"; } ];
+  # Hibernate into the swapfile. Offset from `btrfs inspect-internal map-swapfile -r /swap/swapfile`;
+  # recompute if the swapfile is ever recreated.
+  boot.resumeDevice = "/dev/disk/by-uuid/ca86a28a-9639-4d37-b461-1ff0fcc8f595";
+  boot.kernelParams = [ "resume_offset=533760" ];
 
   nixpkgs.hostPlatform = lib.mkDefault "aarch64-linux";
 }
