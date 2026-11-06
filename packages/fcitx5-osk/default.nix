@@ -35,7 +35,19 @@ rustPlatform.buildRustPackage rec {
   # On unlock KWin closes the lock screen keyboard's connection, sometimes
   # while it is creating its compositor; the expect then aborts with a core
   # dump. Exit like the other disconnect paths do.
+  #
+  # saren uses skvirt on the desktop and this only on the lock screen, where
+  # skvirt can't draw. manual_mode = true keeps it from popping on the
+  # desktop; make manual mode not apply in lock screen mode.
   postPatch = ''
+    substituteInPlace fcitx5-osk/src/state.rs --replace-fail \
+      '    pub fn active_manual_mode(&self) -> bool {
+        self.session_manual_mode()' \
+      '    pub fn active_manual_mode(&self) -> bool {
+        if self.window_manager.mode() == WindowManagerMode::KwinLockScreen {
+            return false;
+        }
+        self.session_manual_mode()'
     f=$cargoDepsCopy/source-registry-0/iced_tiny_skia-0.14.0/src/window/compositor.rs
     chmod u+w $f
     substituteInPlace $f --replace-fail \
