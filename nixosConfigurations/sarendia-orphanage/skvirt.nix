@@ -26,5 +26,15 @@ in
   boot.kernelModules = [ "uinput" ];
   environment.systemPackages = [ pkgs.kyaru.skvirt ];
 
+  # Plasma only: it talks to KWin's virtual keyboard D-Bus API.
+  environment.etc."xdg/autostart/skvirt.desktop".text = ''
+    [Desktop Entry]
+    Type=Application
+    Name=skvirt
+    Exec=skvirt
+    OnlyShowIn=KDE;
+    NoDisplay=true
+  '';
+
   # fcitx5-osk stays installed; run one keyboard at a time.
 }

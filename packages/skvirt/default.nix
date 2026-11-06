@@ -44,6 +44,9 @@ stdenv.mkDerivation {
   cmakeFlags = [ "-DKDE_INSTALL_PLUGINDIR=${kdePackages.qtbase.qtPluginPrefix}" ];
 
   postPatch = ''
+    # Top sits under KWin's applet popups (Kickoff etc.); keyboards belong on top of those.
+    substituteInPlace src/KeyboardWindow.cpp \
+      --replace-fail LayerShellQt::Window::LayerTop LayerShellQt::Window::LayerOverlay
     substituteInPlace src/LayoutGenerator.cpp \
       --replace-fail /usr/include/X11/keysymdef.h ${xorgproto}/include/X11/keysymdef.h \
       --replace-fail /usr/share/X11/xkb/symbols/ ${xkeyboard_config}/share/X11/xkb/symbols/
