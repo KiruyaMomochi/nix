@@ -252,7 +252,10 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
                                       shift_ != Shift::Off);
             const bool locked = k.kind == KeyKind::Shift &&
                                 shift_ == Shift::Locked;
-            if (k.kind == KeyKind::Enter) {
+            // Only the number pad's Enter is green: it's the one that
+            // unlocks.
+            const bool green = k.kind == KeyKind::Enter && k.pad;
+            if (green) {
                 fill = down ? mix(theme.accent, theme.text, 0.15)
                             : theme.accent;
             } else if (lit) {
@@ -261,7 +264,7 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
             roundedRect(cr, k.x + gap, k.y + gap, k.w - 2 * gap,
                         k.h - 2 * gap, radius);
             setColor(cr, fill);
-            if (lit && k.kind != KeyKind::Enter) {
+            if (lit && !green) {
                 cairo_fill_preserve(cr);
                 setColor(cr, theme.accent);
                 cairo_set_line_width(cr, 1.5);
