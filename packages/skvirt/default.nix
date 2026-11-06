@@ -11,10 +11,6 @@
 , fcitx5
 , xorgproto
 , xkeyboard_config
-, wayland
-, wayland-protocols
-, wayland-scanner
-, dbus
 }:
 stdenv.mkDerivation {
   pname = "skvirt";
@@ -27,7 +23,7 @@ stdenv.mkDerivation {
     hash = "sha256-ROtZWKMj+PEuxGpa/nPzNuu/ReP/8YIZOrcw7FVZIT0=";
   };
 
-  nativeBuildInputs = [ cmake pkg-config kdePackages.wrapQtAppsHook wayland-scanner dbus ];
+  nativeBuildInputs = [ cmake pkg-config kdePackages.wrapQtAppsHook ];
   buildInputs = [
     kdePackages.qtbase
     kdePackages.qtdeclarative
@@ -43,21 +39,11 @@ stdenv.mkDerivation {
     libime
     boost
     fcitx5
-    wayland
-    wayland-protocols
   ];
 
-  cmakeFlags = [
-    "-DKDE_INSTALL_PLUGINDIR=${kdePackages.qtbase.qtPluginPrefix}"
-    (lib.cmakeBool "BUILD_TESTING" true)
-  ];
+  cmakeFlags = [ "-DKDE_INSTALL_PLUGINDIR=${kdePackages.qtbase.qtPluginPrefix}" ];
 
-  # lockscreen.patch: as KWin's input method, hands the desktop socket to
-  # fcitx5 and draws an input-method-v1 panel on the lock screen.
-  patches = [ ./show-on-tap-into-field.patch ./lockscreen.patch ];
-
-  doCheck = true;
-  checkPhase = "ctest --output-on-failure";
+  patches = [ ./show-on-tap-into-field.patch ];
 
   postPatch = ''
     # Top sits under KWin's applet popups (Kickoff etc.); keyboards belong on top of those.

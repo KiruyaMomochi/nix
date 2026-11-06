@@ -25,8 +25,6 @@ in
   services.udev.packages = [ inputAccess ];
   boot.kernelModules = [ "uinput" ];
   environment.systemPackages = [ pkgs.kyaru.skvirt ];
-  # D-Bus activates the lock screen watcher (org.skvirt.KWinLauncher).
-  services.dbus.packages = [ pkgs.kyaru.skvirt ];
 
   # Plasma only: it talks to KWin's virtual keyboard D-Bus API.
   environment.etc."xdg/autostart/skvirt.desktop".text = ''
@@ -38,6 +36,8 @@ in
     NoDisplay=true
   '';
 
-  # KWin's input method (System Settings > Keyboard > Virtual Keyboard) is
-  # "skvirt (desktop and lock screen)".
+  # KWin's input method stays "Fcitx 5". skvirt types on the desktop
+  # through uinput; on the lock screen, where only the input method may draw,
+  # fcitx5-hotaru opens a keyboard inside fcitx.
+  i18n.inputMethod.fcitx5.addons = [ pkgs.kyaru.fcitx5-hotaru ];
 }
