@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <optional>
 #include <string>
 #include <vector>
 #include <cairo.h>
@@ -9,7 +8,7 @@
 
 namespace hotaru {
 
-enum class KeyKind { Char, Shift, Backspace, Enter, Layer, Space };
+enum class KeyKind { Char, Shift, Backspace, Enter, Layer, Space, Hide };
 
 struct Key {
     KeyKind kind;
@@ -36,9 +35,12 @@ public:
     int pressed() const { return pressed_; }
     bool repeats(int key) const;
 
-    // Finger lifted on a key: the keysym to send, if any. Updates shift and
-    // layer state.
-    std::optional<uint32_t> release(int key);
+    struct Action {
+        uint32_t sym = 0; // keysym to type, or 0
+        bool hide = false;
+    };
+    // Finger lifted on a key. Updates shift and layer state.
+    Action release(int key);
 
     void reset();
 

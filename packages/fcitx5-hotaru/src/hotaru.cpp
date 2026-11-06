@@ -16,6 +16,7 @@
 #include <fcitx-utils/dbus/bus.h>
 #include <fcitx-utils/dbus/matchrule.h>
 #include <fcitx-utils/dbus/message.h>
+#include <fcitx-utils/dbus/variant.h>
 #include <fcitx-utils/event.h>
 #include <fcitx-utils/log.h>
 #include <fcitx/addonfactory.h>
@@ -150,6 +151,7 @@ public:
 
     fcitx::Instance *instance() { return instance_; }
     bool locked() const { return locked_; }
+    void hideKeyboard();
 
 private:
     FCITX_ADDON_DEPENDENCY_LOADER(wayland, instance_->addonManager());
@@ -482,8 +484,12 @@ void Connection::move(double x, double y) {
 
 void Connection::lift() {
     repeat_.reset();
-    if (auto sym = keyboard_.release(keyboard_.pressed())) {
-        type(*sym);
+    const auto action = keyboard_.release(keyboard_.pressed());
+    if (action.sym) {
+        type(action.sym);
+    }
+    if (action.hide) {
+        addon_->hideKeyboard();
     }
     draw();
 }
@@ -561,6 +567,21 @@ Addon::Addon(fcitx::Instance *instance) : instance_(instance) {
         setLocked(active);
         return true;
     });
+}
+
+// The same thing the lock screen's own "Hide On-Screen Keyboard" button
+// does: KWin hides the panel and deactivates the input method. That button,
+// or tapping the password field, brings it back.
+void Addon::hideKeyboard() {
+    auto *bus = dbus() ? dbus()->call<fcitx::IDBusModule::bus>() : nullptr;
+    if (!bus) {
+        return;
+    }
+    auto msg = bus->createMethodCall("org.kde.KWin", "/VirtualKeyboard",
+                                     "org.freedesktop.DBus.Properties", "Set");
+    msg << "org.kde.kwin.VirtualKeyboard" << "active"
+        << fcitx::dbus::Variant(false);
+    msg.send();
 }
 
 void Addon::setLocked(bool locked) {

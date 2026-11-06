@@ -57,7 +57,10 @@ Keyboard::Keyboard() {
     auto shift = Key{KeyKind::Shift, "⇧", 1.5};
     auto back = Key{KeyKind::Backspace, "⌫", 1.5};
     auto enter = Key{KeyKind::Enter, "⏎", 1.5};
-    auto space = Key{KeyKind::Space, "", 5};
+    auto space = Key{KeyKind::Space, "", 4};
+    // Drawn as a chevron; the lock screen's footer, under the keyboard, has
+    // the button to bring it back.
+    auto hide = Key{KeyKind::Hide, ""};
     auto comma = Key{KeyKind::Char, ","};
     auto dot = Key{KeyKind::Char, "."};
 
@@ -79,14 +82,16 @@ Keyboard::Keyboard() {
         concat(chars("qwertyuiop"), pad1),
         concat(chars("asdfghjkl"), pad2),
         concat(concat(concat(Row{shift}, chars("zxcvbnm")), Row{back}), pad3),
-        concat(Row{Key{KeyKind::Layer, "#+=", 1.5}, comma, space, dot, enter},
+        concat(Row{hide, Key{KeyKind::Layer, "#+=", 1.5}, comma, space, dot,
+                   enter},
                pad4),
     };
     symbolRows_ = {
         concat(chars("!@#$%^&*()"), pad1),
         concat(chars("-_=+[]{}\\|"), pad2),
         concat(chars("`~;:'\"<>/?"), pad3),
-        concat(Row{Key{KeyKind::Layer, "ABC", 1.5}, comma, space, dot, enter},
+        concat(Row{hide, Key{KeyKind::Layer, "ABC", 1.5}, comma, space, dot,
+                   enter},
                pad4),
     };
 }
@@ -183,11 +188,11 @@ bool Keyboard::repeats(int key) const {
     return k && k->kind == KeyKind::Backspace;
 }
 
-std::optional<uint32_t> Keyboard::release(int key) {
+Keyboard::Action Keyboard::release(int key) {
     pressed_ = -1;
     const auto *k = find(key);
     if (!k) {
-        return std::nullopt;
+        return {};
     }
     switch (k->kind) {
     case KeyKind::Char: {
@@ -195,15 +200,15 @@ std::optional<uint32_t> Keyboard::release(int key) {
         if (shift_ == Shift::Once) {
             shift_ = Shift::Off;
         }
-        return static_cast<uint32_t>(static_cast<unsigned char>(s[0]));
+        return {static_cast<uint32_t>(static_cast<unsigned char>(s[0]))};
     }
     case KeyKind::Space:
-        return ' ';
+        return {' '};
     case KeyKind::Enter:
-        return Return;
+        return {Return};
     case KeyKind::Backspace:
         // Sent on press, and repeated while held.
-        return std::nullopt;
+        return {};
     case KeyKind::Shift: {
         auto now = nowMs();
         if (shift_ == Shift::Once && now - lastShiftTap_ < 350) {
@@ -212,13 +217,15 @@ std::optional<uint32_t> Keyboard::release(int key) {
             shift_ = shift_ == Shift::Off ? Shift::Once : Shift::Off;
         }
         lastShiftTap_ = now;
-        return std::nullopt;
+        return {};
     }
+    case KeyKind::Hide:
+        return {0, true};
     case KeyKind::Layer:
         symbols_ = !symbols_;
-        return std::nullopt;
+        return {};
     }
-    return std::nullopt;
+    return {};
 }
 
 void Keyboard::reset() {
@@ -273,6 +280,19 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
                 cairo_fill(cr);
             }
 
+            if (k.kind == KeyKind::Hide) {
+                const double cx = k.x + k.w / 2, cy = k.y + k.h / 2;
+                const double r = k.h * 0.12;
+                cairo_move_to(cr, cx - r * 1.4, cy - r * 0.6);
+                cairo_line_to(cr, cx, cy + r * 0.8);
+                cairo_line_to(cr, cx + r * 1.4, cy - r * 0.6);
+                cairo_set_line_width(cr, 2);
+                cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+                cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
+                setColor(cr, theme.text);
+                cairo_stroke(cr);
+                continue;
+            }
             auto text = label(k);
             if (text.empty()) {
                 continue;
