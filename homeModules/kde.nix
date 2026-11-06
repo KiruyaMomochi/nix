@@ -21,7 +21,7 @@ in
       hunspell
       hunspellDicts.en-us-large
       qbittorrent # qbittorrent-enhanced
-      kwi
+      kyaru.kwi
     ]) ++ (with pkgs.kdePackages; [
       ark
       kcolorchooser
