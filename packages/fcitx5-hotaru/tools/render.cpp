@@ -8,7 +8,7 @@ int main(int argc, char **argv) {
     const int w = 1706, h = 426;
     hotaru::Keyboard kb;
     kb.resize(w, h);
-    if (argc > 3 && std::strcmp(argv[3], "letters") == 0) {
+    if (argc > 3 && std::strcmp(argv[3], "symbols") == 0) {
         kb.release(4 * 16); // the layer key
     }
     if (argc > 2) {

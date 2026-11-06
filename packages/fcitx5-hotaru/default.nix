@@ -17,6 +17,7 @@ stdenv.mkDerivation {
 
   nativeBuildInputs = [ cmake pkg-config wayland-scanner ];
   buildInputs = [ fcitx5 wayland wayland-protocols cairo pango ];
+  cmakeFlags = [ "-DFCITX5_SOURCE=${fcitx5.src}" ];
 
   meta = {
     description = "fcitx5 addon: on-screen keyboard for the KDE lock screen";

@@ -26,8 +26,19 @@ foreach(xml ${protocols})
     list(APPEND protocol_sources ${CMAKE_CURRENT_BINARY_DIR}/${name}.c)
 endforeach()
 
-add_library(hotaru MODULE src/hotaru.cpp src/keyboard.cpp src/theme.cpp ${protocol_sources})
-target_include_directories(hotaru PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+# fcitx's Wayland wrappers are not installed; classicui builds them from the
+# fcitx5 source tree too. Must be the same fcitx5 version that loads us.
+set(FCITX5_SOURCE "" CACHE PATH "fcitx5 source tree")
+set(fcitx_wayland ${FCITX5_SOURCE}/src/lib/fcitx-wayland/core)
+set(fcitx_wayland_sources
+    ${fcitx_wayland}/wl_surface.cpp ${fcitx_wayland}/wl_callback.cpp
+    ${fcitx_wayland}/wl_buffer.cpp ${fcitx_wayland}/wl_region.cpp
+    ${fcitx_wayland}/wl_output.cpp)
+
+add_library(hotaru MODULE src/hotaru.cpp src/keyboard.cpp src/theme.cpp
+    ${protocol_sources} ${fcitx_wayland_sources})
+target_include_directories(hotaru PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${fcitx_wayland})
+target_link_options(hotaru PRIVATE -Wl,--no-undefined)
 target_link_libraries(hotaru PRIVATE
     Fcitx5::Core Fcitx5::Module::Wayland Fcitx5::Module::DBus PkgConfig::Deps)
 set_target_properties(hotaru PROPERTIES PREFIX "lib")

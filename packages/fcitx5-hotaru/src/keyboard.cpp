@@ -62,71 +62,72 @@ Keyboard::Keyboard() {
     auto dot = Key{KeyKind::Char, "."};
 
     using Row = std::vector<Key>;
+    // Letters on the left, a number pad on the right: the screen is wide,
+    // and the lock screen password is digits.
+    auto pad = [](std::vector<Key> keys) {
+        for (auto &k : keys) {
+            k.pad = true;
+        }
+        return keys;
+    };
+    const Row pad1 = pad(chars("123")), pad2 = pad(chars("456")),
+              pad3 = pad(chars("789"));
+    const Row pad4 = pad(Row{Key{KeyKind::Backspace, "⌫"},
+                             Key{KeyKind::Char, "0"},
+                             Key{KeyKind::Enter, "⏎"}});
     letters_ = {
-        chars("1234567890"),
-        chars("qwertyuiop"),
-        chars("asdfghjkl"),
-        concat(concat(Row{shift}, chars("zxcvbnm")), Row{back}),
-        Row{Key{KeyKind::Layer, "?123", 1.5}, comma, space, dot, enter},
+        concat(chars("qwertyuiop"), pad1),
+        concat(chars("asdfghjkl"), pad2),
+        concat(concat(concat(Row{shift}, chars("zxcvbnm")), Row{back}), pad3),
+        concat(Row{Key{KeyKind::Layer, "#+=", 1.5}, comma, space, dot, enter},
+               pad4),
     };
-    // A phone-style number pad, centred under the password field; the lock
-    // screen opens on this page.
-    auto pad = [](const char *label) {
-        return Key{KeyKind::Char, label, 1.7};
-    };
-    auto padKey = [](KeyKind kind, const char *label) {
-        return Key{kind, label, 1.7};
-    };
-    numbers_ = {
-        Row{pad("1"), pad("2"), pad("3")},
-        Row{pad("4"), pad("5"), pad("6")},
-        Row{pad("7"), pad("8"), pad("9")},
-        Row{padKey(KeyKind::Backspace, "⌫"), pad("0"),
-            padKey(KeyKind::Enter, "⏎")},
-        Row{Key{KeyKind::Layer, "ABC", 5.1}},
+    symbolRows_ = {
+        concat(chars("!@#$%^&*()"), pad1),
+        concat(chars("-_=+[]{}\\|"), pad2),
+        concat(chars("`~;:'\"<>/?"), pad3),
+        concat(Row{Key{KeyKind::Layer, "ABC", 1.5}, comma, space, dot, enter},
+               pad4),
     };
 }
 
 std::vector<std::vector<Key>> &Keyboard::rows() {
-    return numberPad_ ? numbers_ : letters_;
+    return symbols_ ? symbolRows_ : letters_;
 }
 
 const std::vector<std::vector<Key>> &Keyboard::rows() const {
-    return numberPad_ ? numbers_ : letters_;
+    return symbols_ ? symbolRows_ : letters_;
 }
 
 void Keyboard::resize(double width, double height) {
     width_ = width;
     height_ = height;
-    const double pad = 4;
-    // The digit row is a little shorter: passwords use it, but less than
-    // the letters.
-    for (auto *layer : {&letters_, &numbers_}) {
-        // Letters: the digit row is a little shorter. Number pad: the ABC
-        // strip at the bottom is.
-        const bool letters = layer == &letters_;
-        const double rowH = (height - 2 * pad) / (layer->size() - 0.4);
-        double y = pad;
+    const double edge = 4;
+    const double inner = width - 2 * edge;
+    // Ten letter units, a gap, three number pad units.
+    const double letterUnit = inner * 0.70 / 10;
+    const double padUnit = inner * 0.27 / 3;
+    const double padX = edge + inner - 3 * padUnit;
+    const double rowH = (height - 2 * edge) / letters_.size();
+    for (auto *layer : {&letters_, &symbolRows_}) {
         for (size_t r = 0; r < layer->size(); r++) {
-            const bool slim = letters ? r == 0 : r + 1 == layer->size();
-            const double h = slim ? rowH * 0.6 : rowH;
             auto &row = (*layer)[r];
             double units = 0;
             for (const auto &k : row) {
-                units += k.width;
+                units += k.pad ? 0 : k.width;
             }
-            // Every row is ten units wide; shorter rows sit centred, like
-            // the home row on a real keyboard.
-            const double unit = (width - 2 * pad) / 10;
-            double x = pad + (10 - units) * unit / 2;
+            // Short letter rows sit centred, like the home row on a real
+            // keyboard.
+            double x = edge + (10 - units) * letterUnit / 2;
+            double px = padX;
             for (auto &k : row) {
-                k.x = x;
-                k.y = y;
-                k.w = k.width * unit;
-                k.h = h;
-                x += k.w;
+                auto &at = k.pad ? px : x;
+                k.x = at;
+                k.y = edge + r * rowH;
+                k.w = k.width * (k.pad ? padUnit : letterUnit);
+                k.h = rowH;
+                at += k.w;
             }
-            y += h;
         }
     }
 }
@@ -145,23 +146,31 @@ const Key *Keyboard::find(int key) const {
 
 int Keyboard::keyAt(double x, double y) const {
     const auto &rs = rows();
-    if (rs.empty() || rs[0].empty()) {
+    if (rs.empty()) {
         return -1;
     }
     size_t r = 0;
     while (r + 1 < rs.size() && y >= rs[r + 1][0].y) {
         r++;
     }
-    const auto &row = rs[r];
-    size_t c = 0;
-    while (c + 1 < row.size() && x >= row[c + 1].x) {
-        c++;
+    // The key under the finger, or the closest one: gaps, including the one
+    // between letters and the number pad, belong to a neighbour.
+    int best = -1;
+    double bestDistance = 0;
+    for (size_t c = 0; c < rs[r].size(); c++) {
+        const auto &k = rs[r][c];
+        const double d = std::max({k.x - x, x - (k.x + k.w), 0.0});
+        if (best < 0 || d < bestDistance) {
+            best = c;
+            bestDistance = d;
+        }
     }
-    return r * RowStride + c;
+    return r * RowStride + best;
 }
 
 std::string Keyboard::label(const Key &key) const {
-    if (key.kind == KeyKind::Char && shift_ != Shift::Off && !numberPad_) {
+    if (key.kind == KeyKind::Char && shift_ != Shift::Off && !symbols_ &&
+        !key.pad) {
         std::string s = key.label;
         std::transform(s.begin(), s.end(), s.begin(), ::toupper);
         return s;
@@ -206,22 +215,20 @@ std::optional<uint32_t> Keyboard::release(int key) {
         return std::nullopt;
     }
     case KeyKind::Layer:
-        numberPad_ = !numberPad_;
+        symbols_ = !symbols_;
         return std::nullopt;
     }
     return std::nullopt;
 }
 
 void Keyboard::reset() {
-    numberPad_ = true;
+    symbols_ = false;
     shift_ = Shift::Off;
     pressed_ = -1;
 }
 
 void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
-    // Labels are sized by the letter rows, so digits match letters.
-    const double letterH = rows()[1][0].h;
-    auto rowH = [letterH](const Key &) { return letterH; };
+    auto rowH = [](const Key &k) { return k.h; };
     setColor(cr, theme.background);
     cairo_paint(cr);
 

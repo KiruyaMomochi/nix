@@ -27,6 +27,8 @@
 #include "keyboard.h"
 #include "theme.h"
 #include "xdg-output-unstable-v1-client.h"
+// From fcitx5's source; see CMakeLists.txt.
+#include "wl_surface.h"
 
 namespace hotaru {
 
@@ -119,7 +121,13 @@ private:
     zxdg_output_v1 *xdgOutput_ = nullptr;
     zwp_input_panel_v1 *panel_ = nullptr;
 
-    wl_surface *surface_ = nullptr;
+    // Every surface on fcitx's connection must carry fcitx's WlSurface
+    // wrapper: classicui reads it off any surface a touch or pointer event
+    // names, and skips those whose userData() is empty.
+    std::unique_ptr<fcitx::wayland::WlSurface> surface_;
+    wl_surface *rawSurface() {
+        return surface_ ? static_cast<wl_surface *>(*surface_) : nullptr;
+    }
     zwp_input_panel_surface_v1 *panelSurface_ = nullptr;
 
     int32_t scale_ = 1;
@@ -278,7 +286,7 @@ void Connection::seatCapabilities(uint32_t caps) {
                    wl_surface *surface, int32_t id, wl_fixed_t x,
                    wl_fixed_t y) {
                     auto *self = static_cast<Connection *>(data);
-                    if (surface != self->surface_ || self->touchId_ >= 0) {
+                    if (surface != self->rawSurface() || self->touchId_ >= 0) {
                         return;
                     }
                     self->touchId_ = id;
@@ -385,9 +393,10 @@ void Connection::show() {
     }
     theme_ = Theme::load();
     keyboard_.reset();
-    surface_ = wl_compositor_create_surface(compositor_);
+    surface_ = std::make_unique<fcitx::wayland::WlSurface>(
+        wl_compositor_create_surface(compositor_));
     panelSurface_ =
-        zwp_input_panel_v1_get_input_panel_surface(panel_, surface_);
+        zwp_input_panel_v1_get_input_panel_surface(panel_, rawSurface());
     zwp_input_panel_surface_v1_set_toplevel(
         panelSurface_, output_,
         ZWP_INPUT_PANEL_SURFACE_V1_POSITION_CENTER_BOTTOM);
@@ -405,8 +414,7 @@ void Connection::hide() {
         panelSurface_ = nullptr;
     }
     if (surface_) {
-        wl_surface_destroy(surface_);
-        surface_ = nullptr;
+        surface_.reset();
         wl_display_flush(display_);
         HOTARU_DEBUG() << "hidden";
     }
@@ -442,10 +450,11 @@ void Connection::draw() {
     cairo_destroy(cr);
     cairo_surface_destroy(image);
 
-    wl_surface_set_buffer_scale(surface_, scale_);
-    wl_surface_attach(surface_, buffer->buffer, 0, 0);
-    wl_surface_damage(surface_, 0, 0, w, h);
-    wl_surface_commit(surface_);
+    auto *surface = rawSurface();
+    wl_surface_set_buffer_scale(surface, scale_);
+    wl_surface_attach(surface, buffer->buffer, 0, 0);
+    wl_surface_damage(surface, 0, 0, w, h);
+    wl_surface_commit(surface);
     wl_display_flush(display_);
 }
 

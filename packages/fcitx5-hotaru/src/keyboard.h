@@ -14,7 +14,8 @@ enum class KeyKind { Char, Shift, Backspace, Enter, Layer, Space };
 struct Key {
     KeyKind kind;
     std::string label;      // letters: the lower-case form
-    double width = 1;       // in key units, ten units per row
+    double width = 1;       // in units of its block's key width
+    bool pad = false;       // in the number pad on the right
     double x = 0, y = 0, w = 0, h = 0;
 };
 
@@ -48,8 +49,8 @@ private:
     std::string label(const Key &key) const;
 
     enum class Shift { Off, Once, Locked };
-    std::vector<std::vector<Key>> letters_, numbers_;
-    bool numberPad_ = true;
+    std::vector<std::vector<Key>> letters_, symbolRows_;
+    bool symbols_ = false;
     Shift shift_ = Shift::Off;
     int pressed_ = -1;
     uint64_t lastShiftTap_ = 0;
