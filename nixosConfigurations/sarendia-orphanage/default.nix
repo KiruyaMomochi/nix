@@ -5,6 +5,7 @@
     ./fan.nix
     ./fingerprint.nix
     ./osk.nix
+    ./skvirt.nix
     ./tablet-mode.nix
     inputs.nixos-hardware.nixosModules.gpd-pocket-4
   ];
