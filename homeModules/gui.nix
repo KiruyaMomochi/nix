@@ -7,7 +7,7 @@ let
   cfg = config.programs.kyaru.desktop;
 
   # Native Wayland with fcitx5 through text-input. The fcitx wiki suggests v1
-  # on KWin, but with the fcitx5-osk launcher as KWin's input method, Chrome
+  # on KWin, but with an on-screen keyboard launcher as KWin's input method, Chrome
   # 156 on v1 gets no IME at all (Win+Space does nothing); v3 works.
   # text-input also tells KWin when a text field is focused, which the
   # on-screen keyboard's touch-to-show relies on.

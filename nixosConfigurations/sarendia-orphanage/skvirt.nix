@@ -39,6 +39,5 @@ in
   '';
 
   # KWin's input method (System Settings > Keyboard > Virtual Keyboard) is
-  # "skvirt (desktop and lock screen)"; fcitx5-osk stays installed until
-  # that has been used on the real lock screen.
+  # "skvirt (desktop and lock screen)".
 }
