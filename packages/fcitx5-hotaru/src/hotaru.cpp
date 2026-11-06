@@ -16,12 +16,12 @@
 #include <fcitx-utils/dbus/bus.h>
 #include <fcitx-utils/dbus/matchrule.h>
 #include <fcitx-utils/dbus/message.h>
-#include <fcitx-utils/dbus/variant.h>
 #include <fcitx-utils/event.h>
 #include <fcitx-utils/log.h>
 #include <fcitx/addonfactory.h>
 #include <fcitx/addoninstance.h>
 #include <fcitx/addonmanager.h>
+#include <fcitx/event.h>
 #include <fcitx/inputcontext.h>
 #include <fcitx/instance.h>
 #include "input-method-unstable-v1-client.h"
@@ -94,6 +94,9 @@ public:
     ~Connection();
 
     void setShown(bool shown);
+    // The hide key: unmap until the password field is touched again.
+    void userHide();
+    void userShow();
 
 private:
     void global(wl_registry *registry, uint32_t name, const char *interface,
@@ -135,6 +138,7 @@ private:
     int32_t logicalWidth_ = 0, logicalHeight_ = 0;
     int32_t width_ = 0, height_ = 0;
     bool wantShown_ = false;
+    bool userHidden_ = false;
 
     int32_t touchId_ = -1;
     double pointerX_ = 0, pointerY_ = 0;
@@ -151,7 +155,6 @@ public:
 
     fcitx::Instance *instance() { return instance_; }
     bool locked() const { return locked_; }
-    void hideKeyboard();
 
 private:
     FCITX_ADDON_DEPENDENCY_LOADER(wayland, instance_->addonManager());
@@ -167,6 +170,8 @@ private:
         created_;
     std::unique_ptr<fcitx::HandlerTableEntry<fcitx::WaylandConnectionClosed>>
         closed_;
+    std::vector<std::unique_ptr<fcitx::HandlerTableEntry<fcitx::EventHandler>>>
+        events_;
     std::unique_ptr<fcitx::dbus::Slot> activeChanged_;
     std::unique_ptr<fcitx::dbus::Slot> getActive_;
 };
@@ -382,6 +387,7 @@ void Connection::seatCapabilities(uint32_t caps) {
 
 void Connection::setShown(bool shown) {
     wantShown_ = shown;
+    userHidden_ = false;
     if (shown) {
         show();
     } else {
@@ -389,8 +395,23 @@ void Connection::setShown(bool shown) {
     }
 }
 
+void Connection::userHide() {
+    userHidden_ = true;
+    hide();
+}
+
+void Connection::userShow() {
+    if (!userHidden_) {
+        return;
+    }
+    userHidden_ = false;
+    if (wantShown_) {
+        show();
+    }
+}
+
 void Connection::show() {
-    if (surface_ || !panel_ || !compositor_ || !shm_ || !output_) {
+    if (userHidden_ || surface_ || !panel_ || !compositor_ || !shm_ || !output_) {
         return;
     }
     theme_ = Theme::load();
@@ -489,7 +510,11 @@ void Connection::lift() {
         type(action.sym);
     }
     if (action.hide) {
-        addon_->hideKeyboard();
+        // Unmapping is all it takes, as in plasma-keyboard: KWin drops a
+        // panel without a buffer. Telling KWin to deactivate doesn't stick
+        // while the password field keeps focus.
+        userHide();
+        return;
     }
     draw();
 }
@@ -541,6 +566,20 @@ Addon::Addon(fcitx::Instance *instance) : instance_(instance) {
             connections_.erase(display);
         });
 
+    // Touching the password field again, or the lock screen's own keyboard
+    // button, focuses it anew or moves its cursor; either brings a hidden
+    // keyboard back. plasma-keyboard does the same.
+    for (auto type : {fcitx::EventType::InputContextFocusIn,
+                      fcitx::EventType::InputContextSurroundingTextUpdated}) {
+        events_.push_back(instance_->watchEvent(
+            type, fcitx::EventWatcherPhase::PostInputMethod,
+            [this](fcitx::Event &) {
+                for (auto &[display, conn] : connections_) {
+                    conn->userShow();
+                }
+            }));
+    }
+
     auto *bus = dbus() ? dbus()->call<fcitx::IDBusModule::bus>() : nullptr;
     if (!bus) {
         HOTARU_WARN() << "no session bus; the keyboard will never show";
@@ -567,21 +606,6 @@ Addon::Addon(fcitx::Instance *instance) : instance_(instance) {
         setLocked(active);
         return true;
     });
-}
-
-// The same thing the lock screen's own "Hide On-Screen Keyboard" button
-// does: KWin hides the panel and deactivates the input method. That button,
-// or tapping the password field, brings it back.
-void Addon::hideKeyboard() {
-    auto *bus = dbus() ? dbus()->call<fcitx::IDBusModule::bus>() : nullptr;
-    if (!bus) {
-        return;
-    }
-    auto msg = bus->createMethodCall("org.kde.KWin", "/VirtualKeyboard",
-                                     "org.freedesktop.DBus.Properties", "Set");
-    msg << "org.kde.kwin.VirtualKeyboard" << "active"
-        << fcitx::dbus::Variant(false);
-    msg.send();
 }
 
 void Addon::setLocked(bool locked) {

@@ -58,8 +58,7 @@ Keyboard::Keyboard() {
     auto back = Key{KeyKind::Backspace, "⌫", 1.5};
     auto enter = Key{KeyKind::Enter, "⏎", 1.5};
     auto space = Key{KeyKind::Space, "", 4};
-    // Drawn as a chevron; the lock screen's footer, under the keyboard, has
-    // the button to bring it back.
+    // Drawn as a chevron. Touching the password field brings it back.
     auto hide = Key{KeyKind::Hide, ""};
     auto comma = Key{KeyKind::Char, ","};
     auto dot = Key{KeyKind::Char, "."};
