@@ -43,10 +43,15 @@ stdenv.mkDerivation {
 
   cmakeFlags = [ "-DKDE_INSTALL_PLUGINDIR=${kdePackages.qtbase.qtPluginPrefix}" ];
 
+  patches = [ ./show-on-tap-into-field.patch ];
+
   postPatch = ''
     # Top sits under KWin's applet popups (Kickoff etc.); keyboards belong on top of those.
     substituteInPlace src/KeyboardWindow.cpp \
       --replace-fail LayerShellQt::Window::LayerTop LayerShellQt::Window::LayerOverlay
+    # Same icon as its desktop entry, so the tray doesn't look like fcitx's.
+    substituteInPlace src/main.cpp \
+      --replace-fail '"input-keyboard"' '"input-keyboard-virtual"'
     substituteInPlace src/LayoutGenerator.cpp \
       --replace-fail /usr/include/X11/keysymdef.h ${xorgproto}/include/X11/keysymdef.h \
       --replace-fail /usr/share/X11/xkb/symbols/ ${xkeyboard_config}/share/X11/xkb/symbols/

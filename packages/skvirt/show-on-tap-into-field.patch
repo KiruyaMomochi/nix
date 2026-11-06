@@ -1,0 +1,65 @@
+diff --git a/src/KeyboardController.cpp b/src/KeyboardController.cpp
+index a0a2d8d..60d88ae 100644
+--- a/src/KeyboardController.cpp
++++ b/src/KeyboardController.cpp
+@@ -12,6 +12,11 @@
+ #include <QDebug>
+ #include <QTimer>
+ 
++namespace {
++// How close a tap and a field gaining focus must be to count as tapping into it.
++constexpr qint64 kTapFocusWindowMs = 500;
++}
++
+ // Map a printable character to the US-layout physical (evdev) key that
+ // produces it. We inject a hardware key via uinput, so fcitx's active engine
+ // (keyboard layout, pinyin, …) processes it just like real input.
+@@ -201,8 +206,12 @@ void KeyboardController::hideKeyboard()
+ void KeyboardController::onTouchActivity()
+ {
+     // Finger/pen: enter touch mode and pop the keyboard if there's a field.
++    // Only a tap that lands just as a field gains focus counts: apps such as
++    // Telegram or terminals keep text input enabled the whole time they are
++    // focused, so "field focused" alone would pop the keyboard on any tap.
+     m_touchMode = true;
+-    if (m_fieldFocused)
++    m_lastTouch.restart();
++    if (m_fieldFocused && m_focusGained.isValid() && m_focusGained.elapsed() < kTapFocusWindowMs)
+         showKeyboard();
+ }
+ 
+@@ -230,9 +239,12 @@ void KeyboardController::onTabletModeChanged(bool tabletMode)
+ void KeyboardController::onFieldFocusChanged(bool focused)
+ {
+     m_fieldFocused = focused;
+-    if (!focused)
++    if (!focused) {
+         hideKeyboard();           // field/app went away
+-    else if (m_touchMode)
++        return;
++    }
++    m_focusGained.restart();
++    if (m_touchMode && m_lastTouch.isValid() && m_lastTouch.elapsed() < kTapFocusWindowMs)
+         showKeyboard();           // tapped into a field
+ }
+ 
+diff --git a/src/KeyboardController.h b/src/KeyboardController.h
+index c2c918b..2af170a 100644
+--- a/src/KeyboardController.h
++++ b/src/KeyboardController.h
+@@ -2,6 +2,7 @@
+ 
+ #include "LayoutGenerator.h"
+ 
++#include <QElapsedTimer>
+ #include <QList>
+ #include <QObject>
+ #include <QQmlEngine>
+@@ -175,5 +176,7 @@ private:
+     // Engine state.
+     bool m_touchMode = false;    // most recent interaction was a finger/pen, not a mouse
+     bool m_fieldFocused = false; // KWin reports an editable client is focused
++    QElapsedTimer m_lastTouch;   // last finger/pen activity
++    QElapsedTimer m_focusGained; // last time a field gained focus
+     bool m_tabletMode = false;   // SW_TABLET_MODE switch position from InputMonitor
+ };
