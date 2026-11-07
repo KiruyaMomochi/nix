@@ -752,22 +752,36 @@ void Addon::touched() {
 std::vector<fcitx::Action *>
 Addon::menuActions(fcitx::InputContext *ic) {
     std::vector<fcitx::Action *> result;
-    std::function<void(const std::vector<fcitx::Action *> &)> collect =
-        [&](const std::vector<fcitx::Action *> &actions) {
+    std::function<void(const std::vector<fcitx::Action *> &, bool)> collect =
+        [&](const std::vector<fcitx::Action *> &actions, bool rimeSchemas) {
+            bool first = true;
             for (auto *action : actions) {
                 if (action->isSeparator()) {
+                    continue;
+                }
+                const auto &name = action->name();
+                // Deploying and syncing are maintenance, not something to
+                // tap by accident while typing.
+                if (name == "fcitx-rime-deploy" || name == "fcitx-rime-sync") {
+                    continue;
+                }
+                // rime's schema menu opens with "Latin Mode", rime's own
+                // English, a second one beside the 中/EN key's. 33 has been
+                // confused by the two before; leave it to the key.
+                if (rimeSchemas && first) {
+                    first = false;
                     continue;
                 }
                 // An action with a menu (rime's schemas, say) is a heading;
                 // what's under it are the switches.
                 if (auto *menu = action->menu()) {
-                    collect(menu->actions());
+                    collect(menu->actions(), name == "fcitx-rime-im");
                 } else if (!action->shortText(ic).empty()) {
                     result.push_back(action);
                 }
             }
         };
-    collect(ic->statusArea().allActions());
+    collect(ic->statusArea().allActions(), false);
     return result;
 }
 
