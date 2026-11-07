@@ -112,6 +112,9 @@ public:
 
     bool hasPanel() const { return panel_ != nullptr; }
     bool shown() const { return surface_ != nullptr; }
+    // Some text field has focus. Without one KWin won't show the panel, and
+    // a buffer committed then is left on screen, drawn but dead to touch.
+    void setFocused(bool focused);
     // The hide key: unmap until a text field is touched again.
     void userHide();
     void userShow();
@@ -156,6 +159,7 @@ private:
     int32_t logicalWidth_ = 0, logicalHeight_ = 0;
     int32_t width_ = 0, height_ = 0;
     bool userHidden_ = false;
+    bool focused_ = false;
 
     int32_t touchId_ = -1;
     double pointerX_ = 0, pointerY_ = 0;
@@ -197,6 +201,7 @@ private:
     FCITX_ADDON_DEPENDENCY_LOADER(wayland, instance_->addonManager());
 
     void refresh();
+    void setFocused(bool focused);
     fcitx::Action *scriptAction(fcitx::InputContext *ic);
 
     fcitx::Instance *instance_;
@@ -211,6 +216,7 @@ private:
         closed_;
     std::vector<std::unique_ptr<fcitx::HandlerTableEntry<fcitx::EventHandler>>>
         events_;
+    std::unique_ptr<fcitx::EventSource> focusCheck_;
 };
 
 Connection::Connection(Addon *addon, wl_display *display)
@@ -318,6 +324,7 @@ void Connection::global(wl_registry *registry, uint32_t name,
         zxdg_output_v1_add_listener(xdgOutput_, &listener, this);
     }
     if (panel_ && !surface_) {
+        focused_ = addon_->instance()->lastFocusedInputContext() != nullptr;
         show();
     }
 }
@@ -423,6 +430,20 @@ void Connection::seatCapabilities(uint32_t caps) {
     }
 }
 
+void Connection::setFocused(bool focused) {
+    if (focused == focused_) {
+        return;
+    }
+    focused_ = focused;
+    if (focused) {
+        show();
+    } else {
+        // The hide key lasts until the next text field, not forever.
+        userHidden_ = false;
+        hide();
+    }
+}
+
 void Connection::userHide() {
     userHidden_ = true;
     hide();
@@ -443,8 +464,8 @@ void Connection::setState(const State &state) {
 }
 
 void Connection::show() {
-    if (userHidden_ || surface_ || !panel_ || !compositor_ || !shm_ ||
-        !output_) {
+    if (!focused_ || userHidden_ || surface_ || !panel_ || !compositor_ ||
+        !shm_ || !output_) {
         return;
     }
     theme_ = Theme::load();
@@ -625,6 +646,24 @@ Addon::Addon(fcitx::Instance *instance) : instance_(instance) {
                 }
             }));
     }
+    // Map the panel only while a text field has focus. Focus out comes
+    // before the next focus in when it moves between fields, so look once
+    // things have settled.
+    events_.push_back(instance_->watchEvent(
+        fcitx::EventType::InputContextFocusIn,
+        fcitx::EventWatcherPhase::PreInputMethod,
+        [this](fcitx::Event &) { setFocused(true); }));
+    events_.push_back(instance_->watchEvent(
+        fcitx::EventType::InputContextFocusOut,
+        fcitx::EventWatcherPhase::PostInputMethod, [this](fcitx::Event &) {
+            focusCheck_ = instance_->eventLoop().addDeferEvent(
+                [this](fcitx::EventSource *) {
+                    setFocused(instance_->lastFocusedInputContext() !=
+                               nullptr);
+                    focusCheck_.reset();
+                    return true;
+                });
+        }));
     // Which language the keys type in, and rime's switches, change with the
     // focused field and the input method.
     for (auto type : {fcitx::EventType::InputContextFocusIn,
@@ -649,6 +688,12 @@ Addon::Addon(fcitx::Instance *instance) : instance_(instance) {
 }
 
 Addon::~Addon() = default;
+
+void Addon::setFocused(bool focused) {
+    for (auto &[display, conn] : connections_) {
+        conn->setFocused(focused);
+    }
+}
 
 bool Addon::available() {
     for (auto &[display, conn] : connections_) {
