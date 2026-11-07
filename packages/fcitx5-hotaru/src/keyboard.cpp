@@ -97,6 +97,125 @@ void strokeRound(cairo_t *cr, const Color &color) {
     cairo_stroke(cr);
 }
 
+// Line icons for the emoji tabs and the strip's emoji button, the way
+// Gboard draws them: one colour, so they read as buttons beside the
+// colour emoji they open. Named by the emoji the tab stands for; r is half
+// the icon's size.
+bool drawIcon(cairo_t *cr, const std::string &name, double cx, double cy,
+              double r, const Color &color) {
+    const double lw = std::max(1.5, r * 0.14);
+    cairo_save(cr);
+    cairo_set_line_width(cr, lw);
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+    cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
+    setColor(cr, color);
+    auto circle = [&](double x, double y, double radius) {
+        cairo_new_sub_path(cr);
+        cairo_arc(cr, x, y, radius, 0, 2 * M_PI);
+    };
+    auto dot = [&](double x, double y, double radius) {
+        circle(x, y, radius);
+        cairo_fill(cr);
+    };
+    bool known = true;
+    if (name == "😀" || name == "😊") {
+        circle(cx, cy, r * 0.9);
+        cairo_stroke(cr);
+        dot(cx - r * 0.32, cy - r * 0.2, r * 0.11);
+        dot(cx + r * 0.32, cy - r * 0.2, r * 0.11);
+        cairo_arc(cr, cx, cy + r * 0.05, r * 0.45, M_PI * 0.2, M_PI * 0.8);
+        cairo_stroke(cr);
+    } else if (name == "🕘") {
+        circle(cx, cy, r * 0.9);
+        cairo_move_to(cr, cx, cy - r * 0.5);
+        cairo_line_to(cr, cx, cy);
+        cairo_line_to(cr, cx + r * 0.35, cy + r * 0.25);
+        cairo_stroke(cr);
+    } else if (name == "👋") {
+        // A person: head and shoulders.
+        circle(cx, cy - r * 0.38, r * 0.36);
+        cairo_stroke(cr);
+        cairo_new_sub_path(cr);
+        cairo_arc(cr, cx, cy + r * 0.9, r * 0.75, M_PI, 2 * M_PI);
+        cairo_stroke(cr);
+    } else if (name == "🐱") {
+        cairo_move_to(cr, cx - r * 0.8, cy + r * 0.1);
+        cairo_line_to(cr, cx - r * 0.75, cy - r * 0.8);
+        cairo_line_to(cr, cx - r * 0.3, cy - r * 0.45);
+        cairo_line_to(cr, cx + r * 0.3, cy - r * 0.45);
+        cairo_line_to(cr, cx + r * 0.75, cy - r * 0.8);
+        cairo_line_to(cr, cx + r * 0.8, cy + r * 0.1);
+        cairo_curve_to(cr, cx + r * 0.8, cy + r * 0.95, cx - r * 0.8,
+                       cy + r * 0.95, cx - r * 0.8, cy + r * 0.1);
+        cairo_stroke(cr);
+        dot(cx - r * 0.3, cy + r * 0.05, r * 0.09);
+        dot(cx + r * 0.3, cy + r * 0.05, r * 0.09);
+    } else if (name == "🍙") {
+        cairo_move_to(cr, cx, cy - r * 0.85);
+        cairo_curve_to(cr, cx + r * 0.3, cy - r * 0.85, cx + r * 0.95,
+                       cy + r * 0.3, cx + r * 0.8, cy + r * 0.65);
+        cairo_curve_to(cr, cx + r * 0.7, cy + r * 0.85, cx - r * 0.7,
+                       cy + r * 0.85, cx - r * 0.8, cy + r * 0.65);
+        cairo_curve_to(cr, cx - r * 0.95, cy + r * 0.3, cx - r * 0.3,
+                       cy - r * 0.85, cx, cy - r * 0.85);
+        cairo_stroke(cr);
+        cairo_rectangle(cr, cx - r * 0.3, cy + r * 0.25, r * 0.6, r * 0.55);
+        cairo_fill(cr);
+    } else if (name == "🚗") {
+        cairo_move_to(cr, cx - r * 0.9, cy + r * 0.35);
+        cairo_line_to(cr, cx - r * 0.9, cy);
+        cairo_line_to(cr, cx - r * 0.6, cy - r * 0.55);
+        cairo_line_to(cr, cx + r * 0.6, cy - r * 0.55);
+        cairo_line_to(cr, cx + r * 0.9, cy);
+        cairo_line_to(cr, cx + r * 0.9, cy + r * 0.35);
+        cairo_close_path(cr);
+        cairo_stroke(cr);
+        dot(cx - r * 0.5, cy + r * 0.45, r * 0.18);
+        dot(cx + r * 0.5, cy + r * 0.45, r * 0.18);
+    } else if (name == "⚽") {
+        circle(cx, cy, r * 0.9);
+        cairo_stroke(cr);
+        // The seams of a tennis ball, simpler than a football's.
+        cairo_new_sub_path(cr);
+        cairo_arc(cr, cx - r * 1.25, cy, r * 0.8, -M_PI / 4, M_PI / 4);
+        cairo_stroke(cr);
+        cairo_new_sub_path(cr);
+        cairo_arc(cr, cx + r * 1.25, cy, r * 0.8, M_PI * 0.75, M_PI * 1.25);
+        cairo_stroke(cr);
+    } else if (name == "💡") {
+        cairo_new_sub_path(cr);
+        cairo_arc(cr, cx, cy - r * 0.25, r * 0.6, M_PI * 0.8, M_PI * 2.2);
+        cairo_line_to(cr, cx + r * 0.3, cy + r * 0.5);
+        cairo_line_to(cr, cx - r * 0.3, cy + r * 0.5);
+        cairo_close_path(cr);
+        cairo_stroke(cr);
+        cairo_move_to(cr, cx - r * 0.25, cy + r * 0.85);
+        cairo_line_to(cr, cx + r * 0.25, cy + r * 0.85);
+        cairo_stroke(cr);
+    } else if (name == "❤️") {
+        cairo_move_to(cr, cx, cy + r * 0.8);
+        cairo_curve_to(cr, cx - r * 1.3, cy - r * 0.1, cx - r * 0.55,
+                       cy - r * 1.05, cx, cy - r * 0.35);
+        cairo_curve_to(cr, cx + r * 0.55, cy - r * 1.05, cx + r * 1.3,
+                       cy - r * 0.1, cx, cy + r * 0.8);
+        cairo_close_path(cr);
+        cairo_stroke(cr);
+    } else if (name == "🏳️") {
+        cairo_move_to(cr, cx - r * 0.6, cy + r * 0.9);
+        cairo_line_to(cr, cx - r * 0.6, cy - r * 0.85);
+        cairo_curve_to(cr, cx - r * 0.1, cy - r * 1.05, cx + r * 0.2,
+                       cy - r * 0.55, cx + r * 0.75, cy - r * 0.75);
+        cairo_line_to(cr, cx + r * 0.75, cy + r * 0.1);
+        cairo_curve_to(cr, cx + r * 0.2, cy + r * 0.3, cx - r * 0.1,
+                       cy - r * 0.2, cx - r * 0.6, cy);
+        cairo_stroke(cr);
+    } else {
+        known = false;
+    }
+    cairo_restore(cr);
+    return known;
+}
+
 } // namespace
 
 Keyboard::Keyboard() {
@@ -987,8 +1106,7 @@ void Keyboard::paintBar(cairo_t *cr, const Theme &theme, PangoLayout *layout,
             strokeRound(cr, theme.text);
             break;
         case KeyKind::EmojiPage:
-            showText(k.label, barH_ * 0.46, k.x, k.y, k.w, k.h, theme.text,
-                     true);
+            drawIcon(cr, "😊", cx, cy, k.h * 0.26, theme.text);
             break;
         case KeyKind::KaomojiPage:
             showText(k.label, barH_ * 0.36, k.x, k.y, k.w, k.h,
@@ -1222,9 +1340,11 @@ void Keyboard::paintPicker(cairo_t *cr, const Theme &theme,
                 cairo_set_line_width(cr, 1.5);
                 cairo_stroke(cr);
             }
-            // Kaomoji tabs are words; emoji tabs are emoji.
-            text(k.label, k.h * (emoji || k.index == 0 ? 0.4 : 0.3), k,
-                 faded(theme.text, on ? 1 : 0.7));
+            // Kaomoji tabs are words; emoji tabs and recent are line icons.
+            if (!drawIcon(cr, k.label, k.x + k.w / 2, k.y + k.h / 2,
+                          k.h * 0.2, faded(theme.text, on ? 1 : 0.7))) {
+                text(k.label, k.h * 0.3, k, faded(theme.text, on ? 1 : 0.7));
+            }
             break;
         }
         default:
