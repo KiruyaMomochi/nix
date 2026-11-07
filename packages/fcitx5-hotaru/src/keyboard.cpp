@@ -126,20 +126,21 @@ bool drawIcon(cairo_t *cr, const std::string &name, double cx, double cy,
         cairo_arc(cr, cx, cy + r * 0.05, r * 0.45, M_PI * 0.2, M_PI * 0.8);
         cairo_stroke(cr);
     } else if (name == "kaomoji") {
-        // (・ω・), drawn: brackets, two dots, a small ω.
+        // (・ω・), drawn: brackets, two dots, a small ω. The brackets reach
+        // as high and low as the smiley's circle beside it.
+        const double R = r * 1.3, a = 0.245 * M_PI;
         cairo_new_sub_path(cr);
-        cairo_arc(cr, cx - r * 0.25, cy, r * 1.05, M_PI * 0.78, M_PI * 1.22);
+        cairo_arc(cr, cx + r * 0.2, cy, R, M_PI - a, M_PI + a);
         cairo_stroke(cr);
         cairo_new_sub_path(cr);
-        cairo_arc(cr, cx + r * 0.25, cy, r * 1.05, -M_PI * 0.22,
-                  M_PI * 0.22);
+        cairo_arc(cr, cx - r * 0.2, cy, R, -a, a);
         cairo_stroke(cr);
-        dot(cx - r * 0.42, cy - r * 0.15, r * 0.11);
-        dot(cx + r * 0.42, cy - r * 0.15, r * 0.11);
+        dot(cx - r * 0.4, cy - r * 0.15, r * 0.12);
+        dot(cx + r * 0.4, cy - r * 0.15, r * 0.12);
         cairo_new_sub_path(cr);
-        cairo_arc_negative(cr, cx - r * 0.13, cy + r * 0.18, r * 0.13, M_PI,
+        cairo_arc_negative(cr, cx - r * 0.15, cy + r * 0.2, r * 0.15, M_PI,
                            0);
-        cairo_arc_negative(cr, cx + r * 0.13, cy + r * 0.18, r * 0.13, M_PI,
+        cairo_arc_negative(cr, cx + r * 0.15, cy + r * 0.2, r * 0.15, M_PI,
                            0);
         cairo_stroke(cr);
     } else if (name == "🕘") {
