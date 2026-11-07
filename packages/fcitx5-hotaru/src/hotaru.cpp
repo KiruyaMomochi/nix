@@ -794,12 +794,11 @@ void Addon::refresh() {
     if (ic) {
         const auto *entry = instance_->inputMethodEntry(ic);
         state.chinese = entry && !entry->isKeyboard();
-        // Passwords and digits get the number pad; the lock screen's field
-        // says it is a password.
+        // Passwords and digits get the number pad. KDE's lock screen marks
+        // its field only as sensitive, not as a password.
         const auto caps = ic->capabilityFlags();
-        FCITX_LOGC(::hotaru::log, Info)
-            << "focused " << ic->program() << " caps " << caps.toInteger();
         state.pad = caps.test(fcitx::CapabilityFlag::Password) ||
+                    caps.test(fcitx::CapabilityFlag::Sensitive) ||
                     caps.test(fcitx::CapabilityFlag::Digit) ||
                     caps.test(fcitx::CapabilityFlag::Number) ||
                     caps.test(fcitx::CapabilityFlag::Dialable);
