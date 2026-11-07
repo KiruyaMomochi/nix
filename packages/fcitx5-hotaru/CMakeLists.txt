@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
-project(fcitx5-hotaru VERSION 0.1.0 LANGUAGES C CXX)
+project(fcitx5-hotaru VERSION 0.2.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(GNUInstallDirs)
 find_package(Fcitx5Core 5.1 REQUIRED)
-find_package(Fcitx5Module REQUIRED COMPONENTS Wayland DBus)
+find_package(Fcitx5Module REQUIRED COMPONENTS Wayland)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(Deps REQUIRED IMPORTED_TARGET wayland-client cairo pangocairo)
 pkg_get_variable(WAYLAND_PROTOCOLS_DIR wayland-protocols pkgdatadir)
@@ -40,7 +40,7 @@ add_library(hotaru MODULE src/hotaru.cpp src/keyboard.cpp src/theme.cpp
 target_include_directories(hotaru PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${fcitx_wayland})
 target_link_options(hotaru PRIVATE -Wl,--no-undefined)
 target_link_libraries(hotaru PRIVATE
-    Fcitx5::Core Fcitx5::Module::Wayland Fcitx5::Module::DBus PkgConfig::Deps)
+    Fcitx5::Core Fcitx5::Module::Wayland PkgConfig::Deps)
 set_target_properties(hotaru PROPERTIES PREFIX "lib")
 
 install(TARGETS hotaru DESTINATION ${CMAKE_INSTALL_LIBDIR}/fcitx5)

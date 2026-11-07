@@ -12,7 +12,7 @@
 }:
 stdenv.mkDerivation {
   pname = "fcitx5-hotaru";
-  version = "0.1.0";
+  version = "0.2.0";
   src = lib.cleanSource ./.;
 
   nativeBuildInputs = [ cmake pkg-config wayland-scanner ];
@@ -20,7 +20,7 @@ stdenv.mkDerivation {
   cmakeFlags = [ "-DFCITX5_SOURCE=${fcitx5.src}" ];
 
   meta = {
-    description = "fcitx5 addon: on-screen keyboard for the KDE lock screen";
+    description = "fcitx5 addon: on-screen keyboard";
     license = lib.licenses.lgpl21Plus;
     platforms = lib.platforms.linux;
   };

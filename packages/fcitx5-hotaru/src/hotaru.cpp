@@ -1,29 +1,38 @@
-// fcitx5 addon: an on-screen keyboard for the KDE lock screen.
+// fcitx5 addon: an on-screen keyboard that lives inside fcitx.
 //
-// KWin keeps fcitx5 as its one input method. On the lock screen it only
-// shows input-panel surfaces from that input method, so this addon opens one
-// on fcitx's own connection to KWin while the session is locked, and types
-// through the focused input context. On the desktop it stays out of the way.
+// KWin keeps fcitx5 as its one input method and shows input-panel surfaces
+// from it, on the desktop and on the lock screen alike. This addon opens one
+// on fcitx's own connection to KWin and lets KWin decide when it is seen.
+//
+// It is also fcitx's on-screen keyboard user interface: once a finger
+// touches it, fcitx switches to on-screen keyboard mode, classicui steps
+// aside, and candidates come here to be drawn in the strip above the keys.
+// A key on a physical keyboard switches back.
 
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <functional>
 #include <memory>
 #include <cairo.h>
 #include <wayland-client.h>
-#include <dbus_public.h>
 #include <wayland_public.h>
-#include <fcitx-utils/dbus/bus.h>
-#include <fcitx-utils/dbus/matchrule.h>
-#include <fcitx-utils/dbus/message.h>
 #include <fcitx-utils/event.h>
 #include <fcitx-utils/log.h>
+#include <fcitx/action.h>
 #include <fcitx/addonfactory.h>
 #include <fcitx/addoninstance.h>
 #include <fcitx/addonmanager.h>
+#include <fcitx/candidatelist.h>
 #include <fcitx/event.h>
 #include <fcitx/inputcontext.h>
+#include <fcitx/inputmethodentry.h>
+#include <fcitx/inputpanel.h>
 #include <fcitx/instance.h>
+#include <fcitx/menu.h>
+#include <fcitx/statusarea.h>
+#include <fcitx/userinterface.h>
+#include <fcitx/userinterfacemanager.h>
 #include "input-method-unstable-v1-client.h"
 #include "keyboard.h"
 #include "theme.h"
@@ -86,6 +95,13 @@ struct Buffer {
     }
 };
 
+// What the keyboard shows besides its keys, gathered from fcitx.
+struct State {
+    Candidates candidates;
+    bool chinese = false;
+    std::string scriptLabel;
+};
+
 // fcitx's connection to KWin. Only the input method's own connection gets
 // zwp_input_panel_v1, so connections without it are left alone.
 class Connection {
@@ -93,10 +109,12 @@ public:
     Connection(Addon *addon, wl_display *display);
     ~Connection();
 
-    void setShown(bool shown);
-    // The hide key: unmap until the password field is touched again.
+    bool hasPanel() const { return panel_ != nullptr; }
+    bool shown() const { return surface_ != nullptr; }
+    // The hide key: unmap until a text field is touched again.
     void userHide();
     void userShow();
+    void setState(const State &state);
 
 private:
     void global(wl_registry *registry, uint32_t name, const char *interface,
@@ -109,7 +127,6 @@ private:
     void move(double x, double y);
     void lift();
     void cancel();
-    void type(uint32_t sym);
     void startRepeat();
 
     Addon *addon_;
@@ -137,7 +154,6 @@ private:
     int32_t scale_ = 1;
     int32_t logicalWidth_ = 0, logicalHeight_ = 0;
     int32_t width_ = 0, height_ = 0;
-    bool wantShown_ = false;
     bool userHidden_ = false;
 
     int32_t touchId_ = -1;
@@ -149,21 +165,43 @@ private:
     std::unique_ptr<fcitx::EventSourceTime> repeat_;
 };
 
-class Addon : public fcitx::AddonInstance {
+class Addon : public fcitx::VirtualKeyboardUserInterface {
 public:
     explicit Addon(fcitx::Instance *instance);
+    ~Addon() override;
 
     fcitx::Instance *instance() { return instance_; }
-    bool locked() const { return locked_; }
+
+    // UserInterface. Only used in on-screen keyboard mode; classicui has the
+    // physical keyboard.
+    void update(fcitx::UserInterfaceComponent component,
+                fcitx::InputContext *ic) override;
+    bool available() override;
+    void suspend() override {}
+    void resume() override { refresh(); }
+    bool isVirtualKeyboardVisible() const override;
+    // KWin decides when the panel is seen; these only undo the hide key.
+    void showVirtualKeyboard() override;
+    void hideVirtualKeyboard() override {}
+
+    // Called by a connection: a finger is on the keyboard.
+    void touched();
+    void type(uint32_t sym);
+    void selectCandidate(int index);
+    void turnPage(int direction);
+    void toggleLanguage();
+    void toggleScript();
 
 private:
     FCITX_ADDON_DEPENDENCY_LOADER(wayland, instance_->addonManager());
-    FCITX_ADDON_DEPENDENCY_LOADER(dbus, instance_->addonManager());
 
-    void setLocked(bool locked);
+    void refresh();
+    fcitx::Action *scriptAction(fcitx::InputContext *ic);
 
     fcitx::Instance *instance_;
-    bool locked_ = false;
+    State state_;
+    // Candidate positions on the page that made it into the strip.
+    std::vector<int> candidateIndex_;
     std::unordered_map<wl_display *, std::unique_ptr<Connection>>
         connections_;
     std::unique_ptr<fcitx::HandlerTableEntry<fcitx::WaylandConnectionCreated>>
@@ -172,8 +210,6 @@ private:
         closed_;
     std::vector<std::unique_ptr<fcitx::HandlerTableEntry<fcitx::EventHandler>>>
         events_;
-    std::unique_ptr<fcitx::dbus::Slot> activeChanged_;
-    std::unique_ptr<fcitx::dbus::Slot> getActive_;
 };
 
 Connection::Connection(Addon *addon, wl_display *display)
@@ -259,6 +295,7 @@ void Connection::global(wl_registry *registry, uint32_t name,
         panel_ = static_cast<zwp_input_panel_v1 *>(
             wl_registry_bind(registry, name, &zwp_input_panel_v1_interface, 1));
         HOTARU_DEBUG() << "input panel available";
+        addon_->instance()->userInterfaceManager().updateAvailability();
     }
 
     if (output_ && xdgOutputManager_ && !xdgOutput_) {
@@ -279,7 +316,7 @@ void Connection::global(wl_registry *registry, uint32_t name,
         };
         zxdg_output_v1_add_listener(xdgOutput_, &listener, this);
     }
-    if (panel_ && wantShown_ && !surface_) {
+    if (panel_ && !surface_) {
         show();
     }
 }
@@ -385,16 +422,6 @@ void Connection::seatCapabilities(uint32_t caps) {
     }
 }
 
-void Connection::setShown(bool shown) {
-    wantShown_ = shown;
-    userHidden_ = false;
-    if (shown) {
-        show();
-    } else {
-        hide();
-    }
-}
-
 void Connection::userHide() {
     userHidden_ = true;
     hide();
@@ -405,16 +432,22 @@ void Connection::userShow() {
         return;
     }
     userHidden_ = false;
-    if (wantShown_) {
-        show();
-    }
+    show();
+}
+
+void Connection::setState(const State &state) {
+    keyboard_.setCandidates(state.candidates);
+    keyboard_.setLanguage(state.chinese, state.scriptLabel);
+    draw();
 }
 
 void Connection::show() {
-    if (userHidden_ || surface_ || !panel_ || !compositor_ || !shm_ || !output_) {
+    if (userHidden_ || surface_ || !panel_ || !compositor_ || !shm_ ||
+        !output_) {
         return;
     }
     theme_ = Theme::load();
+    keyboard_.setFont(theme_.font);
     keyboard_.reset();
     surface_ = std::make_unique<fcitx::wayland::WlSurface>(
         wl_compositor_create_surface(compositor_));
@@ -449,10 +482,10 @@ void Connection::draw() {
     }
     const int lw = logicalWidth_ > 0 ? logicalWidth_ : 1280;
     const int lh = logicalHeight_ > 0 ? logicalHeight_ : 800;
-    // Tall enough for a thumb, short enough to leave the password field
-    // visible: about 40% of a landscape screen.
+    // Tall enough for a thumb, short enough to leave the text visible:
+    // under half of a landscape screen, the strip included.
     const int w = lw;
-    const int h = std::min(int(lh * 0.4), int(lw * 0.36));
+    const int h = std::min(int(lh * 0.46), int(lw * 0.42));
     if (w != width_ || h != height_) {
         width_ = w;
         height_ = h;
@@ -482,21 +515,31 @@ void Connection::draw() {
 }
 
 void Connection::press(double x, double y) {
+    addon_->touched();
     const int key = keyboard_.keyAt(x, y);
     keyboard_.setPressed(key);
     if (keyboard_.repeats(key)) {
-        type(0xff08);
+        addon_->type(0xff08);
         startRepeat();
+    } else if (keyboard_.isSpace(key)) {
+        keyboard_.dragSpace(x);
     }
     draw();
 }
 
 void Connection::move(double x, double y) {
+    if (keyboard_.isSpace(keyboard_.pressed())) {
+        // Sliding along space moves the cursor, as on a phone.
+        for (auto sym : keyboard_.dragSpace(x)) {
+            addon_->type(sym);
+        }
+        return;
+    }
     const int key = keyboard_.keyAt(x, y);
     if (key == keyboard_.pressed()) {
         return;
     }
-    // Sliding to the neighbouring key picks that one instead, as on a phone.
+    // Sliding to the neighbouring key picks that one instead.
     // Sliding off backspace stops deleting.
     repeat_.reset();
     keyboard_.setPressed(keyboard_.repeats(key) ? -1 : key);
@@ -506,15 +549,29 @@ void Connection::move(double x, double y) {
 void Connection::lift() {
     repeat_.reset();
     const auto action = keyboard_.release(keyboard_.pressed());
-    if (action.sym) {
-        type(action.sym);
-    }
     if (action.hide) {
         // Unmapping is all it takes, as in plasma-keyboard: KWin drops a
         // panel without a buffer. Telling KWin to deactivate doesn't stick
-        // while the password field keeps focus.
+        // while the text field keeps focus.
         userHide();
         return;
+    }
+    // Each of these may change what the strip shows; fcitx calls back into
+    // update(), which redraws.
+    if (action.sym) {
+        addon_->type(action.sym);
+    }
+    if (action.candidate >= 0) {
+        addon_->selectCandidate(action.candidate);
+    }
+    if (action.page) {
+        addon_->turnPage(action.page);
+    }
+    if (action.toggleLanguage) {
+        addon_->toggleLanguage();
+    }
+    if (action.toggleScript) {
+        addon_->toggleScript();
     }
     draw();
 }
@@ -522,6 +579,7 @@ void Connection::lift() {
 void Connection::cancel() {
     repeat_.reset();
     keyboard_.setPressed(-1);
+    keyboard_.release(-1);
     draw();
 }
 
@@ -530,23 +588,11 @@ void Connection::startRepeat() {
     repeat_ = loop.addTimeEvent(
         CLOCK_MONOTONIC, fcitx::now(CLOCK_MONOTONIC) + 400000, 0,
         [this](fcitx::EventSourceTime *source, uint64_t) {
-            type(0xff08);
+            addon_->type(0xff08);
             source->setNextInterval(60000);
             source->setOneShot();
             return true;
         });
-}
-
-void Connection::type(uint32_t sym) {
-    auto *ic = addon_->instance()->lastFocusedInputContext();
-    if (!ic) {
-        return;
-    }
-    // The wayland frontend turns a forwarded key without a keycode into
-    // zwp_input_method_context_v1.keysym, which is what the lock screen's
-    // text field reads.
-    ic->forwardKey(fcitx::Key(static_cast<fcitx::KeySym>(sym)));
-    wl_display_flush(display_);
 }
 
 Addon::Addon(fcitx::Instance *instance) : instance_(instance) {
@@ -557,18 +603,17 @@ Addon::Addon(fcitx::Instance *instance) : instance_(instance) {
     created_ = wl->call<fcitx::IWaylandModule::addConnectionCreatedCallback>(
         [this](const std::string &, wl_display *display,
                fcitx::FocusGroup *) {
-            auto conn = std::make_unique<Connection>(this, display);
-            conn->setShown(locked_);
-            connections_[display] = std::move(conn);
+            connections_[display] = std::make_unique<Connection>(this, display);
         });
     closed_ = wl->call<fcitx::IWaylandModule::addConnectionClosedCallback>(
         [this](const std::string &, wl_display *display) {
             connections_.erase(display);
+            instance_->userInterfaceManager().updateAvailability();
         });
 
-    // Touching the password field again, or the lock screen's own keyboard
-    // button, focuses it anew or moves its cursor; either brings a hidden
-    // keyboard back. plasma-keyboard does the same.
+    // Touching a text field again, or the lock screen's own keyboard button,
+    // focuses it anew or moves its cursor; either brings a hidden keyboard
+    // back. plasma-keyboard does the same.
     for (auto type : {fcitx::EventType::InputContextFocusIn,
                       fcitx::EventType::InputContextSurroundingTextUpdated}) {
         events_.push_back(instance_->watchEvent(
@@ -579,44 +624,204 @@ Addon::Addon(fcitx::Instance *instance) : instance_(instance) {
                 }
             }));
     }
-
-    auto *bus = dbus() ? dbus()->call<fcitx::IDBusModule::bus>() : nullptr;
-    if (!bus) {
-        HOTARU_WARN() << "no session bus; the keyboard will never show";
-        return;
+    // Which language the keys type in, and rime's switches, change with the
+    // focused field and the input method.
+    for (auto type : {fcitx::EventType::InputContextFocusIn,
+                      fcitx::EventType::InputContextSwitchInputMethod,
+                      fcitx::EventType::InputContextUpdateUI}) {
+        events_.push_back(instance_->watchEvent(
+            type, fcitx::EventWatcherPhase::PostInputMethod,
+            [this](fcitx::Event &) { refresh(); }));
     }
-    activeChanged_ = bus->addMatch(
-        fcitx::dbus::MatchRule("org.freedesktop.ScreenSaver", "",
-                               "org.freedesktop.ScreenSaver", "ActiveChanged"),
-        [this](fcitx::dbus::Message &msg) {
-            bool active = false;
-            msg >> active;
-            setLocked(active);
-            return true;
-        });
-    auto call = bus->createMethodCall("org.freedesktop.ScreenSaver",
-                                      "/ScreenSaver",
-                                      "org.freedesktop.ScreenSaver",
-                                      "GetActive");
-    getActive_ = call.callAsync(0, [this](fcitx::dbus::Message &reply) {
-        bool active = false;
-        if (reply.type() == fcitx::dbus::MessageType::Reply) {
-            reply >> active;
-        }
-        setLocked(active);
-        return true;
-    });
+    // A key from a real keyboard hands things back to classicui, as fcitx's
+    // own D-Bus virtual keyboard does.
+    events_.push_back(instance_->watchEvent(
+        fcitx::EventType::InputContextKeyEvent,
+        fcitx::EventWatcherPhase::PreInputMethod, [this](fcitx::Event &event) {
+            auto &keyEvent = static_cast<fcitx::KeyEvent &>(event);
+            if (keyEvent.origKey().states().test(fcitx::KeyState::Virtual)) {
+                return;
+            }
+            instance_->setInputMethodMode(
+                fcitx::InputMethodMode::PhysicalKeyboard);
+        }));
 }
 
-void Addon::setLocked(bool locked) {
-    if (locked == locked_) {
+Addon::~Addon() = default;
+
+bool Addon::available() {
+    for (auto &[display, conn] : connections_) {
+        if (conn->hasPanel()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Addon::isVirtualKeyboardVisible() const {
+    for (const auto &[display, conn] : connections_) {
+        if (conn->shown()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void Addon::showVirtualKeyboard() {
+    for (auto &[display, conn] : connections_) {
+        conn->userShow();
+    }
+}
+
+void Addon::update(fcitx::UserInterfaceComponent component,
+                   fcitx::InputContext *) {
+    if (component == fcitx::UserInterfaceComponent::InputPanel) {
+        refresh();
+    }
+}
+
+void Addon::touched() {
+    if (instance_->inputMethodMode() ==
+        fcitx::InputMethodMode::OnScreenKeyboard) {
         return;
     }
-    locked_ = locked;
-    HOTARU_DEBUG() << "locked: " << locked;
-    for (auto &[display, conn] : connections_) {
-        conn->setShown(locked);
+    HOTARU_DEBUG() << "on-screen keyboard mode";
+    instance_->setInputMethodMode(fcitx::InputMethodMode::OnScreenKeyboard);
+    // Whatever classicui was showing moves into the strip.
+    if (auto *ic = instance_->lastFocusedInputContext()) {
+        ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel,
+                                true);
     }
+}
+
+fcitx::Action *Addon::scriptAction(fcitx::InputContext *ic) {
+    // rime names its switches fcitx-rime-<schema>-<option>.
+    std::function<fcitx::Action *(const std::vector<fcitx::Action *> &)>
+        search = [&](const std::vector<fcitx::Action *> &actions)
+        -> fcitx::Action * {
+        for (auto *action : actions) {
+            const auto &name = action->name();
+            if (name.starts_with("fcitx-rime-") &&
+                (name.ends_with("-simplification") ||
+                 name.ends_with("-traditionalization"))) {
+                return action;
+            }
+            if (auto *menu = action->menu()) {
+                if (auto *found = search(menu->actions())) {
+                    return found;
+                }
+            }
+        }
+        return nullptr;
+    };
+    return search(ic->statusArea().allActions());
+}
+
+void Addon::refresh() {
+    State state;
+    auto *ic = instance_->lastFocusedInputContext();
+    if (ic) {
+        const auto *entry = instance_->inputMethodEntry(ic);
+        state.chinese = entry && !entry->isKeyboard();
+        if (auto *action = state.chinese ? scriptAction(ic) : nullptr) {
+            state.scriptLabel = action->shortText(ic);
+        }
+        // Candidates only while fcitx has handed them to us; in physical
+        // keyboard mode they're classicui's.
+        if (instance_->inputMethodMode() ==
+            fcitx::InputMethodMode::OnScreenKeyboard) {
+            auto &panel = ic->inputPanel();
+            state.candidates.preedit =
+                instance_->outputFilter(ic, panel.preedit()).toString();
+            candidateIndex_.clear();
+            if (auto list = panel.candidateList()) {
+                for (int i = 0; i < list->size(); i++) {
+                    const auto &candidate = list->candidate(i);
+                    if (candidate.isPlaceHolder()) {
+                        continue;
+                    }
+                    state.candidates.words.push_back(
+                        instance_->outputFilter(ic, candidate.text())
+                            .toString());
+                    candidateIndex_.push_back(i);
+                }
+                if (auto *pageable = list->toPageable()) {
+                    state.candidates.hasPrev = pageable->hasPrev();
+                    state.candidates.hasNext = pageable->hasNext();
+                }
+            }
+        }
+    }
+    for (auto &[display, conn] : connections_) {
+        conn->setState(state);
+    }
+    state_ = std::move(state);
+}
+
+void Addon::type(uint32_t sym) {
+    auto *ic = instance_->lastFocusedInputContext();
+    if (!ic) {
+        return;
+    }
+    // Through the input method, so rime gets the letters. Marked virtual so
+    // the watcher above doesn't take it for a physical keyboard.
+    const fcitx::Key key(static_cast<fcitx::KeySym>(sym),
+                         fcitx::KeyStates(fcitx::KeyState::Virtual));
+    fcitx::KeyEvent press(ic, key, false);
+    if (!ic->keyEvent(press)) {
+        // Nobody wanted it: straight to the app. The wayland frontend turns
+        // a key without a keycode into zwp_input_method_context_v1.keysym,
+        // which is what the lock screen's password field reads.
+        ic->forwardKey(fcitx::Key(static_cast<fcitx::KeySym>(sym)));
+    }
+    fcitx::KeyEvent release(ic, key, true);
+    ic->keyEvent(release);
+}
+
+void Addon::selectCandidate(int index) {
+    auto *ic = instance_->lastFocusedInputContext();
+    if (!ic || index < 0 || index >= int(candidateIndex_.size())) {
+        return;
+    }
+    auto list = ic->inputPanel().candidateList();
+    const int i = candidateIndex_[index];
+    if (list && i < list->size()) {
+        list->candidate(i).select(ic);
+    }
+}
+
+void Addon::turnPage(int direction) {
+    auto *ic = instance_->lastFocusedInputContext();
+    if (!ic) {
+        return;
+    }
+    auto list = ic->inputPanel().candidateList();
+    auto *pageable = list ? list->toPageable() : nullptr;
+    if (!pageable) {
+        return;
+    }
+    if (direction < 0 && pageable->hasPrev()) {
+        pageable->prev();
+    } else if (direction > 0 && pageable->hasNext()) {
+        pageable->next();
+    }
+    ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+}
+
+void Addon::toggleLanguage() {
+    // Between the keyboard layout and rime, the way Win+Space does on saren.
+    instance_->toggle();
+}
+
+void Addon::toggleScript() {
+    auto *ic = instance_->lastFocusedInputContext();
+    if (!ic) {
+        return;
+    }
+    if (auto *action = scriptAction(ic)) {
+        action->activate(ic);
+    }
+    refresh();
 }
 
 class Factory : public fcitx::AddonFactory {
