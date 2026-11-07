@@ -28,6 +28,7 @@
 #include <fcitx/event.h>
 #include <fcitx/inputcontext.h>
 #include <fcitx/inputmethodentry.h>
+#include <fcitx/inputmethodmanager.h>
 #include <fcitx/inputpanel.h>
 #include <fcitx/instance.h>
 #include <fcitx/menu.h>
@@ -100,6 +101,8 @@ struct Buffer {
 struct State {
     Candidates candidates;
     bool chinese = false;
+    std::vector<std::string> imLabels;
+    int imCurrent = -1;
     bool pad = false;
     bool hints = false;
     std::vector<MenuEntry> menu;
@@ -215,6 +218,8 @@ public:
     // send.
     void newline();
     void toggleLanguage();
+    // One from the current group's list, as the language key's row shows it.
+    void switchInputMethod(int index);
     void activateMenuItem(int index);
     void refresh();
 
@@ -477,6 +482,7 @@ void Connection::userShow() {
 void Connection::setState(const State &state) {
     keyboard_.setCandidates(state.candidates);
     keyboard_.setLanguage(state.chinese);
+    keyboard_.setInputMethods(state.imLabels, state.imCurrent);
     keyboard_.setPad(state.pad);
     keyboard_.setHints(state.hints);
     keyboard_.setMenu(state.menu);
@@ -659,6 +665,11 @@ void Connection::lift(int32_t id) {
     }
     if (finger.popup) {
         auto text = keyboard_.closePopup();
+        if (keyboard_.isLang(finger.key)) {
+            addon_->switchInputMethod(keyboard_.popupPicked());
+            draw();
+            return;
+        }
         if (text.empty()) {
             // Lifted without sliding into the row: a plain tap.
             perform(keyboard_.release(finger.key));
@@ -943,6 +954,24 @@ void Addon::refresh() {
     if (ic) {
         const auto *entry = instance_->inputMethodEntry(ic);
         state.chinese = entry && !entry->isKeyboard();
+        const auto &group = instance_->inputMethodManager().currentGroup();
+        for (const auto &item : group.inputMethodList()) {
+            const auto *e =
+                instance_->inputMethodManager().entry(item.name());
+            if (!e) {
+                continue;
+            }
+            if (e == entry) {
+                state.imCurrent = state.imLabels.size();
+            }
+            // Their own labels read backwards here: rime says ㄓ, chewing 酷.
+            static const std::map<std::string, std::string> names = {
+                {"rime", "中"}, {"chewing", "注"}, {"mozc", "あ"}};
+            auto it = names.find(e->uniqueName());
+            state.imLabels.push_back(e->isKeyboard()    ? "EN"
+                                     : it != names.end() ? it->second
+                                                         : e->label());
+        }
         // Passwords and digits get the number pad. KDE's lock screen marks
         // its field only as sensitive, not as a password.
         const auto caps = ic->capabilityFlags();
@@ -961,7 +990,8 @@ void Addon::refresh() {
         if (state.chinese) {
             state.menu.push_back({"双拼提示", hints_});
         }
-        state.hints = hints_;
+        // The hints are 小鶴雙拼's; other input methods have their own keys.
+        state.hints = hints_ && entry && entry->uniqueName() == "rime";
 
         // Candidates only while fcitx has handed them to us; in physical
         // keyboard mode they're classicui's.
@@ -1071,6 +1101,16 @@ void Addon::newline() {
     // the Multiline hint (Telegram and Chrome don't set it) nor Shift+Enter
     // (KWin drops the shift on its way to text-input-v3 clients) works.
     commitText("\n");
+}
+
+void Addon::switchInputMethod(int index) {
+    auto *ic = instance_->lastFocusedInputContext();
+    const auto &list =
+        instance_->inputMethodManager().currentGroup().inputMethodList();
+    if (!ic || index < 0 || size_t(index) >= list.size()) {
+        return;
+    }
+    instance_->setCurrentInputMethod(ic, list[index].name(), false);
 }
 
 void Addon::toggleLanguage() {

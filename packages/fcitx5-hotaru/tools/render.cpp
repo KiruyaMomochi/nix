@@ -27,6 +27,10 @@ int main(int argc, char **argv) {
         // Holding the full stop, in the bottom row.
         kb.hold(1 * 16 + 6);
         kb.openPopup(1 * 16 + 6); // j
+    } else if (mode == "lang") {
+        kb.setInputMethods({"EN", "中", "酷", "あ"}, 1);
+        kb.hold(3 * 16 + 1);
+        kb.openPopup(3 * 16 + 1);
     } else if (mode == "enter") {
         kb.hold(3 * 16 + 5);
         kb.openPopup(3 * 16 + 5);

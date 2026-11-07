@@ -310,6 +310,17 @@ void Keyboard::setCandidates(Candidates candidates) {
 
 void Keyboard::setLanguage(bool chinese) { chinese_ = chinese; }
 
+void Keyboard::setInputMethods(std::vector<std::string> labels,
+                               int current) {
+    imLabels_ = std::move(labels);
+    imCurrent_ = current;
+}
+
+bool Keyboard::isLang(int key) const {
+    const auto *k = find(key);
+    return k && k->kind == KeyKind::Lang;
+}
+
 void Keyboard::setPad(bool pad) {
     if (pad == pad_) {
         return;
@@ -396,6 +407,9 @@ int Keyboard::keyAt(double x, double y) const {
 
 std::string Keyboard::label(const Key &key) const {
     if (key.kind == KeyKind::Lang) {
+        if (imCurrent_ >= 0 && size_t(imCurrent_) < imLabels_.size()) {
+            return imLabels_[imCurrent_];
+        }
         return chinese_ ? "中" : "EN";
     }
     if (key.kind == KeyKind::Char && chinese_ && !key.pad) {
@@ -458,6 +472,12 @@ std::vector<std::string> Keyboard::alternates(int key, int *anchor) const {
         *anchor = 0;
     }
     const auto *k = find(key);
+    if (k && k->kind == KeyKind::Lang && imLabels_.size() > 1) {
+        if (anchor) {
+            *anchor = std::max(imCurrent_, 0);
+        }
+        return imLabels_;
+    }
     if (k && k->kind == KeyKind::Enter && !k->pad) {
         if (anchor) {
             *anchor = -1;
@@ -545,6 +565,7 @@ void Keyboard::popupMove(double x, double y) {
 
 std::string Keyboard::closePopup() {
     std::string text;
+    popupPicked_ = popup_.key >= 0 ? popup_.selected : -1;
     if (popup_.key >= 0 && popup_.selected >= 0) {
         text = popup_.items[popup_.selected];
         if (text == "换行") {
@@ -872,8 +893,8 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
             if (!pinyinHint) {
                 int anchor = 0;
                 const auto alt = alternates(r * RowStride + c, &anchor);
-                // Enter's row has nothing picked by default, nothing to print.
-                if (!alt.empty() && anchor >= 0) {
+                // Only letters and punctuation print theirs.
+                if (!alt.empty() && anchor >= 0 && k.kind == KeyKind::Char) {
                     pango_font_description_set_absolute_size(
                         font, k.h * 0.2 * PANGO_SCALE);
                     pango_layout_set_font_description(layout, font);

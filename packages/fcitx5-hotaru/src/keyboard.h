@@ -88,6 +88,10 @@ public:
     // What the finger is on, closing the popup: "" for nothing, "\n" for
     // Enter's line break.
     std::string closePopup();
+    // Which item closePopup() took, for rows that aren't text (the language
+    // key's).
+    int popupPicked() const { return popupPicked_; }
+    bool isLang(int key) const;
     bool popupOpen() const { return popup_.key >= 0; }
     // The finger is sliding along space: arrow keys to move the cursor by.
     std::vector<uint32_t> dragSpace(double x);
@@ -109,6 +113,9 @@ public:
     void setCandidates(Candidates candidates);
     // rime (or another real input method) rather than a plain layout.
     void setLanguage(bool chinese);
+    // The input methods to pick from by holding the language key, by their
+    // short labels, and which is on.
+    void setInputMethods(std::vector<std::string> labels, int current);
     // Number pad beside the letters: for passwords and digits. Elsewhere it
     // only comes out on the symbols page, and letters get the full width.
     void setPad(bool pad);
@@ -139,6 +146,9 @@ private:
     Candidates candidates_;
     std::string font_ = "Noto Sans";
     bool chinese_ = false;
+    std::vector<std::string> imLabels_;
+    int imCurrent_ = -1;
+    int popupPicked_ = -1;
     bool pad_ = true;
     bool symbols_ = false;
     bool menuOpen_ = false;
