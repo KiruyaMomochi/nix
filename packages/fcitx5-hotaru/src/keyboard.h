@@ -76,15 +76,17 @@ public:
     // The finger slid off shift without lifting.
     void shiftLeave() { shiftHeld_ = false; }
 
-    // What holding a key gives: a row of characters for letters and
-    // punctuation; Enter has its own long press (a new line). The one at
-    // anchor sits over the key, under the finger.
+    // What holding a key gives: a row above it. The one at anchor sits over
+    // the key and is picked unless the finger moves; an anchor of -1 (Enter)
+    // picks nothing until the finger slides up into the row, so lifting
+    // where it was is still a plain tap.
     std::vector<std::string> alternates(int key, int *anchor = nullptr) const;
     bool longPresses(int key) const;
     // The row of alternates above a held key; the finger slides along it.
     void openPopup(int key);
-    void popupMove(double x);
-    // What the finger is on, closing the popup.
+    void popupMove(double x, double y);
+    // What the finger is on, closing the popup: "" for nothing, "\n" for
+    // Enter's line break.
     std::string closePopup();
     bool popupOpen() const { return popup_.key >= 0; }
     // The finger is sliding along space: arrow keys to move the cursor by.
@@ -148,7 +150,7 @@ private:
     struct Popup {
         int key = -1;
         std::vector<std::string> items;
-        int selected = 0;
+        int selected = 0, anchor = 0;
         double x = 0, y = 0, itemW = 0, h = 0;
     } popup_;
     void paintPopup(cairo_t *cr, const Theme &theme, PangoLayout *layout,

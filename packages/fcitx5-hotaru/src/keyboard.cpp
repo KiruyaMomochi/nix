@@ -458,6 +458,12 @@ std::vector<std::string> Keyboard::alternates(int key, int *anchor) const {
         *anchor = 0;
     }
     const auto *k = find(key);
+    if (k && k->kind == KeyKind::Enter && !k->pad) {
+        if (anchor) {
+            *anchor = -1;
+        }
+        return {"换行"};
+    }
     if (!k || k->kind != KeyKind::Char || k->pad || symbols_) {
         return {};
     }
@@ -500,10 +506,7 @@ std::vector<std::string> Keyboard::alternates(int key, int *anchor) const {
 
 bool Keyboard::longPresses(int key) const {
     const auto *k = find(key);
-    if (!k) {
-        return false;
-    }
-    return (k->kind == KeyKind::Enter && !k->pad) || !alternates(key).empty();
+    return k && !alternates(key).empty();
 }
 
 void Keyboard::openPopup(int key) {
@@ -515,19 +518,24 @@ void Keyboard::openPopup(int key) {
     }
     popup_.key = key;
     popup_.items = std::move(items);
-    popup_.selected = anchor;
+    popup_.selected = popup_.anchor = anchor;
     popup_.itemW = k->w;
     popup_.h = k->h;
     // Above the key with the anchor over it, pulled back in at the edges.
     // The top row's sits over the strip.
     const double total = popup_.itemW * popup_.items.size();
-    popup_.x = std::clamp(k->x - anchor * popup_.itemW, Edge,
+    popup_.x = std::clamp(k->x - std::max(anchor, 0) * popup_.itemW, Edge,
                           width_ - Edge - total);
     popup_.y = std::max(Edge, k->y - k->h);
 }
 
-void Keyboard::popupMove(double x) {
+void Keyboard::popupMove(double x, double y) {
     if (popup_.key < 0) {
+        return;
+    }
+    // Still on the key: nothing, for a row that has to be slid into.
+    if (popup_.anchor < 0 && y > popup_.y + popup_.h) {
+        popup_.selected = -1;
         return;
     }
     const int n = popup_.items.size();
@@ -537,8 +545,11 @@ void Keyboard::popupMove(double x) {
 
 std::string Keyboard::closePopup() {
     std::string text;
-    if (popup_.key >= 0) {
+    if (popup_.key >= 0 && popup_.selected >= 0) {
         text = popup_.items[popup_.selected];
+        if (text == "换行") {
+            text = "\n";
+        }
     }
     popup_ = {};
     return text;
@@ -861,7 +872,8 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
             if (!pinyinHint) {
                 int anchor = 0;
                 const auto alt = alternates(r * RowStride + c, &anchor);
-                if (!alt.empty()) {
+                // Enter's row has nothing picked by default, nothing to print.
+                if (!alt.empty() && anchor >= 0) {
                     pango_font_description_set_absolute_size(
                         font, k.h * 0.2 * PANGO_SCALE);
                     pango_layout_set_font_description(layout, font);

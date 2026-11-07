@@ -601,7 +601,7 @@ void Connection::move(int32_t id, double x, double y) {
     auto &finger = it->second;
     finger.x = x;
     if (finger.popup) {
-        keyboard_.popupMove(x);
+        keyboard_.popupMove(x, y);
         draw();
         return;
     }
@@ -659,6 +659,17 @@ void Connection::lift(int32_t id) {
     }
     if (finger.popup) {
         auto text = keyboard_.closePopup();
+        if (text.empty()) {
+            // Lifted without sliding into the row: a plain tap.
+            perform(keyboard_.release(finger.key));
+            draw();
+            return;
+        }
+        if (text == "\n") {
+            addon_->newline();
+            draw();
+            return;
+        }
         // A symbol types like the key it stands for, so rime still turns it
         // full width; letters and the rest go in as they are.
         if (text.size() == 1 && !std::isalpha(static_cast<unsigned char>(text[0]))) {
@@ -748,13 +759,6 @@ void Connection::longPress(int32_t id) {
         return;
     }
     auto &finger = it->second;
-    if (!keyboard_.isChar(finger.key)) {
-        // Enter: a new line in the text instead of sending it. Done now,
-        // so the finger feels it land; lifting adds nothing more.
-        addon_->newline();
-        finger.done = true;
-        return;
-    }
     keyboard_.openPopup(finger.key);
     finger.popup = true;
     draw();
