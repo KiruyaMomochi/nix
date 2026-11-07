@@ -1063,22 +1063,10 @@ void Addon::commitText(const std::string &text) {
 }
 
 void Addon::newline() {
-    auto *ic = instance_->lastFocusedInputContext();
-    if (!ic) {
-        return;
-    }
-    // A field that says it takes several lines gets the line break as
-    // text, which no app reads as send. The rest get Shift+Enter, the
-    // usual soft break.
-    if (ic->capabilityFlags().test(fcitx::CapabilityFlag::Multiline)) {
-        commitText("\n");
-        return;
-    }
-    if (candidateList_ && !state_.candidates.words.empty()) {
-        selectCandidate(state_.candidates.cursor);
-    }
-    ic->forwardKey(fcitx::Key(FcitxKey_Return, fcitx::KeyState::Shift));
-    ic->forwardKey(fcitx::Key(FcitxKey_Return, fcitx::KeyState::Shift), true);
+    // The line break goes in as text, which no app reads as send. Neither
+    // the Multiline hint (Telegram and Chrome don't set it) nor Shift+Enter
+    // (KWin drops the shift on its way to text-input-v3 clients) works.
+    commitText("\n");
 }
 
 void Addon::toggleLanguage() {
