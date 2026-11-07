@@ -19,6 +19,7 @@
 #include <wayland_public.h>
 #include <fcitx-utils/event.h>
 #include <fcitx-utils/log.h>
+#include <fcitx-utils/utf8.h>
 #include <fcitx/action.h>
 #include <fcitx/addonfactory.h>
 #include <fcitx/addoninstance.h>
@@ -482,10 +483,10 @@ void Connection::draw() {
     }
     const int lw = logicalWidth_ > 0 ? logicalWidth_ : 1280;
     const int lh = logicalHeight_ > 0 ? logicalHeight_ : 800;
-    // Tall enough for a thumb, short enough to leave the text visible:
-    // under half of a landscape screen, the strip included.
+    // Tall enough for a thumb, short enough to leave the text visible on
+    // the Pocket's small screen, the strip included.
     const int w = lw;
-    const int h = std::min(int(lh * 0.46), int(lw * 0.42));
+    const int h = std::min(int(lh * 0.38), int(lw * 0.34));
     if (w != width_ || h != height_) {
         width_ = w;
         height_ = h;
@@ -724,7 +725,10 @@ void Addon::refresh() {
         const auto *entry = instance_->inputMethodEntry(ic);
         state.chinese = entry && !entry->isKeyboard();
         if (auto *action = state.chinese ? scriptAction(ic) : nullptr) {
-            state.scriptLabel = action->shortText(ic);
+            // rime words it 汉字 / 漢字; the first character says it all.
+            auto text = action->shortText(ic);
+            state.scriptLabel = text.substr(
+                0, fcitx::utf8::ncharByteLength(text.begin(), 1));
         }
         // Candidates only while fcitx has handed them to us; in physical
         // keyboard mode they're classicui's.
