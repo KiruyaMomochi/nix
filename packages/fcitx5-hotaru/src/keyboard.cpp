@@ -227,6 +227,18 @@ bool drawIcon(cairo_t *cr, const std::string &name, double cx, double cy,
         cairo_curve_to(cr, cx + r * 0.2, cy + r * 0.3, cx - r * 0.1,
                        cy - r * 0.2, cx - r * 0.6, cy);
         cairo_stroke(cr);
+    } else if (name == "换行") {
+        // ⏎ folding back to the left, and under it the start of the line
+        // it makes: enter, but staying in the box.
+        cairo_move_to(cr, cx + r * 0.7, cy - r * 0.85);
+        cairo_line_to(cr, cx + r * 0.7, cy - r * 0.1);
+        cairo_line_to(cr, cx - r * 0.7, cy - r * 0.1);
+        cairo_move_to(cr, cx - r * 0.35, cy - r * 0.45);
+        cairo_line_to(cr, cx - r * 0.7, cy - r * 0.1);
+        cairo_line_to(cr, cx - r * 0.35, cy + r * 0.25);
+        cairo_move_to(cr, cx - r * 0.7, cy + r * 0.75);
+        cairo_line_to(cr, cx + r * 0.05, cy + r * 0.75);
+        cairo_stroke(cr);
     } else {
         known = false;
     }
@@ -1438,6 +1450,10 @@ void Keyboard::paintPopup(cairo_t *cr, const Theme &theme,
             setColor(cr, theme.accent);
             cairo_set_line_width(cr, 1.5);
             cairo_stroke(cr);
+        }
+        if (drawIcon(cr, popup_.items[i], x + popup_.itemW / 2,
+                     popup_.y + popup_.h / 2, popup_.h * 0.24, theme.text)) {
+            continue;
         }
         pango_font_description_set_absolute_size(
             font, popup_.h * 0.42 * PANGO_SCALE);
