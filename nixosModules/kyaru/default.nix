@@ -29,6 +29,7 @@ in
     ./opentelemetry.nix
     ./greptimedb.nix
     ./hardware-poller.nix
+    ./hmc300t-relay.nix
   ];
 
   options = {
