@@ -234,6 +234,10 @@ bool drawIcon(cairo_t *cr, const std::string &name, double cx, double cy,
     return known;
 }
 
+bool pinnedKey(const Key &k) {
+    return k.kind == KeyKind::Layer || k.kind == KeyKind::Lang;
+}
+
 } // namespace
 
 Keyboard::Keyboard() {
@@ -411,8 +415,10 @@ void Keyboard::layoutPicker() {
         k.index = index;
         pickerKeys_.push_back(std::move(k));
     };
+    // Same spots as on the key pages.
     add(KeyKind::Letters, "ABC", Edge, unit * 1.5, 0);
-    const double tabsX = Edge + unit * 1.5, tabsW = inner - unit * 3;
+    add(KeyKind::Lang, "", Edge + unit * 1.5, unit, 0);
+    const double tabsX = Edge + unit * 2.5, tabsW = inner - unit * 4;
     const int tabs = data.size() + 1;
     for (int i = 0; i < tabs; i++) {
         add(KeyKind::Tab, i == 0 ? "🕘" : data[i - 1].tab,
@@ -459,19 +465,35 @@ void Keyboard::layoutKeys() {
         }
         for (size_t r = 0; r < layer->size(); r++) {
             auto &row = (*layer)[r];
-            double units = 0;
+            const bool bottom = r + 1 == layer->size();
+            double units = 0, pinned = 0;
             for (const auto &k : row) {
-                units += k.pad ? 0 : k.width;
+                if (k.pad) {
+                    continue;
+                }
+                if (bottom && pinnedKey(k)) {
+                    pinned += k.width;
+                } else {
+                    units += k.width;
+                }
             }
+            // ABC/#+= and 中 sit in the same spot on every page, pad or not,
+            // so the finger that just switched pages finds them again. The
+            // rest of the bottom row takes what's left.
+            const double rest =
+                bottom ? (10 * unit - pinned * inner / 10) / units : unit;
             // Short letter rows sit centred, like the home row on a real
             // keyboard.
-            double x = Edge + (10 - units) * unit / 2;
+            double x = bottom ? Edge : Edge + (10 - units) * unit / 2;
             double px = padX;
             for (auto &k : row) {
                 auto &at = k.pad ? px : x;
                 k.x = at;
                 k.y = top + r * rowH;
-                k.w = k.width * (k.pad ? padUnit : unit);
+                k.w = k.width * (k.pad              ? padUnit
+                                 : !bottom          ? unit
+                                 : pinnedKey(k)     ? inner / 10
+                                                    : rest);
                 k.h = rowH;
                 at += k.w;
             }
@@ -1369,7 +1391,7 @@ void Keyboard::paintPicker(cairo_t *cr, const Theme &theme,
             setColor(cr, down ? mix(theme.keyAlt, theme.accent, 0.3)
                               : theme.keyAlt);
             cairo_fill(cr);
-            text(k.label, k.h * (k.kind == KeyKind::Letters ? 0.3 : 0.46),
+            text(label(k), k.h * (k.kind == KeyKind::Lang ? 0.30 : 0.46),
                  k, theme.text);
             break;
         }
