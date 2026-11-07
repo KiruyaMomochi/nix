@@ -999,8 +999,8 @@ Addon::menuActions(fcitx::InputContext *ic) {
                     continue;
                 }
                 // rime's schema menu opens with "Latin Mode", rime's own
-                // English, a second one beside the 中/EN key's. 33 has been
-                // confused by the two before; leave it to the key.
+                // English, a second one beside the 中/EN key's. Two English
+                // modes are easy to mix up; leave it to the key.
                 if (rimeSchemas && first) {
                     first = false;
                     continue;

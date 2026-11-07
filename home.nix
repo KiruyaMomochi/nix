@@ -362,6 +362,10 @@
             {
               "schema" = "double_pinyin_flypy";
             }
+            # 注音（大千）；hotaru 認得這個方案會換成注音鍵盤
+            {
+              "schema" = "bopomofo_tw";
+            }
           ];
           # 中英只靠 fcitx 的 Win+Space 切，rime 自己的 ascii 模式不让按键进
           "ascii_composer/switch_key" = {
