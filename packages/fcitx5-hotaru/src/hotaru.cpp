@@ -675,9 +675,12 @@ Addon::Addon(fcitx::Instance *instance) : instance_(instance) {
         }));
     // Which language the keys type in, and rime's switches, change with the
     // focused field and the input method.
+    // The field says it's a password only once focused: the content type
+    // comes after the focus.
     for (auto type : {fcitx::EventType::InputContextFocusIn,
                       fcitx::EventType::InputContextSwitchInputMethod,
-                      fcitx::EventType::InputContextUpdateUI}) {
+                      fcitx::EventType::InputContextUpdateUI,
+                      fcitx::EventType::InputContextCapabilityChanged}) {
         events_.push_back(instance_->watchEvent(
             type, fcitx::EventWatcherPhase::PostInputMethod,
             [this](fcitx::Event &) { refresh(); }));
@@ -794,6 +797,8 @@ void Addon::refresh() {
         // Passwords and digits get the number pad; the lock screen's field
         // says it is a password.
         const auto caps = ic->capabilityFlags();
+        FCITX_LOGC(::hotaru::log, Info)
+            << "focused " << ic->program() << " caps " << caps.toInteger();
         state.pad = caps.test(fcitx::CapabilityFlag::Password) ||
                     caps.test(fcitx::CapabilityFlag::Digit) ||
                     caps.test(fcitx::CapabilityFlag::Number) ||
