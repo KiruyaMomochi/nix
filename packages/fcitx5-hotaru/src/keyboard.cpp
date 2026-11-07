@@ -125,6 +125,23 @@ bool drawIcon(cairo_t *cr, const std::string &name, double cx, double cy,
         dot(cx + r * 0.32, cy - r * 0.2, r * 0.11);
         cairo_arc(cr, cx, cy + r * 0.05, r * 0.45, M_PI * 0.2, M_PI * 0.8);
         cairo_stroke(cr);
+    } else if (name == "kaomoji") {
+        // (・ω・), drawn: brackets, two dots, a small ω.
+        cairo_new_sub_path(cr);
+        cairo_arc(cr, cx - r * 0.25, cy, r * 1.05, M_PI * 0.78, M_PI * 1.22);
+        cairo_stroke(cr);
+        cairo_new_sub_path(cr);
+        cairo_arc(cr, cx + r * 0.25, cy, r * 1.05, -M_PI * 0.22,
+                  M_PI * 0.22);
+        cairo_stroke(cr);
+        dot(cx - r * 0.42, cy - r * 0.15, r * 0.11);
+        dot(cx + r * 0.42, cy - r * 0.15, r * 0.11);
+        cairo_new_sub_path(cr);
+        cairo_arc_negative(cr, cx - r * 0.13, cy + r * 0.18, r * 0.13, M_PI,
+                           0);
+        cairo_arc_negative(cr, cx + r * 0.13, cy + r * 0.18, r * 0.13, M_PI,
+                           0);
+        cairo_stroke(cr);
     } else if (name == "🕘") {
         circle(cx, cy, r * 0.9);
         cairo_move_to(cr, cx, cy - r * 0.5);
@@ -566,8 +583,7 @@ void Keyboard::layoutBar() {
     double left = Edge;
     add(KeyKind::EmojiPage, "😊", left, tool);
     left += tool;
-    const double kaomojiW = textWidth("(・ω・)", h * 0.36) + h * 0.8;
-    add(KeyKind::KaomojiPage, "(・ω・)", left, kaomojiW);
+    add(KeyKind::KaomojiPage, "", left, tool);
     right -= tool;
     add(KeyKind::Hide, "", right, tool);
     right -= tool;
@@ -1109,8 +1125,7 @@ void Keyboard::paintBar(cairo_t *cr, const Theme &theme, PangoLayout *layout,
             drawIcon(cr, "😊", cx, cy, k.h * 0.26, theme.text);
             break;
         case KeyKind::KaomojiPage:
-            showText(k.label, barH_ * 0.36, k.x, k.y, k.w, k.h,
-                     faded(theme.text, 0.85), true);
+            drawIcon(cr, "kaomoji", cx, cy, k.h * 0.26, theme.text);
             break;
         case KeyKind::More:
             // Three dots.
