@@ -11,6 +11,9 @@ int main(int argc, char **argv) {
     const auto theme = hotaru::Theme::load();
     hotaru::Keyboard kb;
     kb.setFont(theme.font);
+    if (const char *dir = std::getenv("HOTARU_DATA")) {
+        hotaru::Keyboard::loadData(dir);
+    }
     kb.resize(w, h);
     kb.setLanguage(mode != "english");
     kb.setPad(mode == "password");
@@ -31,6 +34,9 @@ int main(int argc, char **argv) {
         kb.setInputMethods({"EN", "中", "酷", "あ"}, 1);
         kb.hold(3 * 16 + 1);
         kb.openPopup(3 * 16 + 1);
+    } else if (mode == "emoji" || mode == "kaomoji") {
+        // Nothing recent yet: opens on the first tab.
+        kb.release(1000 + (mode == "emoji" ? 0 : 1));
     } else if (mode == "enter") {
         kb.hold(3 * 16 + 5);
         kb.openPopup(3 * 16 + 5);
@@ -38,7 +44,7 @@ int main(int argc, char **argv) {
     } else if (mode == "menu") {
         kb.setMenu({{"中文", true}, {"半角", false}, {"汉字", true},
                     {"。，", true}, {"小鹤双拼", true}, {"双拼提示", false}});
-        kb.release(1001); // the menu button, left of hide
+        kb.release(1002); // the menu button, left of hide
     }
     if (argc > 3) {
         kb.hold(std::atoi(argv[3]));

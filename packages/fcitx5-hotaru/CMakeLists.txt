@@ -39,9 +39,12 @@ add_library(hotaru MODULE src/hotaru.cpp src/keyboard.cpp src/theme.cpp
     ${protocol_sources} ${fcitx_wayland_sources})
 target_include_directories(hotaru PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${fcitx_wayland})
 target_link_options(hotaru PRIVATE -Wl,--no-undefined)
+target_compile_definitions(hotaru PRIVATE
+    HOTARU_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/fcitx5/hotaru")
 target_link_libraries(hotaru PRIVATE
     Fcitx5::Core Fcitx5::Module::Wayland PkgConfig::Deps)
 set_target_properties(hotaru PROPERTIES PREFIX "lib")
 
 install(TARGETS hotaru DESTINATION ${CMAKE_INSTALL_LIBDIR}/fcitx5)
 install(FILES hotaru.conf DESTINATION ${CMAKE_INSTALL_DATADIR}/fcitx5/addon)
+install(FILES data/kaomoji.txt DESTINATION ${CMAKE_INSTALL_DATADIR}/fcitx5/hotaru)

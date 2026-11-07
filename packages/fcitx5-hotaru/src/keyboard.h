@@ -23,6 +23,11 @@ enum class KeyKind {
     Candidate,
     PrevPage,
     NextPage,
+    EmojiPage,   // the strip's 😊: the emoji page in place of the keys
+    KaomojiPage, // the strip's (・ω・)
+    Letters,     // back to the keys from a picker page
+    Tab,         // a picker page's category
+    Cell,        // something to put in, on a picker page
 };
 
 struct Key {
@@ -104,6 +109,7 @@ public:
         bool menuOpened = false; // the menu just opened: fill it
         int menuItem = -1;
         int candidate = -1; // index into Candidates::words to pick
+        bool recentChanged = false;
     };
     // Finger lifted on a key. Updates shift, layer and menu state.
     Action release(int key);
@@ -123,6 +129,23 @@ public:
     // Double pinyin: print each key's final in its corner.
     void setHints(bool hints) { hints_ = hints; }
     void setFont(std::string font);
+    // Emoji and kaomoji lists: "tab\titem" lines in emoji.txt and
+    // kaomoji.txt under dir. Read once, shared by every keyboard.
+    static void loadData(const std::string &dir);
+    // Most recent first; the pickers' first tab.
+    void setRecent(std::vector<std::string> emoji,
+                   std::vector<std::string> kaomoji);
+    const std::vector<std::string> &recentEmoji() const { return recent_[0]; }
+    const std::vector<std::string> &recentKaomoji() const {
+        return recent_[1];
+    }
+
+    bool inPicker() const { return page_ != Page::Keys; }
+    bool isCell(int key) const;
+    double cellWidth() const { return cellW_; }
+    // A swipe across the cells: the next or previous screenful, running on
+    // into the neighbouring tab.
+    void turnPickerPage(int direction);
 
 private:
     std::vector<std::vector<Key>> &rows();
@@ -136,6 +159,10 @@ private:
     void layoutKeys();
     void layoutBar();
     void layoutMenu();
+    void layoutPicker();
+    void openPicker(int page);
+    void paintPicker(cairo_t *cr, const Theme &theme, PangoLayout *layout,
+                     PangoFontDescription *font) const;
     void paintBar(cairo_t *cr, const Theme &theme, PangoLayout *layout,
                   PangoFontDescription *font) const;
 
@@ -145,6 +172,15 @@ private:
     std::vector<MenuEntry> menu_;
     Candidates candidates_;
     std::string font_ = "Noto Sans";
+    // Keys, or a picker page in their place: 1 is emoji, 2 kaomoji.
+    enum class Page { Keys, Emoji, Kaomoji };
+    Page page_ = Page::Keys;
+    int category_ = 0, pickerPage_ = 0;
+    std::vector<std::string> shown_; // the open tab's, as it was opened
+    std::vector<Key> pickerKeys_;
+    int columns_ = 1;
+    double cellW_ = 0;
+    std::vector<std::string> recent_[2];
     bool chinese_ = false;
     std::vector<std::string> imLabels_;
     int imCurrent_ = -1;

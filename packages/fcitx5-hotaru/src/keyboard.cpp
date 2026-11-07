@@ -1,6 +1,8 @@
 #include "keyboard.h"
 
 #include <algorithm>
+#include <cstdio>
+#include <cstdlib>
 #include <chrono>
 #include <cmath>
 #include <map>
@@ -15,6 +17,19 @@ constexpr int RowStride = 16;
 // Keys in the strip above the letters, and in the menu.
 constexpr int BarBase = 1000;
 constexpr int MenuBase = 2000;
+constexpr int PickerBase = 3000;
+constexpr int PickerRows = 3;
+constexpr size_t RecentMax = 40;
+
+struct Category {
+    std::string tab;
+    std::vector<std::string> items;
+};
+// [0] emoji, [1] kaomoji; tabs in the order the files give them.
+std::vector<Category> &pickerData(int which) {
+    static std::vector<Category> data[2];
+    return data[which];
+}
 constexpr double Edge = 4;
 
 std::vector<Key> chars(const std::string &s) {
@@ -125,6 +140,150 @@ Keyboard::Keyboard() {
     };
 }
 
+void Keyboard::loadData(const std::string &dir) {
+    const char *files[2] = {"/emoji.txt", "/kaomoji.txt"};
+    for (int which = 0; which < 2; which++) {
+        auto &data = pickerData(which);
+        if (!data.empty()) {
+            continue;
+        }
+        FILE *f = std::fopen((dir + files[which]).c_str(), "r");
+        if (!f) {
+            continue;
+        }
+        char *line = nullptr;
+        size_t size = 0;
+        ssize_t n;
+        while ((n = getline(&line, &size, f)) > 0) {
+            std::string l(line, n);
+            while (!l.empty() && (l.back() == '\n' || l.back() == '\r')) {
+                l.pop_back();
+            }
+            auto tab = l.find('\t');
+            if (l.empty() || l[0] == '#' || tab == std::string::npos) {
+                continue;
+            }
+            auto name = l.substr(0, tab);
+            if (data.empty() || data.back().tab != name) {
+                data.push_back({name, {}});
+            }
+            data.back().items.push_back(l.substr(tab + 1));
+        }
+        std::free(line);
+        std::fclose(f);
+    }
+}
+
+void Keyboard::setRecent(std::vector<std::string> emoji,
+                         std::vector<std::string> kaomoji) {
+    recent_[0] = std::move(emoji);
+    recent_[1] = std::move(kaomoji);
+}
+
+bool Keyboard::isCell(int key) const {
+    const auto *k = find(key);
+    return k && k->kind == KeyKind::Cell;
+}
+
+void Keyboard::openPicker(int page) {
+    page_ = page == 1 ? Page::Emoji : Page::Kaomoji;
+    menuOpen_ = false;
+    // Recent first, unless there's nothing in it yet.
+    category_ = recent_[page - 1].empty() ? 1 : 0;
+    pickerPage_ = 0;
+    layoutPicker();
+}
+
+void Keyboard::turnPickerPage(int direction) {
+    if (!inPicker()) {
+        return;
+    }
+    const int which = page_ == Page::Emoji ? 0 : 1;
+    const int tabs = pickerData(which).size() + 1;
+    const int perPage = columns_ * PickerRows;
+    const int pages =
+        std::max(1, int((shown_.size() + perPage - 1) / perPage));
+    pickerPage_ += direction;
+    if (pickerPage_ >= pages) {
+        if (category_ + 1 >= tabs) {
+            pickerPage_ = pages - 1;
+            return;
+        }
+        category_++;
+        pickerPage_ = 0;
+    } else if (pickerPage_ < 0) {
+        // Back into the previous tab, at its end. Recent is skipped when
+        // empty.
+        if (category_ == 0 || (category_ == 1 && recent_[which].empty())) {
+            pickerPage_ = 0;
+            return;
+        }
+        category_--;
+        pickerPage_ = -1;
+    }
+    layoutPicker();
+}
+
+void Keyboard::layoutPicker() {
+    pickerKeys_.clear();
+    if (!inPicker() || width_ <= 0) {
+        return;
+    }
+    const int which = page_ == Page::Emoji ? 0 : 1;
+    const auto &data = pickerData(which);
+    category_ = std::clamp(category_, 0, int(data.size()));
+    shown_ = category_ == 0 ? recent_[which] : data[category_ - 1].items;
+
+    const double inner = width_ - 2 * Edge;
+    const double top = Edge + barH_;
+    const double rowH = (height_ - Edge - top) / letters_.size();
+    // Emoji in squares; kaomoji are wide.
+    columns_ = std::max(
+        1, int(inner / (which == 0 ? rowH * 1.1 : rowH * 3.4)));
+    cellW_ = inner / columns_;
+    const int perPage = columns_ * PickerRows;
+    const int pages =
+        std::max(1, int((shown_.size() + perPage - 1) / perPage));
+    if (pickerPage_ < 0 || pickerPage_ >= pages) {
+        pickerPage_ = pickerPage_ < 0 ? pages - 1 : 0;
+    }
+    for (int i = 0; i < perPage; i++) {
+        size_t item = pickerPage_ * perPage + i;
+        if (item >= shown_.size()) {
+            break;
+        }
+        Key k{KeyKind::Cell, shown_[item]};
+        k.x = Edge + (i % columns_) * cellW_;
+        k.y = top + (i / columns_) * rowH;
+        k.w = cellW_;
+        k.h = rowH;
+        k.index = item;
+        pickerKeys_.push_back(std::move(k));
+    }
+    // ABC, the tabs, backspace: along the bottom, where the space bar row
+    // was.
+    const double unit = inner / 10;
+    const double y = top + PickerRows * rowH;
+    auto add = [&](KeyKind kind, std::string label, double x, double w,
+                   int index) {
+        Key k{kind, std::move(label)};
+        k.x = x;
+        k.y = y;
+        k.w = w;
+        k.h = rowH;
+        k.index = index;
+        pickerKeys_.push_back(std::move(k));
+    };
+    add(KeyKind::Letters, "ABC", Edge, unit * 1.5, 0);
+    const double tabsX = Edge + unit * 1.5, tabsW = inner - unit * 3;
+    const int tabs = data.size() + 1;
+    for (int i = 0; i < tabs; i++) {
+        add(KeyKind::Tab, i == 0 ? "🕘" : data[i - 1].tab,
+            tabsX + i * tabsW / tabs, tabsW / tabs, i);
+    }
+    add(KeyKind::Backspace, "⌫", Edge + inner - unit * 1.5, unit * 1.5, 0);
+}
+
 std::vector<std::vector<Key>> &Keyboard::rows() {
     return symbols_ ? symbolRows_ : letters_;
 }
@@ -141,6 +300,7 @@ void Keyboard::resize(double width, double height) {
     layoutKeys();
     layoutBar();
     layoutMenu();
+    layoutPicker();
 }
 
 void Keyboard::layoutKeys() {
@@ -284,6 +444,11 @@ void Keyboard::layoutBar() {
     }
 
     // Idle: tools. Hiding keeps the corner Gboard and Windows give it.
+    double left = Edge;
+    add(KeyKind::EmojiPage, "😊", left, tool);
+    left += tool;
+    const double kaomojiW = textWidth("(・ω・)", h * 0.36) + h * 0.8;
+    add(KeyKind::KaomojiPage, "(・ω・)", left, kaomojiW);
     right -= tool;
     add(KeyKind::Hide, "", right, tool);
     right -= tool;
@@ -343,6 +508,10 @@ const Key *Keyboard::find(int key) const {
     if (key < 0) {
         return nullptr;
     }
+    if (key >= PickerBase) {
+        size_t i = key - PickerBase;
+        return i < pickerKeys_.size() ? &pickerKeys_[i] : nullptr;
+    }
     if (key >= MenuBase) {
         size_t i = key - MenuBase;
         return i < menuKeys_.size() ? &menuKeys_[i] : nullptr;
@@ -370,6 +539,15 @@ int Keyboard::keyAt(double x, double y) const {
             const auto &k = bar_[i];
             if (x >= k.x && x < k.x + k.w) {
                 return BarBase + i;
+            }
+        }
+        return -1;
+    }
+    if (inPicker()) {
+        for (size_t i = 0; i < pickerKeys_.size(); i++) {
+            const auto &k = pickerKeys_[i];
+            if (x >= k.x && x < k.x + k.w && y >= k.y && y < k.y + k.h) {
+                return PickerBase + i;
             }
         }
         return -1;
@@ -675,6 +853,41 @@ Keyboard::Action Keyboard::release(int key) {
     case KeyKind::Candidate:
         a.candidate = k->index;
         break;
+    case KeyKind::EmojiPage:
+    case KeyKind::KaomojiPage: {
+        const auto page =
+            k->kind == KeyKind::EmojiPage ? Page::Emoji : Page::Kaomoji;
+        if (page_ == page) {
+            page_ = Page::Keys;
+        } else {
+            openPicker(page == Page::Emoji ? 1 : 2);
+        }
+        layoutBar();
+        break;
+    }
+    case KeyKind::Letters:
+        page_ = Page::Keys;
+        layoutBar();
+        break;
+    case KeyKind::Tab:
+        category_ = k->index;
+        pickerPage_ = 0;
+        layoutPicker();
+        break;
+    case KeyKind::Cell: {
+        a.text = k->label;
+        // The open tab keeps its order until it's opened again, so nothing
+        // jumps under the finger.
+        auto &recent = recent_[page_ == Page::Emoji ? 0 : 1];
+        recent.erase(std::remove(recent.begin(), recent.end(), a.text),
+                     recent.end());
+        recent.insert(recent.begin(), a.text);
+        if (recent.size() > RecentMax) {
+            recent.resize(RecentMax);
+        }
+        a.recentChanged = true;
+        break;
+    }
     case KeyKind::PrevPage:
         if (!offsets_.empty()) {
             offset_ = offsets_.back();
@@ -696,6 +909,7 @@ Keyboard::Action Keyboard::release(int key) {
 void Keyboard::reset() {
     symbols_ = false;
     menuOpen_ = false;
+    page_ = Page::Keys;
     shift_ = Shift::Off;
     shiftHeld_ = shiftUsed_ = false;
     held_.clear();
@@ -727,7 +941,9 @@ void Keyboard::paintBar(cairo_t *cr, const Theme &theme, PangoLayout *layout,
         const auto &k = bar_[i];
         // The open menu's button stays lit, like a held shift.
         if (isHeld(BarBase + i) ||
-            (k.kind == KeyKind::More && menuOpen_)) {
+            (k.kind == KeyKind::More && menuOpen_) ||
+            (k.kind == KeyKind::EmojiPage && page_ == Page::Emoji) ||
+            (k.kind == KeyKind::KaomojiPage && page_ == Page::Kaomoji)) {
             // The look of a selected candidate in fcitx's plasma theme.
             roundedRect(cr, k.x + 2, k.y + 2, k.w - 4, k.h - 4, 5);
             setColor(cr, mix(theme.background, theme.accent, 0.3));
@@ -770,6 +986,14 @@ void Keyboard::paintBar(cairo_t *cr, const Theme &theme, PangoLayout *layout,
             cairo_line_to(cr, cx + r * 1.4, cy - r * 0.6);
             strokeRound(cr, theme.text);
             break;
+        case KeyKind::EmojiPage:
+            showText(k.label, barH_ * 0.46, k.x, k.y, k.w, k.h, theme.text,
+                     true);
+            break;
+        case KeyKind::KaomojiPage:
+            showText(k.label, barH_ * 0.36, k.x, k.y, k.w, k.h,
+                     faded(theme.text, 0.85), true);
+            break;
         case KeyKind::More:
             // Three dots.
             for (int d = -1; d <= 1; d++) {
@@ -808,6 +1032,13 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
         cairo_move_to(cr, x + (w - tw) / 2, y + (h - th) / 2);
         pango_cairo_show_layout(cr, layout);
     };
+
+    if (inPicker()) {
+        paintPicker(cr, theme, layout, font);
+        pango_font_description_free(font);
+        g_object_unref(layout);
+        return;
+    }
 
     if (menuOpen_) {
         for (size_t i = 0; i < menuKeys_.size(); i++) {
@@ -928,6 +1159,97 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
     paintPopup(cr, theme, layout, font);
     pango_font_description_free(font);
     g_object_unref(layout);
+}
+
+void Keyboard::paintPicker(cairo_t *cr, const Theme &theme,
+                           PangoLayout *layout,
+                           PangoFontDescription *font) const {
+    const double gap = 3, radius = 5;
+    auto text = [&](const std::string &s, double size, const Key &k,
+                    const Color &color) {
+        pango_font_description_set_absolute_size(font, size * PANGO_SCALE);
+        pango_layout_set_font_description(layout, font);
+        pango_layout_set_text(layout, s.c_str(), -1);
+        int tw, th;
+        pango_layout_get_pixel_size(layout, &tw, &th);
+        // Kaomoji too wide for their cell shrink rather than spill.
+        if (tw > k.w - 2 * gap - 4) {
+            const double fit = size * (k.w - 2 * gap - 4) / tw;
+            pango_font_description_set_absolute_size(font,
+                                                     fit * PANGO_SCALE);
+            pango_layout_set_font_description(layout, font);
+            pango_layout_get_pixel_size(layout, &tw, &th);
+        }
+        setColor(cr, color);
+        cairo_move_to(cr, k.x + (k.w - tw) / 2, k.y + (k.h - th) / 2);
+        pango_cairo_show_layout(cr, layout);
+    };
+    const bool emoji = page_ == Page::Emoji;
+    if (shown_.empty() && !pickerKeys_.empty()) {
+        Key k{KeyKind::Cell, ""};
+        k.x = Edge;
+        k.y = Edge + barH_;
+        k.w = width_ - 2 * Edge;
+        k.h = pickerKeys_.back().y - k.y;
+        text("用过的会出现在这里", k.h * 0.12, k, faded(theme.text, 0.4));
+    }
+    for (size_t i = 0; i < pickerKeys_.size(); i++) {
+        const auto &k = pickerKeys_[i];
+        const bool down = isHeld(PickerBase + i);
+        switch (k.kind) {
+        case KeyKind::Cell:
+            // Bare, like Gboard's grid; a pressed one gets the key look.
+            if (down) {
+                roundedRect(cr, k.x + gap, k.y + gap, k.w - 2 * gap,
+                            k.h - 2 * gap, radius);
+                setColor(cr, mix(theme.key, theme.accent, 0.3));
+                cairo_fill_preserve(cr);
+                setColor(cr, theme.accent);
+                cairo_set_line_width(cr, 1.5);
+                cairo_stroke(cr);
+            }
+            text(k.label, k.h * (emoji ? 0.52 : 0.36), k, theme.text);
+            break;
+        case KeyKind::Tab: {
+            const bool on = k.index == category_;
+            if (on || down) {
+                roundedRect(cr, k.x + gap, k.y + gap, k.w - 2 * gap,
+                            k.h - 2 * gap, radius);
+                setColor(cr,
+                         mix(theme.keyAlt, theme.accent, down ? 0.3 : 0.2));
+                cairo_fill_preserve(cr);
+                setColor(cr, theme.accent);
+                cairo_set_line_width(cr, 1.5);
+                cairo_stroke(cr);
+            }
+            // Kaomoji tabs are words; emoji tabs are emoji.
+            text(k.label, k.h * (emoji || k.index == 0 ? 0.4 : 0.3), k,
+                 faded(theme.text, on ? 1 : 0.7));
+            break;
+        }
+        default:
+            roundedRect(cr, k.x + gap, k.y + gap, k.w - 2 * gap,
+                        k.h - 2 * gap, radius);
+            setColor(cr, down ? mix(theme.keyAlt, theme.accent, 0.3)
+                              : theme.keyAlt);
+            cairo_fill(cr);
+            text(k.label, k.h * (k.kind == KeyKind::Letters ? 0.3 : 0.46),
+                 k, theme.text);
+            break;
+        }
+    }
+    // Where in the tab: a thin line over the bottom row, one screenful's
+    // share long.
+    const int perPage = columns_ * PickerRows;
+    const int pages =
+        std::max(1, int((shown_.size() + perPage - 1) / perPage));
+    if (pages > 1 && !pickerKeys_.empty()) {
+        const double y = pickerKeys_.back().y - 2;
+        const double w = (width_ - 2 * Edge) / pages;
+        setColor(cr, faded(theme.accent, 0.8));
+        cairo_rectangle(cr, Edge + pickerPage_ * w, y, w, 2);
+        cairo_fill(cr);
+    }
 }
 
 void Keyboard::paintPopup(cairo_t *cr, const Theme &theme,

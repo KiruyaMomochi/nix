@@ -12,6 +12,10 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <cmath>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <functional>
 #include <map>
 #include <memory>
@@ -97,6 +101,41 @@ struct Buffer {
     }
 };
 
+// Recently used emoji and kaomoji, one per line, kept across restarts.
+std::string recentPath(const char *name) {
+    const char *data = std::getenv("XDG_DATA_HOME");
+    const char *home = std::getenv("HOME");
+    std::string dir = data && *data ? data
+                                    : std::string(home ? home : "") +
+                                          "/.local/share";
+    return dir + "/fcitx5/hotaru/" + name;
+}
+
+std::vector<std::string> loadRecent(const char *name) {
+    std::vector<std::string> items;
+    std::ifstream in(recentPath(name));
+    for (std::string line; std::getline(in, line);) {
+        if (!line.empty()) {
+            items.push_back(line);
+        }
+    }
+    return items;
+}
+
+void saveRecent(const std::vector<std::string> &emoji,
+                const std::vector<std::string> &kaomoji) {
+    std::filesystem::create_directories(
+        std::filesystem::path(recentPath("x")).parent_path());
+    for (auto [name, items] :
+         {std::pair{"recent-emoji", &emoji},
+          std::pair{"recent-kaomoji", &kaomoji}}) {
+        std::ofstream out(recentPath(name));
+        for (const auto &item : *items) {
+            out << item << '\n';
+        }
+    }
+}
+
 // What the keyboard shows besides its keys, gathered from fcitx.
 struct State {
     Candidates candidates;
@@ -172,7 +211,7 @@ private:
     // Every finger on the keyboard, by touch id; the mouse is one more.
     struct Finger {
         int key = -1;
-        double x = 0;
+        double x = 0, startX = 0;
         bool done = false;  // already typed: a later finger rolled over it
         bool popup = false; // holding opened the alternates
     };
@@ -252,6 +291,9 @@ private:
 
 Connection::Connection(Addon *addon, wl_display *display)
     : addon_(addon), display_(display) {
+    Keyboard::loadData(HOTARU_DATADIR);
+    keyboard_.setRecent(loadRecent("recent-emoji"),
+                        loadRecent("recent-kaomoji"));
     static const wl_registry_listener listener = {
         .global =
             [](void *data, wl_registry *registry, uint32_t name,
@@ -583,7 +625,7 @@ void Connection::press(int32_t id, double x, double y) {
         finger.done = true;
     }
     const int key = keyboard_.keyAt(x, y);
-    fingers_[id] = {key, x};
+    fingers_[id] = {key, x, x};
     keyboard_.hold(key);
     if (keyboard_.repeats(key)) {
         addon_->type(0xff08);
@@ -606,6 +648,16 @@ void Connection::move(int32_t id, double x, double y) {
     }
     auto &finger = it->second;
     finger.x = x;
+    // A swipe across the emoji: the next or previous screenful. The finger
+    // types nothing after.
+    if (keyboard_.inPicker() && keyboard_.isCell(finger.key) &&
+        std::abs(x - finger.startX) > keyboard_.cellWidth() * 0.6) {
+        keyboard_.unhold(finger.key);
+        keyboard_.turnPickerPage(x < finger.startX ? 1 : -1);
+        finger.done = true;
+        draw();
+        return;
+    }
     if (finger.popup) {
         keyboard_.popupMove(x, y);
         draw();
@@ -711,6 +763,9 @@ void Connection::perform(const Keyboard::Action &action) {
     }
     if (!action.text.empty()) {
         addon_->commitText(action.text);
+    }
+    if (action.recentChanged) {
+        saveRecent(keyboard_.recentEmoji(), keyboard_.recentKaomoji());
     }
     if (action.candidate >= 0) {
         addon_->selectCandidate(action.candidate);
