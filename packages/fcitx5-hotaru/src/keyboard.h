@@ -61,16 +61,37 @@ public:
     // nearest key, so a tap never falls through.
     int keyAt(double x, double y) const;
 
-    // The finger is down on (or has slid onto) a key.
-    void setPressed(int key) { pressed_ = key; }
-    int pressed() const { return pressed_; }
+    // Keys under a finger, drawn lit. Several fingers can be down.
+    void hold(int key);
+    void unhold(int key);
     bool repeats(int key) const;
     bool isSpace(int key) const;
+    bool isShift(int key) const;
+    // A plain key that types on release; a second finger landing types it
+    // at once, so fast two-thumb typing doesn't wait for the first lift.
+    bool isChar(int key) const;
+    // A finger is on shift: letters other fingers type are upper case, and
+    // shift itself doesn't toggle when it lifts.
+    void shiftDown() { shiftHeld_ = true, shiftUsed_ = false; }
+    // The finger slid off shift without lifting.
+    void shiftLeave() { shiftHeld_ = false; }
+
+    // What holding a key gives: a row of characters for letters and
+    // punctuation; Enter has its own long press (a new line).
+    std::vector<std::string> alternates(int key) const;
+    bool longPresses(int key) const;
+    // The row of alternates above a held key; the finger slides along it.
+    void openPopup(int key, std::vector<std::string> items, double x);
+    void popupMove(double x);
+    // What the finger is on, closing the popup.
+    std::string closePopup();
+    bool popupOpen() const { return popup_.key >= 0; }
     // The finger is sliding along space: arrow keys to move the cursor by.
     std::vector<uint32_t> dragSpace(double x);
 
     struct Action {
         uint32_t sym = 0; // keysym to type, or 0
+        std::string text; // or text to put in as is
         bool hide = false;
         bool toggleLanguage = false;
         bool menuOpened = false; // the menu just opened: fill it
@@ -120,7 +141,17 @@ private:
     bool menuOpen_ = false;
     bool hints_ = false;
     Shift shift_ = Shift::Off;
-    int pressed_ = -1;
+    bool shiftHeld_ = false, shiftUsed_ = false;
+    std::vector<int> held_;
+    bool isHeld(int key) const;
+    struct Popup {
+        int key = -1;
+        std::vector<std::string> items;
+        int selected = 0;
+        double x = 0, y = 0, itemW = 0, h = 0;
+    } popup_;
+    void paintPopup(cairo_t *cr, const Theme &theme, PangoLayout *layout,
+                    PangoFontDescription *font) const;
     uint64_t lastShiftTap_ = 0;
     bool dragging_ = false, dragMoved_ = false;
     double dragOrigin_ = 0;

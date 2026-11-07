@@ -22,13 +22,18 @@ int main(int argc, char **argv) {
                           0});
     } else if (mode == "symbols") {
         kb.release(3 * 16); // the layer key
+    } else if (mode == "popup") {
+        kb.setLanguage(true);
+        // Holding the full stop, in the bottom row.
+        kb.hold(3 * 16 + 4);
+        kb.openPopup(3 * 16 + 4, kb.alternates(3 * 16 + 4), 0);
     } else if (mode == "menu") {
         kb.setMenu({{"中文", true}, {"半角", false}, {"汉字", true},
                     {"。，", true}, {"小鹤双拼", true}, {"双拼提示", false}});
         kb.release(1001); // the menu button, left of hide
     }
     if (argc > 3) {
-        kb.setPressed(std::atoi(argv[3]));
+        kb.hold(std::atoi(argv[3]));
     }
     auto *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w * 2, h * 2);
     auto *cr = cairo_create(surface);

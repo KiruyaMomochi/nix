@@ -13,6 +13,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <functional>
+#include <map>
 #include <memory>
 #include <cairo.h>
 #include <wayland-client.h>
@@ -128,11 +129,14 @@ private:
     void show();
     void hide();
     void draw();
-    void press(double x, double y);
-    void move(double x, double y);
-    void lift();
+    void press(int32_t id, double x, double y);
+    void move(int32_t id, double x, double y);
+    void lift(int32_t id);
     void cancel();
-    void startRepeat();
+    void startRepeat(int32_t id);
+    void startLongPress(int32_t id);
+    void longPress(int32_t id);
+    void perform(const Keyboard::Action &action);
 
     Addon *addon_;
     wl_display *display_;
@@ -162,13 +166,23 @@ private:
     bool userHidden_ = false;
     bool focused_ = false;
 
-    int32_t touchId_ = -1;
+    // Every finger on the keyboard, by touch id; the mouse is one more.
+    struct Finger {
+        int key = -1;
+        double x = 0;
+        bool done = false;  // already typed: a later finger rolled over it
+        bool popup = false; // holding opened the alternates
+    };
+    std::map<int32_t, Finger> fingers_;
+    static constexpr int32_t Mouse = -100;
     double pointerX_ = 0, pointerY_ = 0;
     bool pointerDown_ = false;
 
     Keyboard keyboard_;
     Theme theme_;
-    std::unique_ptr<fcitx::EventSourceTime> repeat_;
+    // Backspace repeating and the long press timer, and whose they are.
+    std::unique_ptr<fcitx::EventSourceTime> repeat_, longPress_;
+    int32_t repeatFinger_ = 0, longPressFinger_ = 0;
 };
 
 class Addon : public fcitx::VirtualKeyboardUserInterface {
@@ -194,6 +208,12 @@ public:
     void touched();
     void type(uint32_t sym);
     void selectCandidate(int index);
+    // Put text in as is, past the input method: what's being spelled is
+    // settled first, the way punctuation would.
+    void commitText(const std::string &text);
+    // A line break in the field rather than Enter, which chat apps take as
+    // send.
+    void newline();
     void toggleLanguage();
     void activateMenuItem(int index);
     void refresh();
@@ -344,35 +364,26 @@ void Connection::seatCapabilities(uint32_t caps) {
                    wl_surface *surface, int32_t id, wl_fixed_t x,
                    wl_fixed_t y) {
                     auto *self = static_cast<Connection *>(data);
-                    if (surface != self->rawSurface() || self->touchId_ >= 0) {
+                    if (surface != self->rawSurface()) {
                         return;
                     }
-                    self->touchId_ = id;
-                    self->press(wl_fixed_to_double(x), wl_fixed_to_double(y));
+                    self->press(id, wl_fixed_to_double(x),
+                                wl_fixed_to_double(y));
                 },
             .up =
                 [](void *data, wl_touch *, uint32_t, uint32_t, int32_t id) {
-                    auto *self = static_cast<Connection *>(data);
-                    if (id == self->touchId_) {
-                        self->touchId_ = -1;
-                        self->lift();
-                    }
+                    static_cast<Connection *>(data)->lift(id);
                 },
             .motion =
                 [](void *data, wl_touch *, uint32_t, int32_t id,
                    wl_fixed_t x, wl_fixed_t y) {
-                    auto *self = static_cast<Connection *>(data);
-                    if (id == self->touchId_) {
-                        self->move(wl_fixed_to_double(x),
-                                   wl_fixed_to_double(y));
-                    }
+                    static_cast<Connection *>(data)->move(
+                        id, wl_fixed_to_double(x), wl_fixed_to_double(y));
                 },
             .frame = [](void *, wl_touch *) {},
             .cancel =
                 [](void *data, wl_touch *) {
-                    auto *self = static_cast<Connection *>(data);
-                    self->touchId_ = -1;
-                    self->cancel();
+                    static_cast<Connection *>(data)->cancel();
                 },
             .shape = [](void *, wl_touch *, int32_t, wl_fixed_t,
                         wl_fixed_t) {},
@@ -405,7 +416,7 @@ void Connection::seatCapabilities(uint32_t caps) {
                     self->pointerX_ = wl_fixed_to_double(x);
                     self->pointerY_ = wl_fixed_to_double(y);
                     if (self->pointerDown_) {
-                        self->move(self->pointerX_, self->pointerY_);
+                        self->move(Mouse, self->pointerX_, self->pointerY_);
                     }
                 },
             .button =
@@ -417,10 +428,10 @@ void Connection::seatCapabilities(uint32_t caps) {
                     }
                     if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
                         self->pointerDown_ = true;
-                        self->press(self->pointerX_, self->pointerY_);
+                        self->press(Mouse, self->pointerX_, self->pointerY_);
                     } else if (self->pointerDown_) {
                         self->pointerDown_ = false;
-                        self->lift();
+                        self->lift(Mouse);
                     }
                 },
             .axis = [](void *, wl_pointer *, uint32_t, uint32_t,
@@ -494,7 +505,8 @@ void Connection::show() {
 
 void Connection::hide() {
     repeat_.reset();
-    touchId_ = -1;
+    longPress_.reset();
+    fingers_.clear();
     pointerDown_ = false;
     if (panelSurface_) {
         zwp_input_panel_surface_v1_destroy(panelSurface_);
@@ -545,41 +557,119 @@ void Connection::draw() {
     wl_display_flush(display_);
 }
 
-void Connection::press(double x, double y) {
+void Connection::press(int32_t id, double x, double y) {
     addon_->touched();
+    // While the alternates are up, the finger holding them is the only one
+    // that counts.
+    if (keyboard_.popupOpen()) {
+        return;
+    }
+    // A key still under an earlier finger types now, in the order the
+    // fingers landed. Shift and space are held on purpose, so they stay.
+    for (auto &[other, finger] : fingers_) {
+        if (finger.done || !keyboard_.isChar(finger.key)) {
+            continue;
+        }
+        if (longPressFinger_ == other) {
+            longPress_.reset();
+        }
+        perform(keyboard_.release(finger.key));
+        finger.done = true;
+    }
     const int key = keyboard_.keyAt(x, y);
-    keyboard_.setPressed(key);
+    fingers_[id] = {key, x};
+    keyboard_.hold(key);
     if (keyboard_.repeats(key)) {
         addon_->type(0xff08);
-        startRepeat();
+        startRepeat(id);
     } else if (keyboard_.isSpace(key)) {
         keyboard_.dragSpace(x);
+    } else if (keyboard_.isShift(key)) {
+        keyboard_.shiftDown();
+    }
+    if (keyboard_.longPresses(key)) {
+        startLongPress(id);
     }
     draw();
 }
 
-void Connection::move(double x, double y) {
-    if (keyboard_.isSpace(keyboard_.pressed())) {
+void Connection::move(int32_t id, double x, double y) {
+    auto it = fingers_.find(id);
+    if (it == fingers_.end() || it->second.done) {
+        return;
+    }
+    auto &finger = it->second;
+    finger.x = x;
+    if (finger.popup) {
+        keyboard_.popupMove(x);
+        draw();
+        return;
+    }
+    if (keyboard_.isSpace(finger.key)) {
         // Sliding along space moves the cursor, as on a phone.
         for (auto sym : keyboard_.dragSpace(x)) {
             addon_->type(sym);
         }
         return;
     }
-    const int key = keyboard_.keyAt(x, y);
-    if (key == keyboard_.pressed()) {
+    int key = keyboard_.keyAt(x, y);
+    // Sliding off backspace stops deleting, and lands on nothing.
+    if (keyboard_.repeats(key) && key != finger.key) {
+        key = -1;
+    }
+    if (key == finger.key) {
         return;
     }
     // Sliding to the neighbouring key picks that one instead.
-    // Sliding off backspace stops deleting.
-    repeat_.reset();
-    keyboard_.setPressed(keyboard_.repeats(key) ? -1 : key);
+    if (repeatFinger_ == id) {
+        repeat_.reset();
+    }
+    if (longPressFinger_ == id) {
+        longPress_.reset();
+    }
+    if (keyboard_.isShift(finger.key)) {
+        keyboard_.shiftLeave();
+    }
+    keyboard_.unhold(finger.key);
+    finger.key = key;
+    keyboard_.hold(key);
+    if (keyboard_.longPresses(key)) {
+        startLongPress(id);
+    }
     draw();
 }
 
-void Connection::lift() {
-    repeat_.reset();
-    const auto action = keyboard_.release(keyboard_.pressed());
+void Connection::lift(int32_t id) {
+    auto it = fingers_.find(id);
+    if (it == fingers_.end()) {
+        return;
+    }
+    const auto finger = it->second;
+    fingers_.erase(it);
+    if (repeatFinger_ == id) {
+        repeat_.reset();
+    }
+    if (longPressFinger_ == id) {
+        longPress_.reset();
+    }
+    keyboard_.unhold(finger.key);
+    if (finger.done) {
+        draw();
+        return;
+    }
+    if (finger.popup) {
+        auto text = keyboard_.closePopup();
+        // One ASCII character types like the key it stands for, so rime
+        // still turns it full width; anything else goes in as it is.
+        if (text.size() == 1) {
+            addon_->type(static_cast<unsigned char>(text[0]));
+        } else {
+            addon_->commitText(text);
+        }
+        draw();
+        return;
+    }
+    const auto action = keyboard_.release(finger.key);
     if (action.hide) {
         // Unmapping is all it takes, as in plasma-keyboard: KWin drops a
         // panel without a buffer. Telling KWin to deactivate doesn't stick
@@ -587,10 +677,18 @@ void Connection::lift() {
         userHide();
         return;
     }
+    perform(action);
+    draw();
+}
+
+void Connection::perform(const Keyboard::Action &action) {
     // Each of these may change what the strip shows; fcitx calls back into
     // update(), which redraws.
     if (action.sym) {
         addon_->type(action.sym);
+    }
+    if (!action.text.empty()) {
+        addon_->commitText(action.text);
     }
     if (action.candidate >= 0) {
         addon_->selectCandidate(action.candidate);
@@ -604,18 +702,24 @@ void Connection::lift() {
     if (action.menuOpened) {
         addon_->refresh();
     }
-    draw();
 }
 
 void Connection::cancel() {
     repeat_.reset();
-    keyboard_.setPressed(-1);
+    longPress_.reset();
+    for (auto &[id, finger] : fingers_) {
+        keyboard_.unhold(finger.key);
+    }
+    fingers_.clear();
+    keyboard_.closePopup();
     keyboard_.release(-1);
+    keyboard_.shiftLeave();
     draw();
 }
 
-void Connection::startRepeat() {
+void Connection::startRepeat(int32_t id) {
     auto &loop = addon_->instance()->eventLoop();
+    repeatFinger_ = id;
     repeat_ = loop.addTimeEvent(
         CLOCK_MONOTONIC, fcitx::now(CLOCK_MONOTONIC) + 400000, 0,
         [this](fcitx::EventSourceTime *source, uint64_t) {
@@ -624,6 +728,37 @@ void Connection::startRepeat() {
             source->setOneShot();
             return true;
         });
+}
+
+void Connection::startLongPress(int32_t id) {
+    auto &loop = addon_->instance()->eventLoop();
+    longPressFinger_ = id;
+    // Gboard's default: long enough not to catch a slow tap.
+    longPress_ = loop.addTimeEvent(
+        CLOCK_MONOTONIC, fcitx::now(CLOCK_MONOTONIC) + 350000, 0,
+        [this, id](fcitx::EventSourceTime *, uint64_t) {
+            longPress(id);
+            return true;
+        });
+}
+
+void Connection::longPress(int32_t id) {
+    auto it = fingers_.find(id);
+    if (it == fingers_.end() || it->second.done) {
+        return;
+    }
+    auto &finger = it->second;
+    if (!keyboard_.isChar(finger.key)) {
+        // Enter: a new line in the text instead of sending it. Done now,
+        // so the finger feels it land; lifting adds nothing more.
+        addon_->newline();
+        finger.done = true;
+        return;
+    }
+    keyboard_.openPopup(finger.key, keyboard_.alternates(finger.key),
+                        finger.x);
+    finger.popup = true;
+    draw();
 }
 
 Addon::Addon(fcitx::Instance *instance) : instance_(instance) {
@@ -662,6 +797,17 @@ Addon::Addon(fcitx::Instance *instance) : instance_(instance) {
         fcitx::EventType::InputContextFocusIn,
         fcitx::EventWatcherPhase::PreInputMethod,
         [this](fcitx::Event &) { setFocused(true); }));
+    // What each field says it is, to see which ones admit to taking
+    // several lines.
+    events_.push_back(instance_->watchEvent(
+        fcitx::EventType::InputContextCapabilityChanged,
+        fcitx::EventWatcherPhase::PostInputMethod, [](fcitx::Event &event) {
+            auto *ic = static_cast<fcitx::InputContextEvent &>(event)
+                           .inputContext();
+            FCITX_LOGC(::hotaru::log, Info)
+                << "field " << ic->program() << " caps 0x" << std::hex
+                << ic->capabilityFlags().toInteger();
+        }));
     events_.push_back(instance_->watchEvent(
         fcitx::EventType::InputContextFocusOut,
         fcitx::EventWatcherPhase::PostInputMethod, [this](fcitx::Event &) {
@@ -904,6 +1050,36 @@ void Addon::selectCandidate(int index) {
         }
     } catch (...) {
     }
+}
+
+void Addon::commitText(const std::string &text) {
+    auto *ic = instance_->lastFocusedInputContext();
+    if (!ic) {
+        return;
+    }
+    if (candidateList_ && !state_.candidates.words.empty()) {
+        selectCandidate(state_.candidates.cursor);
+    }
+    ic->commitString(text);
+}
+
+void Addon::newline() {
+    auto *ic = instance_->lastFocusedInputContext();
+    if (!ic) {
+        return;
+    }
+    // A field that says it takes several lines gets the line break as
+    // text, which no app reads as send. The rest get Shift+Enter, the
+    // usual soft break.
+    if (ic->capabilityFlags().test(fcitx::CapabilityFlag::Multiline)) {
+        commitText("\n");
+        return;
+    }
+    if (candidateList_ && !state_.candidates.words.empty()) {
+        selectCandidate(state_.candidates.cursor);
+    }
+    ic->forwardKey(fcitx::Key(FcitxKey_Return, fcitx::KeyState::Shift));
+    ic->forwardKey(fcitx::Key(FcitxKey_Return, fcitx::KeyState::Shift), true);
 }
 
 void Addon::toggleLanguage() {

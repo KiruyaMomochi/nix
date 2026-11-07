@@ -297,8 +297,13 @@ void Keyboard::setCandidates(Candidates candidates) {
         offsets_.clear();
     }
     candidates_ = std::move(candidates);
-    if (pressed_ >= BarBase) {
-        pressed_ = -1;
+    if (std::any_of(held_.begin(), held_.end(),
+                    [](int k) { return k >= BarBase && k < MenuBase; })) {
+        held_.erase(std::remove_if(held_.begin(), held_.end(),
+                                   [](int k) {
+                                       return k >= BarBase && k < MenuBase;
+                                   }),
+                    held_.end());
     }
     layoutBar();
 }
@@ -402,8 +407,8 @@ std::string Keyboard::label(const Key &key) const {
             return "。";
         }
     }
-    if (key.kind == KeyKind::Char && shift_ != Shift::Off && !symbols_ &&
-        !key.pad) {
+    if (key.kind == KeyKind::Char && (shift_ != Shift::Off || shiftHeld_) &&
+        !symbols_ && !key.pad) {
         std::string s = key.label;
         std::transform(s.begin(), s.end(), s.begin(), ::toupper);
         return s;
@@ -419,6 +424,111 @@ bool Keyboard::repeats(int key) const {
 bool Keyboard::isSpace(int key) const {
     const auto *k = find(key);
     return k && k->kind == KeyKind::Space;
+}
+
+bool Keyboard::isShift(int key) const {
+    const auto *k = find(key);
+    return k && k->kind == KeyKind::Shift;
+}
+
+bool Keyboard::isChar(int key) const {
+    const auto *k = find(key);
+    return k && k->kind == KeyKind::Char;
+}
+
+void Keyboard::hold(int key) {
+    if (key >= 0) {
+        held_.push_back(key);
+    }
+}
+
+void Keyboard::unhold(int key) {
+    auto it = std::find(held_.begin(), held_.end(), key);
+    if (it != held_.end()) {
+        held_.erase(it);
+    }
+}
+
+bool Keyboard::isHeld(int key) const {
+    return std::find(held_.begin(), held_.end(), key) != held_.end();
+}
+
+std::vector<std::string> Keyboard::alternates(int key) const {
+    const auto *k = find(key);
+    if (!k || k->kind != KeyKind::Char || k->pad || symbols_) {
+        return {};
+    }
+    // Gboard's: digits along the top row, its symbols under the rest, so
+    // the thumbs already know where they are. ASCII goes through the input
+    // method like a typed key, so rime still makes ! into ！.
+    static const std::map<std::string, std::vector<std::string>> latin = {
+        {"q", {"1"}}, {"w", {"2"}}, {"e", {"3"}}, {"r", {"4"}},
+        {"t", {"5"}}, {"y", {"6"}}, {"u", {"7"}}, {"i", {"8"}},
+        {"o", {"9"}}, {"p", {"0"}}, {"a", {"@"}}, {"s", {"#"}},
+        {"d", {"$"}}, {"f", {"_"}}, {"g", {"&"}}, {"h", {"-"}},
+        {"j", {"+"}}, {"k", {"("}}, {"l", {")"}}, {"z", {"*"}},
+        {"x", {"\""}}, {"c", {"'"}}, {"v", {":"}}, {"b", {";"}},
+        {"n", {"!"}}, {"m", {"?"}},
+    };
+    static const std::map<std::string, std::vector<std::string>> chinese = {
+        {".", {"……", "…", "·", "～"}},
+        {",", {"、", "；", "：", "\""}},
+    };
+    static const std::map<std::string, std::vector<std::string>> english = {
+        {".", {"…", "~", "·"}},
+        {",", {";", ":", "'"}},
+    };
+    for (const auto *table : {&latin, chinese_ ? &chinese : &english}) {
+        auto it = table->find(k->label);
+        if (it != table->end()) {
+            return it->second;
+        }
+    }
+    return {};
+}
+
+bool Keyboard::longPresses(int key) const {
+    const auto *k = find(key);
+    if (!k) {
+        return false;
+    }
+    return (k->kind == KeyKind::Enter && !k->pad) || !alternates(key).empty();
+}
+
+void Keyboard::openPopup(int key, std::vector<std::string> items, double x) {
+    const auto *k = find(key);
+    if (!k || items.empty()) {
+        return;
+    }
+    popup_.key = key;
+    popup_.items = std::move(items);
+    popup_.selected = 0;
+    popup_.itemW = k->w;
+    popup_.h = k->h;
+    // Above the key, starting over it and running right, pulled back in at
+    // the edges. The top row's sits over the strip.
+    const double total = popup_.itemW * popup_.items.size();
+    popup_.x = std::clamp(k->x, Edge, width_ - Edge - total);
+    popup_.y = std::max(Edge, k->y - k->h);
+    popupMove(x);
+}
+
+void Keyboard::popupMove(double x) {
+    if (popup_.key < 0) {
+        return;
+    }
+    const int n = popup_.items.size();
+    popup_.selected =
+        std::clamp(int(std::floor((x - popup_.x) / popup_.itemW)), 0, n - 1);
+}
+
+std::string Keyboard::closePopup() {
+    std::string text;
+    if (popup_.key >= 0) {
+        text = popup_.items[popup_.selected];
+    }
+    popup_ = {};
+    return text;
 }
 
 std::vector<uint32_t> Keyboard::dragSpace(double x) {
@@ -446,23 +556,30 @@ std::vector<uint32_t> Keyboard::dragSpace(double x) {
 }
 
 Keyboard::Action Keyboard::release(int key) {
-    pressed_ = -1;
-    const bool dragged = dragging_ && dragMoved_;
-    dragging_ = dragMoved_ = false;
     const auto *k = find(key);
     Action a;
     if (!k) {
+        dragging_ = dragMoved_ = false;
         return a;
+    }
+    bool dragged = false;
+    if (k->kind == KeyKind::Space) {
+        dragged = dragging_ && dragMoved_;
+        dragging_ = dragMoved_ = false;
     }
     switch (k->kind) {
     case KeyKind::Char: {
         // Send the key itself, not what's printed on it: rime decides
         // whether ',' becomes '，'.
         auto s = k->label;
-        if (shift_ != Shift::Off && !symbols_ && !k->pad) {
+        const bool upper = shift_ != Shift::Off || shiftHeld_;
+        if (upper && !symbols_ && !k->pad) {
             std::transform(s.begin(), s.end(), s.begin(), ::toupper);
         }
-        if (shift_ == Shift::Once) {
+        if (shiftHeld_) {
+            // Held like a real shift: it leaves no state behind.
+            shiftUsed_ = true;
+        } else if (shift_ == Shift::Once) {
             shift_ = Shift::Off;
         }
         a.sym = static_cast<unsigned char>(s[0]);
@@ -479,6 +596,11 @@ Keyboard::Action Keyboard::release(int key) {
         // Sent on press, and repeated while held.
         break;
     case KeyKind::Shift: {
+        const bool chord = shiftUsed_;
+        shiftHeld_ = shiftUsed_ = false;
+        if (chord) {
+            break;
+        }
         auto now = nowMs();
         if (shift_ == Shift::Once && now - lastShiftTap_ < 350) {
             shift_ = Shift::Locked;
@@ -530,7 +652,9 @@ void Keyboard::reset() {
     symbols_ = false;
     menuOpen_ = false;
     shift_ = Shift::Off;
-    pressed_ = -1;
+    shiftHeld_ = shiftUsed_ = false;
+    held_.clear();
+    popup_ = {};
     dragging_ = dragMoved_ = false;
 }
 
@@ -557,7 +681,7 @@ void Keyboard::paintBar(cairo_t *cr, const Theme &theme, PangoLayout *layout,
     for (size_t i = 0; i < bar_.size(); i++) {
         const auto &k = bar_[i];
         // The open menu's button stays lit, like a held shift.
-        if (pressed_ == int(BarBase + i) ||
+        if (isHeld(BarBase + i) ||
             (k.kind == KeyKind::More && menuOpen_)) {
             // The look of a selected candidate in fcitx's plasma theme.
             roundedRect(cr, k.x + 2, k.y + 2, k.w - 4, k.h - 4, 5);
@@ -643,7 +767,7 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
     if (menuOpen_) {
         for (size_t i = 0; i < menuKeys_.size(); i++) {
             const auto &k = menuKeys_[i];
-            const bool down = pressed_ == int(MenuBase + i);
+            const bool down = isHeld(MenuBase + i);
             // Switches that are on look like a held shift.
             const bool on = menu_[i].checked;
             Color fill = theme.key;
@@ -674,14 +798,15 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
             if (!visible(k)) {
                 continue;
             }
-            const bool down = pressed_ == int(r * RowStride + c);
+            const bool down = isHeld(r * RowStride + c);
             const bool special = k.kind != KeyKind::Char &&
                                  k.kind != KeyKind::Space;
             Color fill = special ? theme.keyAlt : theme.key;
             // Pressed keys and an active shift look like the selected
             // candidate in fcitx's plasma theme: accent-tinted, outlined.
-            const bool lit = down || (k.kind == KeyKind::Shift &&
-                                      shift_ != Shift::Off);
+            const bool lit =
+                down || (k.kind == KeyKind::Shift &&
+                         (shift_ != Shift::Off || shiftHeld_));
             const bool locked = k.kind == KeyKind::Shift &&
                                 shift_ == Shift::Locked;
             // Only the number pad's Enter is green: it's the one that
@@ -714,8 +839,28 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
             drawText(text, k.h * (small ? 0.30 : 0.46), k.x, k.y, k.w, k.h,
                      theme.text);
 
-            if (hints_ && chinese_ && !symbols_ && !k.pad &&
-                k.kind == KeyKind::Char) {
+            // What holding gives, faint in the corner, as Gboard prints the
+            // digits on its top row. The pinyin hints take the corner when
+            // they're on.
+            const bool pinyinHint = hints_ && chinese_ && !symbols_ &&
+                                    !k.pad && k.kind == KeyKind::Char &&
+                                    flypyFinals().count(k.label[0]);
+            if (!pinyinHint) {
+                const auto alt = alternates(r * RowStride + c);
+                if (!alt.empty()) {
+                    pango_font_description_set_absolute_size(
+                        font, k.h * 0.2 * PANGO_SCALE);
+                    pango_layout_set_font_description(layout, font);
+                    pango_layout_set_text(layout, alt[0].c_str(), -1);
+                    int tw, th;
+                    pango_layout_get_pixel_size(layout, &tw, &th);
+                    setColor(cr, faded(theme.text, 0.4));
+                    cairo_move_to(cr, k.x + k.w - gap - tw - 4,
+                                  k.y + gap + 2);
+                    pango_cairo_show_layout(cr, layout);
+                }
+            }
+            if (pinyinHint) {
                 auto it = flypyFinals().find(k.label[0]);
                 if (it != flypyFinals().end()) {
                     // Top right corner, small and faint.
@@ -733,8 +878,51 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
             }
         }
     }
+    paintPopup(cr, theme, layout, font);
     pango_font_description_free(font);
     g_object_unref(layout);
+}
+
+void Keyboard::paintPopup(cairo_t *cr, const Theme &theme,
+                          PangoLayout *layout,
+                          PangoFontDescription *font) const {
+    if (popup_.key < 0) {
+        return;
+    }
+    const double w = popup_.itemW * popup_.items.size();
+    // A raised card: the key colour, a hairline, a soft shadow below.
+    roundedRect(cr, popup_.x + 1, popup_.y + 3, w, popup_.h, 7);
+    setColor(cr, faded(Color{0, 0, 0}, 0.25));
+    cairo_fill(cr);
+    roundedRect(cr, popup_.x, popup_.y, w, popup_.h, 7);
+    setColor(cr, theme.key);
+    cairo_fill_preserve(cr);
+    setColor(cr, faded(theme.text, 0.2));
+    cairo_set_line_width(cr, 1);
+    cairo_stroke(cr);
+    for (size_t i = 0; i < popup_.items.size(); i++) {
+        const double x = popup_.x + i * popup_.itemW;
+        const bool selected = int(i) == popup_.selected;
+        if (selected) {
+            roundedRect(cr, x + 3, popup_.y + 3, popup_.itemW - 6,
+                        popup_.h - 6, 5);
+            setColor(cr, mix(theme.key, theme.accent, 0.3));
+            cairo_fill_preserve(cr);
+            setColor(cr, theme.accent);
+            cairo_set_line_width(cr, 1.5);
+            cairo_stroke(cr);
+        }
+        pango_font_description_set_absolute_size(
+            font, popup_.h * 0.42 * PANGO_SCALE);
+        pango_layout_set_font_description(layout, font);
+        pango_layout_set_text(layout, popup_.items[i].c_str(), -1);
+        int tw, th;
+        pango_layout_get_pixel_size(layout, &tw, &th);
+        setColor(cr, theme.text);
+        cairo_move_to(cr, x + (popup_.itemW - tw) / 2,
+                      popup_.y + (popup_.h - th) / 2);
+        pango_cairo_show_layout(cr, layout);
+    }
 }
 
 } // namespace hotaru
