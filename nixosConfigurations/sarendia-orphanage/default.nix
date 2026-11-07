@@ -4,7 +4,7 @@
     ./hardware-configuration.nix
     ./fan.nix
     ./fingerprint.nix
-    ./skvirt.nix
+    ./hotaru.nix
     ./tablet-mode.nix
     inputs.nixos-hardware.nixosModules.gpd-pocket-4
   ];
