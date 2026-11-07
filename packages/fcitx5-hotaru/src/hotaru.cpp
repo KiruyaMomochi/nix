@@ -32,6 +32,7 @@
 #include <fcitx/event.h>
 #include <fcitx/inputcontext.h>
 #include <fcitx/inputmethodentry.h>
+#include <fcitx/inputmethodengine.h>
 #include <fcitx/inputmethodmanager.h>
 #include <fcitx/inputpanel.h>
 #include <fcitx/instance.h>
@@ -144,6 +145,7 @@ struct State {
     int imCurrent = -1;
     bool pad = false;
     bool hints = false;
+    bool zhuyin = false;
     std::vector<MenuEntry> menu;
 };
 
@@ -268,10 +270,22 @@ private:
     void setFocused(bool focused);
     // The switches fcitx would list under Ctrl+~ / the tray icon.
     std::vector<fcitx::Action *> menuActions(fcitx::InputContext *ic);
+    // rime's schemas, from its menu in the status area: name and action.
+    // Only there while rime is the input method.
+    std::vector<std::pair<std::string, fcitx::Action *>>
+    rimeSchemas(fcitx::InputContext *ic);
 
     fcitx::Instance *instance_;
     State state_;
     bool hints_ = false;
+    // What each label in the language key's row switches to: an input
+    // method, and for rime which schema. rime's schema names are kept from
+    // the last time it was on, so they still show while on EN.
+    struct Choice {
+        std::string im, schema;
+    };
+    std::vector<Choice> choices_;
+    std::vector<std::string> rimeSchemaNames_;
     // Candidate list the strip's words came from, and how to reach each
     // word in it: through the whole list when it allows, else the page.
     std::shared_ptr<fcitx::CandidateList> candidateList_;
@@ -526,6 +540,7 @@ void Connection::setState(const State &state) {
     keyboard_.setLanguage(state.chinese);
     keyboard_.setInputMethods(state.imLabels, state.imCurrent);
     keyboard_.setPad(state.pad);
+    keyboard_.setZhuyin(state.zhuyin);
     keyboard_.setHints(state.hints);
     keyboard_.setMenu(state.menu);
     draw();
@@ -1009,11 +1024,44 @@ void Addon::refresh() {
     if (ic) {
         const auto *entry = instance_->inputMethodEntry(ic);
         state.chinese = entry && !entry->isKeyboard();
+        const bool rime = entry && entry->uniqueName() == "rime";
+        // rime's schema now, by its name, e.g. 注音·臺灣正體.
+        std::string schema;
+        if (rime) {
+            if (auto *engine = instance_->inputMethodEngine(ic)) {
+                schema = engine->subMode(*entry, *ic);
+            }
+            auto schemas = rimeSchemas(ic);
+            if (!schemas.empty()) {
+                rimeSchemaNames_.clear();
+                for (const auto &[name, action] : schemas) {
+                    rimeSchemaNames_.push_back(name);
+                }
+            }
+        }
+        state.zhuyin = schema.find("注音") != std::string::npos;
+        choices_.clear();
         const auto &group = instance_->inputMethodManager().currentGroup();
         for (const auto &item : group.inputMethodList()) {
             const auto *e =
                 instance_->inputMethodManager().entry(item.name());
             if (!e) {
+                continue;
+            }
+            if (e->uniqueName() == "rime" && !rimeSchemaNames_.empty()) {
+                // One label per schema: 小鶴雙拼 is 中, 注音 is 注.
+                for (const auto &name : rimeSchemaNames_) {
+                    if (e == entry && name == schema) {
+                        state.imCurrent = state.imLabels.size();
+                    }
+                    state.imLabels.push_back(
+                        name.find("注音") != std::string::npos ? "注" : "中");
+                    choices_.push_back({e->uniqueName(), name});
+                }
+                if (e == entry && state.imCurrent < 0) {
+                    // On rime's own English, or a schema we didn't list.
+                    state.imCurrent = state.imLabels.size() - 1;
+                }
                 continue;
             }
             if (e == entry) {
@@ -1026,6 +1074,7 @@ void Addon::refresh() {
             state.imLabels.push_back(e->isKeyboard()    ? "EN"
                                      : it != names.end() ? it->second
                                                          : e->label());
+            choices_.push_back({e->uniqueName(), ""});
         }
         // Passwords and digits get the number pad. KDE's lock screen marks
         // its field only as sensitive, not as a password.
@@ -1042,11 +1091,11 @@ void Addon::refresh() {
                 {action->shortText(ic),
                  action->isCheckable() && action->isChecked(ic)});
         }
-        if (state.chinese) {
+        if (state.chinese && !state.zhuyin) {
             state.menu.push_back({"双拼提示", hints_});
         }
         // The hints are 小鶴雙拼's; other input methods have their own keys.
-        state.hints = hints_ && entry && entry->uniqueName() == "rime";
+        state.hints = hints_ && rime && !state.zhuyin;
 
         // Candidates only while fcitx has handed them to us; in physical
         // keyboard mode they're classicui's.
@@ -1158,14 +1207,52 @@ void Addon::newline() {
     commitText("\n");
 }
 
+std::vector<std::pair<std::string, fcitx::Action *>>
+Addon::rimeSchemas(fcitx::InputContext *ic) {
+    std::vector<std::pair<std::string, fcitx::Action *>> result;
+    for (auto *action : ic->statusArea().allActions()) {
+        auto *menu = action->menu();
+        if (action->name() != "fcitx-rime-im" || !menu) {
+            continue;
+        }
+        bool first = true;
+        for (auto *schema : menu->actions()) {
+            if (schema->isSeparator()) {
+                continue;
+            }
+            // Latin Mode, rime's own English, heads the list.
+            if (first) {
+                first = false;
+                continue;
+            }
+            // Deploy and sync sit under the same menu, after a separator.
+            const auto &name = schema->name();
+            if (name == "fcitx-rime-deploy" || name == "fcitx-rime-sync") {
+                continue;
+            }
+            result.emplace_back(schema->shortText(ic), schema);
+        }
+    }
+    return result;
+}
+
 void Addon::switchInputMethod(int index) {
     auto *ic = instance_->lastFocusedInputContext();
-    const auto &list =
-        instance_->inputMethodManager().currentGroup().inputMethodList();
-    if (!ic || index < 0 || size_t(index) >= list.size()) {
+    if (!ic || index < 0 || size_t(index) >= choices_.size()) {
         return;
     }
-    instance_->setCurrentInputMethod(ic, list[index].name(), false);
+    const auto choice = choices_[index];
+    instance_->setCurrentInputMethod(ic, choice.im, false);
+    if (choice.schema.empty()) {
+        return;
+    }
+    for (const auto &[name, action] : rimeSchemas(ic)) {
+        if (name == choice.schema) {
+            action->activate(ic);
+            break;
+        }
+    }
+    refresh();
 }
 
 void Addon::toggleLanguage() {

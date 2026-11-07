@@ -41,6 +41,12 @@ int main(int argc, char **argv) {
         kb.hold(3 * 16 + 5);
         kb.openPopup(3 * 16 + 5);
         kb.popupMove(1e9, 0); // slid up into it
+    } else if (mode == "zhuyin") {
+        kb.setInputMethods({"EN", "中", "注", "あ"}, 2);
+        kb.setZhuyin(true);
+        kb.setCandidates({"ㄋㄧˇ ㄏㄠˇ",
+                          {"你好", "妳好", "擬好", "你", "妳", "擬", "禰"},
+                          0});
     } else if (mode == "menu") {
         kb.setMenu({{"中文", true}, {"半角", false}, {"汉字", true},
                     {"。，", true}, {"小鹤双拼", true}, {"双拼提示", false}});

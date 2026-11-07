@@ -35,6 +35,7 @@ struct Key {
     std::string label;      // letters: the lower-case form
     double width = 1;       // in units of its block's key width
     bool pad = false;       // in the number pad on the right
+    std::string face;       // printed instead of label: ㄅ on the 1 key
     double x = 0, y = 0, w = 0, h = 0;
     int index = 0;          // candidates, menu items: which one
 };
@@ -125,6 +126,8 @@ public:
     // Number pad beside the letters: for passwords and digits. Elsewhere it
     // only comes out on the symbols page, and letters get the full width.
     void setPad(bool pad);
+    // rime on its 注音 schema: the 大千 layout, ㄅㄆㄇㄈ on the keys.
+    void setZhuyin(bool zhuyin) { zhuyin_ = zhuyin; }
     void setMenu(std::vector<MenuEntry> menu);
     // Double pinyin: print each key's final in its corner.
     void setHints(bool hints) { hints_ = hints; }
@@ -167,7 +170,8 @@ private:
                   PangoFontDescription *font) const;
 
     enum class Shift { Off, Once, Locked };
-    std::vector<std::vector<Key>> letters_, symbolRows_;
+    std::vector<std::vector<Key>> letters_, symbolRows_, zhuyinRows_;
+    bool zhuyin_ = false;
     std::vector<Key> bar_, menuKeys_;
     std::vector<MenuEntry> menu_;
     Candidates candidates_;

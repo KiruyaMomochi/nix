@@ -291,6 +291,33 @@ Keyboard::Keyboard() {
                    enter},
                pad4),
     };
+    // 大千, as Gboard lays it out: four rows of ten, ㄦ by the space bar,
+    // no shift. Each key sends what rime's bopomofo schema reads as that
+    // symbol, the key it sits on in 大千.
+    auto zhuyin = [](const char *keys, const char *faces) {
+        Row row;
+        std::string f = faces;
+        size_t at = 0;
+        for (const char *k = keys; *k; k++) {
+            Key key{KeyKind::Char, std::string(1, *k)};
+            const size_t next = f.find(' ', at);
+            key.face = f.substr(at, next - at);
+            at = next == std::string::npos ? f.size() : next + 1;
+            row.push_back(std::move(key));
+        }
+        return row;
+    };
+    auto er = Key{KeyKind::Char, "-"};
+    er.face = "ㄦ";
+    zhuyinRows_ = {
+        zhuyin("1234567890", "ㄅ ㄉ ˇ ˋ ㄓ ˊ ˙ ㄚ ㄞ ㄢ"),
+        zhuyin("qwertyuiop", "ㄆ ㄊ ㄍ ㄐ ㄔ ㄗ ㄧ ㄛ ㄟ ㄣ"),
+        zhuyin("asdfghjkl;", "ㄇ ㄋ ㄎ ㄑ ㄕ ㄘ ㄨ ㄜ ㄠ ㄤ"),
+        zhuyin("zxcvbnm,./", "ㄈ ㄌ ㄏ ㄒ ㄖ ㄙ ㄩ ㄝ ㄡ ㄥ"),
+        // , and . are ㄝ and ㄡ here, so the comma key puts in ， itself.
+        Row{Key{KeyKind::Layer, "#+=", 1.5}, lang, Key{KeyKind::Char, "，"},
+            space, er, back, enter},
+    };
 }
 
 void Keyboard::loadData(const std::string &dir) {
@@ -440,11 +467,11 @@ void Keyboard::layoutPicker() {
 }
 
 std::vector<std::vector<Key>> &Keyboard::rows() {
-    return symbols_ ? symbolRows_ : letters_;
+    return symbols_ ? symbolRows_ : zhuyin_ ? zhuyinRows_ : letters_;
 }
 
 const std::vector<std::vector<Key>> &Keyboard::rows() const {
-    return symbols_ ? symbolRows_ : letters_;
+    return symbols_ ? symbolRows_ : zhuyin_ ? zhuyinRows_ : letters_;
 }
 
 void Keyboard::resize(double width, double height) {
@@ -464,12 +491,13 @@ void Keyboard::layoutKeys() {
     }
     const double inner = width_ - 2 * Edge;
     const double top = Edge + barH_;
-    const double rowH = (height_ - Edge - top) / letters_.size();
     // With the pad: ten letter units, a gap, three pad units. Without it the
     // letters take the whole width, for two thumbs.
     const double padUnit = inner * 0.27 / 3;
     const double padX = Edge + inner - 3 * padUnit;
-    for (auto *layer : {&letters_, &symbolRows_}) {
+    for (auto *layer : {&letters_, &symbolRows_, &zhuyinRows_}) {
+        // 注音 has a row more than the others; its keys are that much lower.
+        const double rowH = (height_ - Edge - top) / layer->size();
         const bool withPad = layer == &symbolRows_ || pad_;
         const double unit = withPad ? inner * 0.70 / 10 : inner / 10;
         if (layer == &letters_) {
@@ -754,6 +782,9 @@ int Keyboard::keyAt(double x, double y) const {
 }
 
 std::string Keyboard::label(const Key &key) const {
+    if (!key.face.empty()) {
+        return key.face;
+    }
     if (key.kind == KeyKind::Lang) {
         if (imCurrent_ >= 0 && size_t(imCurrent_) < imLabels_.size()) {
             return imLabels_[imCurrent_];
@@ -835,6 +866,11 @@ std::vector<std::string> Keyboard::alternates(int key, int *anchor) const {
     if (!k || k->kind != KeyKind::Char || k->pad || symbols_) {
         return {};
     }
+    if (!k->face.empty()) {
+        // What the 注音 key is on a plain keyboard is printed in its corner
+        // instead; holding it does nothing yet.
+        return {};
+    }
     // Gboard's: digits along the top row, its symbols under the rest, so
     // the thumbs already know where they are. ASCII goes through the input
     // method like a typed key, so rime still makes ! into ！.
@@ -850,6 +886,8 @@ std::vector<std::string> Keyboard::alternates(int key, int *anchor) const {
     static const std::map<std::string, std::vector<std::string>> chinese = {
         {".", {"……", "…", "·", "～"}},
         {",", {"、", "；", "：", "\""}},
+        // 注音's comma key: the stops its , and . can't give.
+        {"，", {"。", "、", "？", "！", "：", "；", "……"}},
     };
     static const std::map<std::string, std::vector<std::string>> english = {
         {".", {"…", "~", "·"}},
@@ -965,7 +1003,12 @@ Keyboard::Action Keyboard::release(int key) {
         // Send the key itself, not what's printed on it: rime decides
         // whether ',' becomes '，'.
         auto s = k->label;
-        const bool upper = shift_ != Shift::Off || shiftHeld_;
+        if (static_cast<unsigned char>(s[0]) >= 0x80) {
+            // Not a key at all (注音's ，): straight in.
+            a.text = s;
+            break;
+        }
+        const bool upper = (shift_ != Shift::Off || shiftHeld_) && !zhuyin_;
         if (upper && !symbols_ && !k->pad) {
             std::transform(s.begin(), s.end(), s.begin(), ::toupper);
         }
@@ -1287,9 +1330,21 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
             // digits on its top row. The pinyin hints take the corner when
             // they're on.
             const bool pinyinHint = hints_ && chinese_ && !symbols_ &&
-                                    !k.pad && k.kind == KeyKind::Char &&
+                                    !zhuyin_ && !k.pad &&
+                                    k.kind == KeyKind::Char &&
                                     flypyFinals().count(k.label[0]);
-            if (!pinyinHint) {
+            if (!k.face.empty() && !symbols_) {
+                // 注音 keys: the plain key they sit on, as Gboard prints it.
+                pango_font_description_set_absolute_size(
+                    font, k.h * 0.2 * PANGO_SCALE);
+                pango_layout_set_font_description(layout, font);
+                pango_layout_set_text(layout, k.label.c_str(), -1);
+                int tw, th;
+                pango_layout_get_pixel_size(layout, &tw, &th);
+                setColor(cr, faded(theme.text, 0.4));
+                cairo_move_to(cr, k.x + k.w - gap - tw - 4, k.y + gap + 2);
+                pango_cairo_show_layout(cr, layout);
+            } else if (!pinyinHint) {
                 int anchor = 0;
                 const auto alt = alternates(r * RowStride + c, &anchor);
                 // Only letters and punctuation print theirs.
