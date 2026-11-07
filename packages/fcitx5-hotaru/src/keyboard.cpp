@@ -453,7 +453,10 @@ bool Keyboard::isHeld(int key) const {
     return std::find(held_.begin(), held_.end(), key) != held_.end();
 }
 
-std::vector<std::string> Keyboard::alternates(int key) const {
+std::vector<std::string> Keyboard::alternates(int key, int *anchor) const {
+    if (anchor) {
+        *anchor = 0;
+    }
     const auto *k = find(key);
     if (!k || k->kind != KeyKind::Char || k->pad || symbols_) {
         return {};
@@ -478,13 +481,21 @@ std::vector<std::string> Keyboard::alternates(int key) const {
         {".", {"…", "~", "·"}},
         {",", {";", ":", "'"}},
     };
-    for (const auto *table : {&latin, chinese_ ? &chinese : &english}) {
-        auto it = table->find(k->label);
-        if (it != table->end()) {
-            return it->second;
+    auto it = latin.find(k->label);
+    if (it != latin.end()) {
+        // Letters: the symbol under the finger, the letter itself either
+        // side of it, upper case left, lower right. Those two go straight
+        // into the text, past rime.
+        std::string upper = k->label;
+        upper[0] = std::toupper(upper[0]);
+        if (anchor) {
+            *anchor = 1;
         }
+        return {upper, it->second[0], k->label};
     }
-    return {};
+    const auto &table = chinese_ ? chinese : english;
+    it = table.find(k->label);
+    return it != table.end() ? it->second : std::vector<std::string>{};
 }
 
 bool Keyboard::longPresses(int key) const {
@@ -495,22 +506,24 @@ bool Keyboard::longPresses(int key) const {
     return (k->kind == KeyKind::Enter && !k->pad) || !alternates(key).empty();
 }
 
-void Keyboard::openPopup(int key, std::vector<std::string> items, double x) {
+void Keyboard::openPopup(int key) {
     const auto *k = find(key);
+    int anchor = 0;
+    auto items = alternates(key, &anchor);
     if (!k || items.empty()) {
         return;
     }
     popup_.key = key;
     popup_.items = std::move(items);
-    popup_.selected = 0;
+    popup_.selected = anchor;
     popup_.itemW = k->w;
     popup_.h = k->h;
-    // Above the key, starting over it and running right, pulled back in at
-    // the edges. The top row's sits over the strip.
+    // Above the key with the anchor over it, pulled back in at the edges.
+    // The top row's sits over the strip.
     const double total = popup_.itemW * popup_.items.size();
-    popup_.x = std::clamp(k->x, Edge, width_ - Edge - total);
+    popup_.x = std::clamp(k->x - anchor * popup_.itemW, Edge,
+                          width_ - Edge - total);
     popup_.y = std::max(Edge, k->y - k->h);
-    popupMove(x);
 }
 
 void Keyboard::popupMove(double x) {
@@ -846,12 +859,13 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
                                     !k.pad && k.kind == KeyKind::Char &&
                                     flypyFinals().count(k.label[0]);
             if (!pinyinHint) {
-                const auto alt = alternates(r * RowStride + c);
+                int anchor = 0;
+                const auto alt = alternates(r * RowStride + c, &anchor);
                 if (!alt.empty()) {
                     pango_font_description_set_absolute_size(
                         font, k.h * 0.2 * PANGO_SCALE);
                     pango_layout_set_font_description(layout, font);
-                    pango_layout_set_text(layout, alt[0].c_str(), -1);
+                    pango_layout_set_text(layout, alt[anchor].c_str(), -1);
                     int tw, th;
                     pango_layout_get_pixel_size(layout, &tw, &th);
                     setColor(cr, faded(theme.text, 0.4));

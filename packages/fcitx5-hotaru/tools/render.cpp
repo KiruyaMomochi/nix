@@ -25,8 +25,8 @@ int main(int argc, char **argv) {
     } else if (mode == "popup") {
         kb.setLanguage(true);
         // Holding the full stop, in the bottom row.
-        kb.hold(3 * 16 + 4);
-        kb.openPopup(3 * 16 + 4, kb.alternates(3 * 16 + 4), 0);
+        kb.hold(1 * 16 + 6);
+        kb.openPopup(1 * 16 + 6); // j
     } else if (mode == "menu") {
         kb.setMenu({{"中文", true}, {"半角", false}, {"汉字", true},
                     {"。，", true}, {"小鹤双拼", true}, {"双拼提示", false}});

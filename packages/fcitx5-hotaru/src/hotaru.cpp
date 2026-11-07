@@ -659,9 +659,9 @@ void Connection::lift(int32_t id) {
     }
     if (finger.popup) {
         auto text = keyboard_.closePopup();
-        // One ASCII character types like the key it stands for, so rime
-        // still turns it full width; anything else goes in as it is.
-        if (text.size() == 1) {
+        // A symbol types like the key it stands for, so rime still turns it
+        // full width; letters and the rest go in as they are.
+        if (text.size() == 1 && !std::isalpha(static_cast<unsigned char>(text[0]))) {
             addon_->type(static_cast<unsigned char>(text[0]));
         } else {
             addon_->commitText(text);
@@ -755,8 +755,7 @@ void Connection::longPress(int32_t id) {
         finger.done = true;
         return;
     }
-    keyboard_.openPopup(finger.key, keyboard_.alternates(finger.key),
-                        finger.x);
+    keyboard_.openPopup(finger.key);
     finger.popup = true;
     draw();
 }

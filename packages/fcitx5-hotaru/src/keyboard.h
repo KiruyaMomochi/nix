@@ -77,11 +77,12 @@ public:
     void shiftLeave() { shiftHeld_ = false; }
 
     // What holding a key gives: a row of characters for letters and
-    // punctuation; Enter has its own long press (a new line).
-    std::vector<std::string> alternates(int key) const;
+    // punctuation; Enter has its own long press (a new line). The one at
+    // anchor sits over the key, under the finger.
+    std::vector<std::string> alternates(int key, int *anchor = nullptr) const;
     bool longPresses(int key) const;
     // The row of alternates above a held key; the finger slides along it.
-    void openPopup(int key, std::vector<std::string> items, double x);
+    void openPopup(int key);
     void popupMove(double x);
     // What the finger is on, closing the popup.
     std::string closePopup();
