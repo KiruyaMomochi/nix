@@ -1,5 +1,5 @@
 // Draws the keyboard to a PNG, for looking at it without a lock screen.
-// usage: render out.png [idle|composing|symbols|english] [pressed-key-index]
+// usage: render out.png [idle|composing|symbols|english|password|menu] [pressed]
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -12,13 +12,20 @@ int main(int argc, char **argv) {
     hotaru::Keyboard kb;
     kb.setFont(theme.font);
     kb.resize(w, h);
-    kb.setLanguage(mode != "english", "汉字");
-    kb.setHints(true);
+    kb.setLanguage(mode != "english");
+    kb.setPad(mode == "password");
     if (mode == "composing") {
-        kb.setCandidates({"ni hao", {"你好", "妳好", "拟好", "你", "尼", "泥"},
-                          false, true});
+        kb.setCandidates({"ni hao",
+                          {"你好", "妳好", "拟好", "你", "尼", "泥", "呢",
+                           "腻", "逆", "倪", "妮", "拟", "匿", "溺", "霓",
+                           "你好啊", "尼泊尔", "泥巴", "逆天"},
+                          0});
     } else if (mode == "symbols") {
         kb.release(3 * 16); // the layer key
+    } else if (mode == "menu") {
+        kb.setMenu({{"中文", true}, {"半角", false}, {"汉字", true},
+                    {"。，", true}, {"小鹤双拼", true}, {"双拼提示", false}});
+        kb.release(1001); // the menu button, left of hide
     }
     if (argc > 3) {
         kb.setPressed(std::atoi(argv[3]));

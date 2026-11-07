@@ -19,7 +19,6 @@
 #include <wayland_public.h>
 #include <fcitx-utils/event.h>
 #include <fcitx-utils/log.h>
-#include <fcitx-utils/utf8.h>
 #include <fcitx/action.h>
 #include <fcitx/addonfactory.h>
 #include <fcitx/addoninstance.h>
@@ -100,7 +99,9 @@ struct Buffer {
 struct State {
     Candidates candidates;
     bool chinese = false;
-    std::string scriptLabel;
+    bool pad = false;
+    bool hints = false;
+    std::vector<MenuEntry> menu;
 };
 
 // fcitx's connection to KWin. Only the input method's own connection gets
@@ -193,21 +194,26 @@ public:
     void touched();
     void type(uint32_t sym);
     void selectCandidate(int index);
-    void turnPage(int direction);
     void toggleLanguage();
-    void toggleScript();
+    void activateMenuItem(int index);
+    void refresh();
 
 private:
     FCITX_ADDON_DEPENDENCY_LOADER(wayland, instance_->addonManager());
 
-    void refresh();
     void setFocused(bool focused);
-    fcitx::Action *scriptAction(fcitx::InputContext *ic);
+    // The switches fcitx would list under Ctrl+~ / the tray icon.
+    std::vector<fcitx::Action *> menuActions(fcitx::InputContext *ic);
 
     fcitx::Instance *instance_;
     State state_;
-    // Candidate positions on the page that made it into the strip.
-    std::vector<int> candidateIndex_;
+    bool hints_ = false;
+    // Candidate list the strip's words came from, and how to reach each
+    // word in it: through the whole list when it allows, else the page.
+    std::shared_ptr<fcitx::CandidateList> candidateList_;
+    bool bulk_ = false;
+    // Menu entries past fcitx's own are hotaru's.
+    std::vector<fcitx::Action *> menuActions_;
     std::unordered_map<wl_display *, std::unique_ptr<Connection>>
         connections_;
     std::unique_ptr<fcitx::HandlerTableEntry<fcitx::WaylandConnectionCreated>>
@@ -459,7 +465,10 @@ void Connection::userShow() {
 
 void Connection::setState(const State &state) {
     keyboard_.setCandidates(state.candidates);
-    keyboard_.setLanguage(state.chinese, state.scriptLabel);
+    keyboard_.setLanguage(state.chinese);
+    keyboard_.setPad(state.pad);
+    keyboard_.setHints(state.hints);
+    keyboard_.setMenu(state.menu);
     draw();
 }
 
@@ -586,14 +595,14 @@ void Connection::lift() {
     if (action.candidate >= 0) {
         addon_->selectCandidate(action.candidate);
     }
-    if (action.page) {
-        addon_->turnPage(action.page);
-    }
     if (action.toggleLanguage) {
         addon_->toggleLanguage();
     }
-    if (action.toggleScript) {
-        addon_->toggleScript();
+    if (action.menuItem >= 0) {
+        addon_->activateMenuItem(action.menuItem);
+    }
+    if (action.menuOpened) {
+        addon_->refresh();
     }
     draw();
 }
@@ -740,27 +749,26 @@ void Addon::touched() {
     }
 }
 
-fcitx::Action *Addon::scriptAction(fcitx::InputContext *ic) {
-    // rime names its switches fcitx-rime-<schema>-<option>.
-    std::function<fcitx::Action *(const std::vector<fcitx::Action *> &)>
-        search = [&](const std::vector<fcitx::Action *> &actions)
-        -> fcitx::Action * {
-        for (auto *action : actions) {
-            const auto &name = action->name();
-            if (name.starts_with("fcitx-rime-") &&
-                (name.ends_with("-simplification") ||
-                 name.ends_with("-traditionalization"))) {
-                return action;
-            }
-            if (auto *menu = action->menu()) {
-                if (auto *found = search(menu->actions())) {
-                    return found;
+std::vector<fcitx::Action *>
+Addon::menuActions(fcitx::InputContext *ic) {
+    std::vector<fcitx::Action *> result;
+    std::function<void(const std::vector<fcitx::Action *> &)> collect =
+        [&](const std::vector<fcitx::Action *> &actions) {
+            for (auto *action : actions) {
+                if (action->isSeparator()) {
+                    continue;
+                }
+                // An action with a menu (rime's schemas, say) is a heading;
+                // what's under it are the switches.
+                if (auto *menu = action->menu()) {
+                    collect(menu->actions());
+                } else if (!action->shortText(ic).empty()) {
+                    result.push_back(action);
                 }
             }
-        }
-        return nullptr;
-    };
-    return search(ic->statusArea().allActions());
+        };
+    collect(ic->statusArea().allActions());
+    return result;
 }
 
 void Addon::refresh() {
@@ -769,34 +777,70 @@ void Addon::refresh() {
     if (ic) {
         const auto *entry = instance_->inputMethodEntry(ic);
         state.chinese = entry && !entry->isKeyboard();
-        if (auto *action = state.chinese ? scriptAction(ic) : nullptr) {
-            // rime words it 汉字 / 漢字; the first character says it all.
-            auto text = action->shortText(ic);
-            state.scriptLabel = text.substr(
-                0, fcitx::utf8::ncharByteLength(text.begin(), 1));
+        // Passwords and digits get the number pad; the lock screen's field
+        // says it is a password.
+        const auto caps = ic->capabilityFlags();
+        state.pad = caps.test(fcitx::CapabilityFlag::Password) ||
+                    caps.test(fcitx::CapabilityFlag::Digit) ||
+                    caps.test(fcitx::CapabilityFlag::Number) ||
+                    caps.test(fcitx::CapabilityFlag::Dialable);
+
+        menuActions_ = menuActions(ic);
+        for (auto *action : menuActions_) {
+            state.menu.push_back(
+                {action->shortText(ic),
+                 action->isCheckable() && action->isChecked(ic)});
         }
+        if (state.chinese) {
+            state.menu.push_back({"双拼提示", hints_});
+        }
+        state.hints = hints_;
+
         // Candidates only while fcitx has handed them to us; in physical
         // keyboard mode they're classicui's.
+        candidateList_.reset();
+        bulk_ = false;
         if (instance_->inputMethodMode() ==
             fcitx::InputMethodMode::OnScreenKeyboard) {
             auto &panel = ic->inputPanel();
             state.candidates.preedit =
                 instance_->outputFilter(ic, panel.preedit()).toString();
-            candidateIndex_.clear();
             if (auto list = panel.candidateList()) {
-                for (int i = 0; i < list->size(); i++) {
-                    const auto &candidate = list->candidate(i);
-                    if (candidate.isPlaceHolder()) {
-                        continue;
-                    }
+                candidateList_ = list;
+                auto add = [&](const fcitx::CandidateWord &candidate) {
                     state.candidates.words.push_back(
                         instance_->outputFilter(ic, candidate.text())
                             .toString());
-                    candidateIndex_.push_back(i);
+                };
+                // The whole list, not just rime's page of five, so the
+                // strip can fill its width. rime doesn't know how long it
+                // is and throws past the end.
+                if (auto *all = list->toBulk()) {
+                    bulk_ = true;
+                    const int total = all->totalSize();
+                    const int limit = total >= 0 ? std::min(total, 60) : 60;
+                    for (int i = 0; i < limit; i++) {
+                        try {
+                            add(all->candidateFromAll(i));
+                        } catch (...) {
+                            break;
+                        }
+                    }
+                } else {
+                    for (int i = 0; i < list->size(); i++) {
+                        add(list->candidate(i));
+                    }
                 }
-                if (auto *pageable = list->toPageable()) {
-                    state.candidates.hasPrev = pageable->hasPrev();
-                    state.candidates.hasNext = pageable->hasNext();
+                // Space picks the cursor's candidate; the page's own index
+                // is its index in the whole list when the page is the first.
+                const int cursor = list->cursorIndex();
+                state.candidates.cursor = cursor >= 0 ? cursor : 0;
+                if (bulk_) {
+                    if (auto *pageable = list->toPageable();
+                        pageable && pageable->currentPage() > 0) {
+                        state.candidates.cursor +=
+                            pageable->currentPage() * list->size();
+                    }
                 }
             }
         }
@@ -829,32 +873,19 @@ void Addon::type(uint32_t sym) {
 
 void Addon::selectCandidate(int index) {
     auto *ic = instance_->lastFocusedInputContext();
-    if (!ic || index < 0 || index >= int(candidateIndex_.size())) {
+    if (!ic || !candidateList_ || index < 0) {
         return;
     }
-    auto list = ic->inputPanel().candidateList();
-    const int i = candidateIndex_[index];
-    if (list && i < list->size()) {
-        list->candidate(i).select(ic);
+    // Hold on: selecting replaces the list under us.
+    auto list = candidateList_;
+    try {
+        if (bulk_) {
+            list->toBulk()->candidateFromAll(index).select(ic);
+        } else if (index < list->size()) {
+            list->candidate(index).select(ic);
+        }
+    } catch (...) {
     }
-}
-
-void Addon::turnPage(int direction) {
-    auto *ic = instance_->lastFocusedInputContext();
-    if (!ic) {
-        return;
-    }
-    auto list = ic->inputPanel().candidateList();
-    auto *pageable = list ? list->toPageable() : nullptr;
-    if (!pageable) {
-        return;
-    }
-    if (direction < 0 && pageable->hasPrev()) {
-        pageable->prev();
-    } else if (direction > 0 && pageable->hasNext()) {
-        pageable->next();
-    }
-    ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
 }
 
 void Addon::toggleLanguage() {
@@ -862,13 +893,15 @@ void Addon::toggleLanguage() {
     instance_->toggle();
 }
 
-void Addon::toggleScript() {
+void Addon::activateMenuItem(int index) {
     auto *ic = instance_->lastFocusedInputContext();
-    if (!ic) {
+    if (!ic || index < 0) {
         return;
     }
-    if (auto *action = scriptAction(ic)) {
-        action->activate(ic);
+    if (size_t(index) < menuActions_.size()) {
+        menuActions_[index]->activate(ic);
+    } else {
+        hints_ = !hints_;
     }
     refresh();
 }

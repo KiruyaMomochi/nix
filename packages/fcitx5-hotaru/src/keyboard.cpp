@@ -12,8 +12,10 @@ constexpr uint32_t Return = 0xff0d;
 constexpr uint32_t Left = 0xff51;
 constexpr uint32_t Right = 0xff53;
 constexpr int RowStride = 16;
-// Keys in the strip above the letters.
+// Keys in the strip above the letters, and in the menu.
 constexpr int BarBase = 1000;
+constexpr int MenuBase = 2000;
+constexpr double Edge = 4;
 
 std::vector<Key> chars(const std::string &s) {
     std::vector<Key> row;
@@ -134,17 +136,30 @@ const std::vector<std::vector<Key>> &Keyboard::rows() const {
 void Keyboard::resize(double width, double height) {
     width_ = width;
     height_ = height;
-    const double edge = 4;
-    const double inner = width - 2 * edge;
     // A strip for candidates and tools, then four rows of keys.
-    barH_ = std::round((height - 2 * edge) * 0.17);
-    const double top = edge + barH_;
-    // Ten letter units, a gap, three number pad units.
-    letterUnit_ = inner * 0.70 / 10;
+    barH_ = std::round((height - 2 * Edge) * 0.17);
+    layoutKeys();
+    layoutBar();
+    layoutMenu();
+}
+
+void Keyboard::layoutKeys() {
+    if (width_ <= 0) {
+        return;
+    }
+    const double inner = width_ - 2 * Edge;
+    const double top = Edge + barH_;
+    const double rowH = (height_ - Edge - top) / letters_.size();
+    // With the pad: ten letter units, a gap, three pad units. Without it the
+    // letters take the whole width, for two thumbs.
     const double padUnit = inner * 0.27 / 3;
-    const double padX = edge + inner - 3 * padUnit;
-    const double rowH = (height - edge - top) / letters_.size();
+    const double padX = Edge + inner - 3 * padUnit;
     for (auto *layer : {&letters_, &symbolRows_}) {
+        const bool withPad = layer == &symbolRows_ || pad_;
+        const double unit = withPad ? inner * 0.70 / 10 : inner / 10;
+        if (layer == &letters_) {
+            letterUnit_ = unit;
+        }
         for (size_t r = 0; r < layer->size(); r++) {
             auto &row = (*layer)[r];
             double units = 0;
@@ -153,19 +168,39 @@ void Keyboard::resize(double width, double height) {
             }
             // Short letter rows sit centred, like the home row on a real
             // keyboard.
-            double x = edge + (10 - units) * letterUnit_ / 2;
+            double x = Edge + (10 - units) * unit / 2;
             double px = padX;
             for (auto &k : row) {
                 auto &at = k.pad ? px : x;
                 k.x = at;
                 k.y = top + r * rowH;
-                k.w = k.width * (k.pad ? padUnit : letterUnit_);
+                k.w = k.width * (k.pad ? padUnit : unit);
                 k.h = rowH;
                 at += k.w;
             }
         }
     }
-    layoutBar();
+}
+
+void Keyboard::layoutMenu() {
+    menuKeys_.clear();
+    if (width_ <= 0 || menu_.empty()) {
+        return;
+    }
+    // A grid over the keys, four across, as tall as the keys' rows.
+    const int columns = 4;
+    const double top = Edge + barH_;
+    const double rowH = (height_ - Edge - top) / letters_.size();
+    const double w = (width_ - 2 * Edge) / columns;
+    for (size_t i = 0; i < menu_.size(); i++) {
+        Key k{KeyKind::MenuItem, menu_[i].label};
+        k.x = Edge + (i % columns) * w;
+        k.y = top + (i / columns) * rowH;
+        k.w = w;
+        k.h = rowH;
+        k.index = i;
+        menuKeys_.push_back(std::move(k));
+    }
 }
 
 double Keyboard::textWidth(const std::string &text, double size) const {
@@ -195,10 +230,9 @@ void Keyboard::layoutBar() {
     if (width_ <= 0) {
         return;
     }
-    const double edge = 4;
-    const double y = edge, h = barH_;
+    const double y = Edge, h = barH_;
     const double tool = h * 1.3;
-    double right = width_ - edge;
+    double right = width_ - Edge;
     auto add = [&](KeyKind kind, std::string label, double x, double w,
                    int index = 0) {
         Key k{kind, std::move(label)};
@@ -211,29 +245,40 @@ void Keyboard::layoutBar() {
     };
 
     if (composing()) {
-        // Candidates, left to right; the arrows page through them.
-        if (candidates_.hasPrev || candidates_.hasNext) {
+        // As many candidates as fit, left to right; the arrows only appear
+        // when some don't, and step through the rest a stripful at a time.
+        const double padding = h * 0.45;
+        // The preedit sits on the left, small, as rime spells it out.
+        double start = Edge;
+        if (!candidates_.preedit.empty()) {
+            start += textWidth(candidates_.preedit, h * 0.32) + padding * 2;
+        }
+        auto fill = [&](double limit) {
+            double x = start;
+            size_t i = offset_;
+            for (; i < candidates_.words.size(); i++) {
+                const double w =
+                    std::max(textWidth(candidates_.words[i], h * 0.48) +
+                                 padding * 2,
+                             h * 1.4);
+                if (x + w > limit) {
+                    break;
+                }
+                add(KeyKind::Candidate, candidates_.words[i], x, w, i);
+                x += w;
+            }
+            return i;
+        };
+        nextOffset_ = fill(right);
+        hasNext_ = nextOffset_ < candidates_.words.size();
+        if (hasNext_ || offset_ > 0) {
+            bar_.clear();
             right -= tool;
             add(KeyKind::NextPage, "", right, tool);
             right -= tool;
             add(KeyKind::PrevPage, "", right, tool);
-        }
-        const double padding = h * 0.45;
-        // The preedit sits on the left, small, as rime spells it out.
-        double x = edge;
-        if (!candidates_.preedit.empty()) {
-            x += textWidth(candidates_.preedit, h * 0.32) + padding * 2;
-        }
-        for (size_t i = 0; i < candidates_.words.size(); i++) {
-            const double w =
-                std::max(textWidth(candidates_.words[i], h * 0.48) +
-                             padding * 2,
-                         h * 1.4);
-            if (x + w > right) {
-                break;
-            }
-            add(KeyKind::Candidate, candidates_.words[i], x, w, i);
-            x += w;
+            nextOffset_ = fill(right);
+            hasNext_ = nextOffset_ < candidates_.words.size();
         }
         return;
     }
@@ -241,14 +286,16 @@ void Keyboard::layoutBar() {
     // Idle: tools. Hiding keeps the corner Gboard and Windows give it.
     right -= tool;
     add(KeyKind::Hide, "", right, tool);
-    if (!scriptLabel_.empty()) {
-        const double w = std::max(textWidth(scriptLabel_, h * 0.4) + h, tool);
-        right -= w;
-        add(KeyKind::Script, scriptLabel_, right, w);
-    }
+    right -= tool;
+    add(KeyKind::More, "", right, tool);
 }
 
 void Keyboard::setCandidates(Candidates candidates) {
+    // New words from the input method start the strip over.
+    if (candidates.words != candidates_.words) {
+        offset_ = 0;
+        offsets_.clear();
+    }
     candidates_ = std::move(candidates);
     if (pressed_ >= BarBase) {
         pressed_ = -1;
@@ -256,10 +303,19 @@ void Keyboard::setCandidates(Candidates candidates) {
     layoutBar();
 }
 
-void Keyboard::setLanguage(bool chinese, std::string scriptLabel) {
-    chinese_ = chinese;
-    scriptLabel_ = std::move(scriptLabel);
-    layoutBar();
+void Keyboard::setLanguage(bool chinese) { chinese_ = chinese; }
+
+void Keyboard::setPad(bool pad) {
+    if (pad == pad_) {
+        return;
+    }
+    pad_ = pad;
+    layoutKeys();
+}
+
+void Keyboard::setMenu(std::vector<MenuEntry> menu) {
+    menu_ = std::move(menu);
+    layoutMenu();
 }
 
 void Keyboard::setFont(std::string font) {
@@ -270,6 +326,10 @@ void Keyboard::setFont(std::string font) {
 const Key *Keyboard::find(int key) const {
     if (key < 0) {
         return nullptr;
+    }
+    if (key >= MenuBase) {
+        size_t i = key - MenuBase;
+        return i < menuKeys_.size() ? &menuKeys_[i] : nullptr;
     }
     if (key >= BarBase) {
         size_t i = key - BarBase;
@@ -298,6 +358,15 @@ int Keyboard::keyAt(double x, double y) const {
         }
         return -1;
     }
+    if (menuOpen_) {
+        for (size_t i = 0; i < menuKeys_.size(); i++) {
+            const auto &k = menuKeys_[i];
+            if (x >= k.x && x < k.x + k.w && y >= k.y && y < k.y + k.h) {
+                return MenuBase + i;
+            }
+        }
+        return -1;
+    }
     size_t r = 0;
     while (r + 1 < rs.size() && y >= rs[r + 1][0].y) {
         r++;
@@ -308,6 +377,9 @@ int Keyboard::keyAt(double x, double y) const {
     double bestDistance = 0;
     for (size_t c = 0; c < rs[r].size(); c++) {
         const auto &k = rs[r][c];
+        if (!visible(k)) {
+            continue;
+        }
         const double d = std::max({k.x - x, x - (k.x + k.w), 0.0});
         if (best < 0 || d < bestDistance) {
             best = c;
@@ -425,17 +497,30 @@ Keyboard::Action Keyboard::release(int key) {
     case KeyKind::Lang:
         a.toggleLanguage = true;
         break;
-    case KeyKind::Script:
-        a.toggleScript = true;
+    case KeyKind::More:
+        menuOpen_ = !menuOpen_;
+        a.menuOpened = menuOpen_;
+        break;
+    case KeyKind::MenuItem:
+        // Stays open, so the switch is seen to flip.
+        a.menuItem = k->index;
         break;
     case KeyKind::Candidate:
         a.candidate = k->index;
         break;
     case KeyKind::PrevPage:
-        a.page = -1;
+        if (!offsets_.empty()) {
+            offset_ = offsets_.back();
+            offsets_.pop_back();
+            layoutBar();
+        }
         break;
     case KeyKind::NextPage:
-        a.page = 1;
+        if (hasNext_) {
+            offsets_.push_back(offset_);
+            offset_ = nextOffset_;
+            layoutBar();
+        }
         break;
     }
     return a;
@@ -443,6 +528,7 @@ Keyboard::Action Keyboard::release(int key) {
 
 void Keyboard::reset() {
     symbols_ = false;
+    menuOpen_ = false;
     shift_ = Shift::Off;
     pressed_ = -1;
     dragging_ = dragMoved_ = false;
@@ -450,7 +536,6 @@ void Keyboard::reset() {
 
 void Keyboard::paintBar(cairo_t *cr, const Theme &theme, PangoLayout *layout,
                         PangoFontDescription *font) const {
-    const double edge = 4;
     auto showText = [&](const std::string &text, double size, double x,
                         double y, double w, double h, const Color &color,
                         bool centre) {
@@ -465,13 +550,15 @@ void Keyboard::paintBar(cairo_t *cr, const Theme &theme, PangoLayout *layout,
     };
 
     if (composing() && !candidates_.preedit.empty()) {
-        showText(candidates_.preedit, barH_ * 0.32, edge + barH_ * 0.45, edge,
+        showText(candidates_.preedit, barH_ * 0.32, Edge + barH_ * 0.45, Edge,
                  0, barH_, faded(theme.text, 0.55), false);
     }
 
     for (size_t i = 0; i < bar_.size(); i++) {
         const auto &k = bar_[i];
-        if (pressed_ == int(BarBase + i)) {
+        // The open menu's button stays lit, like a held shift.
+        if (pressed_ == int(BarBase + i) ||
+            (k.kind == KeyKind::More && menuOpen_)) {
             // The look of a selected candidate in fcitx's plasma theme.
             roundedRect(cr, k.x + 2, k.y + 2, k.w - 4, k.h - 4, 5);
             setColor(cr, mix(theme.background, theme.accent, 0.3));
@@ -484,9 +571,11 @@ void Keyboard::paintBar(cairo_t *cr, const Theme &theme, PangoLayout *layout,
         const double r = k.h * 0.12;
         switch (k.kind) {
         case KeyKind::Candidate:
-            // The first is what space would pick.
+            // The highlighted one is what space would pick.
             showText(k.label, barH_ * 0.48, k.x, k.y, k.w, k.h,
-                     k.index == 0 ? theme.accent : theme.text, true);
+                     k.index == candidates_.cursor ? theme.accent
+                                                   : theme.text,
+                     true);
             if (i + 1 < bar_.size() &&
                 bar_[i + 1].kind == KeyKind::Candidate) {
                 setColor(cr, faded(theme.text, 0.12));
@@ -497,9 +586,8 @@ void Keyboard::paintBar(cairo_t *cr, const Theme &theme, PangoLayout *layout,
             break;
         case KeyKind::PrevPage:
         case KeyKind::NextPage: {
-            const bool enabled = k.kind == KeyKind::PrevPage
-                                     ? candidates_.hasPrev
-                                     : candidates_.hasNext;
+            const bool enabled =
+                k.kind == KeyKind::PrevPage ? offset_ > 0 : hasNext_;
             const double dx = k.kind == KeyKind::PrevPage ? 1 : -1;
             cairo_move_to(cr, cx + r * 0.6 * dx, cy - r * 1.4);
             cairo_line_to(cr, cx - r * 0.8 * dx, cy);
@@ -513,9 +601,13 @@ void Keyboard::paintBar(cairo_t *cr, const Theme &theme, PangoLayout *layout,
             cairo_line_to(cr, cx + r * 1.4, cy - r * 0.6);
             strokeRound(cr, theme.text);
             break;
-        case KeyKind::Script:
-            showText(k.label, barH_ * 0.4, k.x, k.y, k.w, k.h,
-                     faded(theme.text, 0.8), true);
+        case KeyKind::More:
+            // Three dots.
+            for (int d = -1; d <= 1; d++) {
+                cairo_arc(cr, cx + d * r * 1.4, cy, r * 0.28, 0, 2 * M_PI);
+                setColor(cr, theme.text);
+                cairo_fill(cr);
+            }
             break;
         default:
             break;
@@ -548,9 +640,40 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
         pango_cairo_show_layout(cr, layout);
     };
 
+    if (menuOpen_) {
+        for (size_t i = 0; i < menuKeys_.size(); i++) {
+            const auto &k = menuKeys_[i];
+            const bool down = pressed_ == int(MenuBase + i);
+            // Switches that are on look like a held shift.
+            const bool on = menu_[i].checked;
+            Color fill = theme.key;
+            if (down || on) {
+                fill = mix(fill, theme.accent, down ? 0.3 : 0.2);
+            }
+            roundedRect(cr, k.x + gap, k.y + gap, k.w - 2 * gap,
+                        k.h - 2 * gap, radius);
+            setColor(cr, fill);
+            if (down || on) {
+                cairo_fill_preserve(cr);
+                setColor(cr, theme.accent);
+                cairo_set_line_width(cr, 1.5);
+                cairo_stroke(cr);
+            } else {
+                cairo_fill(cr);
+            }
+            drawText(k.label, k.h * 0.32, k.x, k.y, k.w, k.h, theme.text);
+        }
+        pango_font_description_free(font);
+        g_object_unref(layout);
+        return;
+    }
+
     for (size_t r = 0; r < rs.size(); r++) {
         for (size_t c = 0; c < rs[r].size(); c++) {
             const auto &k = rs[r][c];
+            if (!visible(k)) {
+                continue;
+            }
             const bool down = pressed_ == int(r * RowStride + c);
             const bool special = k.kind != KeyKind::Char &&
                                  k.kind != KeyKind::Space;
