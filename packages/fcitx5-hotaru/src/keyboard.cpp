@@ -989,12 +989,8 @@ std::string Keyboard::closePopup() {
     popupPicked_ = popup_.key >= 0 ? popup_.selected : -1;
     if (popup_.key >= 0 && popup_.selected >= 0) {
         text = popup_.items[popup_.selected];
-        if (text == "换行") {
+        if (text == "newline") {
             text = "\n";
-        }
-        // The key's own 注音 symbol: nothing to insert, it's a plain tap.
-        if (const auto *k = find(popup_.key); k && text == k->face) {
-            text.clear();
         }
     }
     popup_ = {};
