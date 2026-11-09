@@ -1843,8 +1843,9 @@ void Keyboard::paintFlick(cairo_t *cr, const Theme &theme,
     // with no kana to change there's nothing to show at all.
     std::array<std::string, 5> shown;
     for (int i = 0; i < 5; i++) {
-        shown[i] = k->label == "゛小" ? nextKanaForm(lastKana_, markForm[i])
-                                      : (*items)[i];
+        shown[i] = !*(*items)[i]        ? ""
+                   : k->label == "゛小" ? nextKanaForm(lastKana_, markForm[i])
+                                        : (*items)[i];
     }
     if (shown[0].empty()) {
         return;

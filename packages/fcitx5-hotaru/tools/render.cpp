@@ -58,8 +58,8 @@ int main(int argc, char **argv) {
         kb.setKana(true);
         if (mode == "kana-marks") {
             // か just typed, then a finger on ゛小.
-            kb.flickStart(10, 0, 0);
-            kb.release(10);
+            kb.flickStart(11, 0, 0);
+            kb.release(11);
             kb.hold(3 * 16 + 6);
             kb.flickStart(3 * 16 + 6, 0, 0);
         } else if (mode != "kana") {
