@@ -228,6 +228,35 @@ bool drawIcon(cairo_t *cr, const std::string &name, double cx, double cy,
         cairo_curve_to(cr, cx + r * 0.2, cy + r * 0.3, cx - r * 0.1,
                        cy - r * 0.2, cx - r * 0.6, cy);
         cairo_stroke(cr);
+    } else if (name == "、。" || name == "゛゜") {
+        // Punctuation and marks sit in a corner of their square, so alone
+        // they look off centre. Faint squares show the corner, as Gboard.
+        const double s = r, between = r * 0.3;
+        const double x0 = cx - s - between / 2, x1 = cx + between / 2;
+        const double y0 = cy - s / 2;
+        cairo_save(cr);
+        cairo_set_line_width(cr, 1);
+        setColor(cr, faded(color, 0.45));
+        cairo_rectangle(cr, x0, y0, s, s);
+        cairo_rectangle(cr, x1, y0, s, s);
+        cairo_stroke(cr);
+        cairo_restore(cr);
+        cairo_set_line_width(cr, lw * 0.7);
+        if (name == "、。") {
+            cairo_move_to(cr, x0 + s * 0.14, y0 + s * 0.62);
+            cairo_line_to(cr, x0 + s * 0.38, y0 + s * 0.88);
+            cairo_stroke(cr);
+            cairo_arc(cr, x1 + s * 0.26, y0 + s * 0.74, s * 0.17, 0, 2 * M_PI);
+            cairo_stroke(cr);
+        } else {
+            for (double dx : {0.62, 0.86}) {
+                cairo_move_to(cr, x0 + s * dx, y0 + s * 0.08);
+                cairo_line_to(cr, x0 + s * (dx + 0.1), y0 + s * 0.34);
+            }
+            cairo_stroke(cr);
+            cairo_arc(cr, x1 + s * 0.76, y0 + s * 0.24, s * 0.17, 0, 2 * M_PI);
+            cairo_stroke(cr);
+        }
     } else if (name == "␣") {
         cairo_move_to(cr, cx - r * 0.8, cy - r * 0.25);
         cairo_line_to(cr, cx - r * 0.8, cy + r * 0.3);
@@ -1546,6 +1575,18 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
 
             auto text = label(k);
             if (text.empty()) {
+                continue;
+            }
+            if (text == "、。") {
+                drawIcon(cr, text, k.x + k.w / 2, k.y + k.h / 2, k.h * 0.26,
+                         theme.text);
+                continue;
+            }
+            if (text == "゛小") {
+                drawIcon(cr, "゛゜", k.x + k.w / 2, k.y + k.h * 0.38,
+                         k.h * 0.26, theme.text);
+                drawText("大⇔小", k.h * 0.17, k.x, k.y + k.h * 0.56, k.w,
+                         k.h * 0.32, theme.text);
                 continue;
             }
             if (k.kind == KeyKind::CursorRight || text == "␣") {
