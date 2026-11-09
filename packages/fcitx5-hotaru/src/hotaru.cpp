@@ -19,6 +19,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <tuple>
 #include <cairo.h>
 #include <wayland-client.h>
 #include <wayland_public.h>
@@ -137,6 +138,68 @@ void saveRecent(const std::vector<std::string> &emoji,
     }
 }
 
+// How far from each key's centre presses land, for moving the keys' hit areas
+// to where the thumbs really go. Running totals per key and nothing else: a
+// log in order would be everything that was typed.
+class TouchStats {
+public:
+    TouchStats() {
+        std::ifstream in(recentPath("touches.tsv"));
+        std::string page, orientation, key;
+        Sum s;
+        while (in >> page >> orientation >> key >> s.n >> s.x >> s.y >> s.xx >>
+               s.yy) {
+            sums_[{page, orientation, key}] = s;
+        }
+    }
+    ~TouchStats() { save(); }
+
+    void add(const std::string &page, const char *orientation,
+             const std::string &key, double dx, double dy) {
+        auto &s = sums_[{page, orientation, key}];
+        s.n++;
+        s.x += dx;
+        s.y += dy;
+        s.xx += dx * dx;
+        s.yy += dy * dy;
+        if (++unsaved_ >= 20) {
+            save();
+        }
+    }
+
+private:
+    struct Sum {
+        long n = 0;
+        double x = 0, y = 0, xx = 0, yy = 0;
+    };
+
+    void save() {
+        if (!unsaved_) {
+            return;
+        }
+        unsaved_ = 0;
+        const std::filesystem::path path = recentPath("touches.tsv");
+        std::error_code ec;
+        std::filesystem::create_directories(path.parent_path(), ec);
+        auto temp = path;
+        temp += ".new";
+        {
+            std::ofstream out(temp);
+            out.precision(12);
+            for (const auto &[where, s] : sums_) {
+                const auto &[page, orientation, key] = where;
+                out << page << '\t' << orientation << '\t' << key << '\t'
+                    << s.n << '\t' << s.x << '\t' << s.y << '\t' << s.xx
+                    << '\t' << s.yy << '\n';
+            }
+        }
+        std::filesystem::rename(temp, path, ec);
+    }
+
+    std::map<std::tuple<std::string, std::string, std::string>, Sum> sums_;
+    int unsaved_ = 0;
+};
+
 // What the keyboard shows besides its keys, gathered from fcitx.
 struct State {
     Candidates candidates;
@@ -224,6 +287,8 @@ private:
 
     Keyboard keyboard_;
     Theme theme_;
+    TouchStats touches_;
+    bool privateField_ = false; // passwords and the like: nothing is counted
     // Backspace repeating and the long press timer, and whose they are.
     std::unique_ptr<fcitx::EventSourceTime> repeat_, longPress_;
     int32_t repeatFinger_ = 0, longPressFinger_ = 0;
@@ -540,6 +605,7 @@ void Connection::setState(const State &state) {
     keyboard_.setLanguage(state.chinese);
     keyboard_.setInputMethods(state.imLabels, state.imCurrent);
     keyboard_.setPad(state.pad);
+    privateField_ = state.pad;
     keyboard_.setZhuyin(state.zhuyin);
     keyboard_.setHints(state.hints);
     keyboard_.setMenu(state.menu);
@@ -640,6 +706,12 @@ void Connection::press(int32_t id, double x, double y) {
         finger.done = true;
     }
     const int key = keyboard_.keyAt(x, y);
+    if (const auto at = keyboard_.landing(key, x, y);
+        at && id != Mouse && !privateField_) {
+        touches_.add(at->page,
+                     logicalWidth_ >= logicalHeight_ ? "landscape" : "portrait",
+                     at->key, at->dx, at->dy);
+    }
     fingers_[id] = {key, x, x};
     keyboard_.hold(key);
     if (keyboard_.repeats(key)) {

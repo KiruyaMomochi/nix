@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -66,6 +67,13 @@ public:
     // Index of the key under (x, y), or -1. Gaps between keys belong to the
     // nearest key, so a tap never falls through.
     int keyAt(double x, double y) const;
+    // Where a press came down on a typing key, in key sizes from its centre.
+    // Nothing for number pads, symbols and picker pages.
+    struct Landing {
+        std::string page, key;
+        double dx = 0, dy = 0;
+    };
+    std::optional<Landing> landing(int key, double x, double y) const;
 
     // Keys under a finger, drawn lit. Several fingers can be down.
     void hold(int key);

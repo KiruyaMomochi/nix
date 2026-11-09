@@ -726,6 +726,17 @@ const Key *Keyboard::find(int key) const {
     return &rs[r][c];
 }
 
+std::optional<Keyboard::Landing> Keyboard::landing(int key, double x,
+                                                   double y) const {
+    const auto *k = find(key);
+    if (!k || k->kind != KeyKind::Char || k->pad || symbols_ || inPicker()) {
+        return std::nullopt;
+    }
+    return Landing{zhuyin_ ? "zhuyin" : "letters", k->label,
+                   (x - k->x - k->w / 2) / k->w,
+                   (y - k->y - k->h / 2) / k->h};
+}
+
 int Keyboard::keyAt(double x, double y) const {
     const auto &rs = rows();
     if (rs.empty()) {
