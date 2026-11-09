@@ -1802,7 +1802,7 @@ void Keyboard::paintFlick(cairo_t *cr, const Theme &theme,
             if (!form.empty()) {
                 shown[i] = form;
             } else if (i == 0) {
-                shown[i] = "大⇔小";
+                shown[i].clear();
             }
         }
     }
@@ -1815,9 +1815,6 @@ void Keyboard::paintFlick(cairo_t *cr, const Theme &theme,
         } else if (s == "゛" || s == "゜") {
             mx -= textSize * 0.25;
             my += textSize * 0.25;
-        }
-        if (s == "大⇔小") {
-            textSize *= 0.5;
         }
         pango_font_description_set_absolute_size(font, textSize * PANGO_SCALE);
         pango_layout_set_font_description(layout, font);
