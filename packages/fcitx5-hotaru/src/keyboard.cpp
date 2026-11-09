@@ -228,6 +228,18 @@ bool drawIcon(cairo_t *cr, const std::string &name, double cx, double cy,
         cairo_curve_to(cr, cx + r * 0.2, cy + r * 0.3, cx - r * 0.1,
                        cy - r * 0.2, cx - r * 0.6, cy);
         cairo_stroke(cr);
+    } else if (name == "␣") {
+        cairo_move_to(cr, cx - r * 0.8, cy - r * 0.25);
+        cairo_line_to(cr, cx - r * 0.8, cy + r * 0.3);
+        cairo_line_to(cr, cx + r * 0.8, cy + r * 0.3);
+        cairo_line_to(cr, cx + r * 0.8, cy - r * 0.25);
+        cairo_stroke(cr);
+    } else if (name == "▶") {
+        // Drawn thin to sit with the ⌫ and ⏎ glyphs around it.
+        cairo_move_to(cr, cx - r * 0.35, cy - r * 0.8);
+        cairo_line_to(cr, cx + r * 0.45, cy);
+        cairo_line_to(cr, cx - r * 0.35, cy + r * 0.8);
+        cairo_stroke(cr);
     } else if (name == "newline") {
         // ⏎ folding back to the left, and under it the start of the line
         // it makes: enter, but staying in the box.
@@ -1506,8 +1518,14 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
             if (text.empty()) {
                 continue;
             }
+            if (k.kind == KeyKind::CursorRight || text == "␣") {
+                drawIcon(cr, text, k.x + k.w / 2, k.y + k.h / 2, k.h * 0.2,
+                         theme.text);
+                continue;
+            }
             const bool small = (text.size() > 3 && k.kind == KeyKind::Layer) ||
-                               k.kind == KeyKind::Lang;
+                               k.kind == KeyKind::Lang || text == "゛小" ||
+                               text == "、。";
             drawText(text, k.h * (small ? 0.30 : 0.46), k.x, k.y, k.w, k.h,
                      theme.text);
 
