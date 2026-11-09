@@ -227,7 +227,7 @@ bool drawIcon(cairo_t *cr, const std::string &name, double cx, double cy,
         cairo_curve_to(cr, cx + r * 0.2, cy + r * 0.3, cx - r * 0.1,
                        cy - r * 0.2, cx - r * 0.6, cy);
         cairo_stroke(cr);
-    } else if (name == "换行") {
+    } else if (name == "newline") {
         // ⏎ folding back to the left, and under it the start of the line
         // it makes: enter, but staying in the box.
         cairo_move_to(cr, cx + r * 0.7, cy - r * 0.85);
@@ -861,7 +861,7 @@ std::vector<std::string> Keyboard::alternates(int key, int *anchor) const {
         if (anchor) {
             *anchor = -1;
         }
-        return {"换行"};
+        return {"newline"};
     }
     if (!k || k->kind != KeyKind::Char || k->pad || symbols_) {
         return {};
