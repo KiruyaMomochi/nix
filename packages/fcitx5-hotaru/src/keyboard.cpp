@@ -356,6 +356,9 @@ std::string nextKanaForm(const std::string &kana, int which) {
         {"お", "", "", "ぉ"},   {"や", "", "", "ゃ"},   {"ゆ", "", "", "ゅ"},
         {"よ", "", "", "ょ"},   {"わ", "", "", "ゎ"},
     };
+    if (kana.empty()) { // would match the rows' empty slots
+        return {};
+    }
     for (const auto &row : forms) {
         if (std::find(row.begin(), row.end(), kana) == row.end()) {
             continue;
