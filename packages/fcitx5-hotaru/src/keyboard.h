@@ -15,6 +15,7 @@ enum class KeyKind {
     Shift,
     Backspace,
     Enter,
+    CursorRight,
     Layer,
     Space,
     Lang,      // 中 / EN
@@ -118,6 +119,10 @@ public:
     struct Action {
         uint32_t sym = 0; // keysym to type, or 0
         std::string text; // or text to put in as is
+        // Typed key by key for mozc, after a backspace if eraseFirst: ゛ on
+        // か takes the か back and spells が.
+        std::string romaji;
+        bool eraseFirst = false;
         bool hide = false;
         bool toggleLanguage = false;
         bool menuOpened = false; // the menu just opened: fill it
@@ -189,6 +194,7 @@ private:
     std::vector<std::vector<Key>> letters_, symbolRows_, zhuyinRows_, kanaRows_;
     bool zhuyin_ = false;
     bool kana_ = false;
+    std::string lastKana_; // what ゛小 acts on; any other key forgets it
     struct Flick {
         int key = -1;
         double x = 0, y = 0;

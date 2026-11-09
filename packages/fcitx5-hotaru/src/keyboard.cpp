@@ -261,9 +261,59 @@ const FlickItems *flickItems(const std::string &label) {
         {"や", {"や", "（", "ゆ", "）", "よ"}},
         {"ら", {"ら", "り", "る", "れ", "ろ"}},
         {"わ", {"わ", "を", "ん", "ー", ""}},
+        {"、。", {"、", "。", "？", "！", "…"}},
     };
     auto it = table.find(label);
     return it != table.end() ? &it->second : nullptr;
+}
+
+// How mozc is told each kana: it composes them from romaji itself.
+std::string romajiOf(const std::string &kana) {
+    static const std::map<std::string, std::string> table = {
+        {"あ", "a"},   {"い", "i"},   {"う", "u"},   {"え", "e"},
+        {"お", "o"},   {"か", "ka"},  {"き", "ki"},  {"く", "ku"},
+        {"け", "ke"},  {"こ", "ko"},  {"さ", "sa"},  {"し", "si"},
+        {"す", "su"},  {"せ", "se"},  {"そ", "so"},  {"た", "ta"},
+        {"ち", "ti"},  {"つ", "tu"},  {"て", "te"},  {"と", "to"},
+        {"な", "na"},  {"に", "ni"},  {"ぬ", "nu"},  {"ね", "ne"},
+        {"の", "no"},  {"は", "ha"},  {"ひ", "hi"},  {"ふ", "hu"},
+        {"へ", "he"},  {"ほ", "ho"},  {"ま", "ma"},  {"み", "mi"},
+        {"む", "mu"},  {"め", "me"},  {"も", "mo"},  {"や", "ya"},
+        {"ゆ", "yu"},  {"よ", "yo"},  {"ら", "ra"},  {"り", "ri"},
+        {"る", "ru"},  {"れ", "re"},  {"ろ", "ro"},  {"わ", "wa"},
+        {"を", "wo"},  {"ん", "nn"},  {"ー", "-"},   {"が", "ga"},
+        {"ぎ", "gi"},  {"ぐ", "gu"},  {"げ", "ge"},  {"ご", "go"},
+        {"ざ", "za"},  {"じ", "zi"},  {"ず", "zu"},  {"ぜ", "ze"},
+        {"ぞ", "zo"},  {"だ", "da"},  {"ぢ", "di"},  {"づ", "du"},
+        {"で", "de"},  {"ど", "do"},  {"ば", "ba"},  {"び", "bi"},
+        {"ぶ", "bu"},  {"べ", "be"},  {"ぼ", "bo"},  {"ぱ", "pa"},
+        {"ぴ", "pi"},  {"ぷ", "pu"},  {"ぺ", "pe"},  {"ぽ", "po"},
+        {"ゔ", "vu"},  {"ぁ", "xa"},  {"ぃ", "xi"},  {"ぅ", "xu"},
+        {"ぇ", "xe"},  {"ぉ", "xo"},  {"っ", "xtu"}, {"ゃ", "xya"},
+        {"ゅ", "xyu"}, {"ょ", "xyo"}, {"ゎ", "xwa"}, {"、", ","},
+        {"。", "."},   {"？", "?"},   {"！", "!"},   {"…", "z."},
+        {"（", "("},   {"）", ")"},
+    };
+    auto it = table.find(kana);
+    return it != table.end() ? it->second : std::string{};
+}
+
+// The next form ゛小 turns a kana into, going round. "" if it has no others.
+std::string nextKanaForm(const std::string &kana) {
+    static const char *const groups[] = {
+        "かが", "きぎ", "くぐ", "けげ", "こご", "さざ", "しじ", "すず",
+        "せぜ", "そぞ", "ただ", "ちぢ", "つっづ", "てで", "とど",
+        "はばぱ", "ひびぴ", "ふぶぷ", "へべぺ", "ほぼぽ", "あぁ", "いぃ",
+        "うぅゔ", "えぇ", "おぉ", "やゃ", "ゆゅ", "よょ", "わゎ",
+    };
+    for (const std::string group : groups) {
+        for (size_t i = 0; i < group.size(); i += 3) {
+            if (group.compare(i, 3, kana) == 0) {
+                return group.substr((i + 3) % group.size(), 3);
+            }
+        }
+    }
+    return {};
 }
 
 bool pinnedKey(const Key &k) {
@@ -311,23 +361,27 @@ Keyboard::Keyboard() {
                    enter},
                pad4),
     };
-    // The letters stay for romaji; the kana take the number pad's place.
+    // The letters stay for romaji. Where the number pad goes: the kana, and
+    // Gboard's right-hand column with ⌫ at the top. Four narrower columns in
+    // the three's width.
     kanaRows_ = letters_;
     const char *const kana[4][3] = {{"あ", "か", "さ"},
                                     {"た", "な", "は"},
                                     {"ま", "や", "ら"},
-                                    {nullptr, "わ", nullptr}};
+                                    {"゛小", "わ", "、。"}};
+    const Key side[4] = {Key{KeyKind::Backspace, "⌫", 0.75, true},
+                         Key{KeyKind::CursorRight, "▶", 0.75, true},
+                         Key{KeyKind::Space, "␣", 0.75, true},
+                         Key{KeyKind::Enter, "⏎", 0.75, true}};
     for (size_t r = 0; r < kanaRows_.size(); r++) {
-        int c = 0;
-        for (auto &k : kanaRows_[r]) {
-            if (!k.pad) {
-                continue;
-            }
-            if (kana[r][c]) {
-                k.label = kana[r][c];
-            }
-            c++;
+        auto &row = kanaRows_[r];
+        row.erase(std::remove_if(row.begin(), row.end(),
+                                 [](const Key &k) { return k.pad; }),
+                  row.end());
+        for (const char *label : kana[r]) {
+            row.push_back(Key{KeyKind::Char, label, 0.75, true});
         }
+        row.push_back(side[r]);
     }
     // 大千, as Gboard lays it out: four rows of ten, ㄦ by the space bar,
     // no shift. Each key sends what rime's bopomofo schema reads as that
@@ -839,7 +893,7 @@ std::string Keyboard::label(const Key &key) const {
         if (imCurrent_ >= 0 && size_t(imCurrent_) < imLabels_.size()) {
             return imLabels_[imCurrent_];
         }
-        return chinese_ ? "中" : "EN";
+        return chinese_ ? "拼" : "EN";
     }
     if (key.kind == KeyKind::Char && chinese_ && !key.pad) {
         // rime turns these into full-width punctuation.
@@ -1098,6 +1152,8 @@ std::vector<uint32_t> Keyboard::dragSpace(double x) {
 Keyboard::Action Keyboard::release(int key) {
     const auto *k = find(key);
     Action a;
+    std::string lastKana;
+    lastKana.swap(lastKana_);
     if (!k) {
         dragging_ = dragMoved_ = false;
         return a;
@@ -1113,9 +1169,18 @@ Keyboard::Action Keyboard::release(int key) {
         // whether ',' becomes '，'.
         if (flick_.key == key) {
             if (const auto *items = flickItems(k->label)) {
-                a.text = (*items)[flick_.direction];
+                lastKana_ = (*items)[flick_.direction];
+                a.romaji = romajiOf(lastKana_);
             }
             flick_ = {};
+            break;
+        }
+        if (k->label == "゛小") {
+            lastKana_ = nextKanaForm(lastKana);
+            if (!lastKana_.empty()) {
+                a.romaji = romajiOf(lastKana_);
+                a.eraseFirst = true;
+            }
             break;
         }
         auto s = k->label;
@@ -1143,6 +1208,9 @@ Keyboard::Action Keyboard::release(int key) {
         break;
     case KeyKind::Enter:
         a.sym = Return;
+        break;
+    case KeyKind::CursorRight:
+        a.sym = 0xff53;
         break;
     case KeyKind::Backspace:
         // Sent on press, and repeated while held.

@@ -859,6 +859,12 @@ void Connection::lift(int32_t id) {
 void Connection::perform(const Keyboard::Action &action) {
     // Each of these may change what the strip shows; fcitx calls back into
     // update(), which redraws.
+    if (action.eraseFirst) {
+        addon_->type(0xff08);
+    }
+    for (const char c : action.romaji) {
+        addon_->type(static_cast<unsigned char>(c));
+    }
     if (action.sym) {
         addon_->type(action.sym);
     }
@@ -1142,7 +1148,7 @@ void Addon::refresh() {
                         state.imCurrent = state.imLabels.size();
                     }
                     state.imLabels.push_back(
-                        name.find("注音") != std::string::npos ? "注" : "中");
+                        name.find("注音") != std::string::npos ? "注" : "拼");
                     choices_.push_back({e->uniqueName(), name});
                 }
                 if (e == entry && state.imCurrent < 0) {
@@ -1156,7 +1162,7 @@ void Addon::refresh() {
             }
             // Their own labels read backwards here: rime says ㄓ, chewing 酷.
             static const std::map<std::string, std::string> names = {
-                {"rime", "中"}, {"chewing", "注"}, {"mozc", "あ"}};
+                {"rime", "拼"}, {"chewing", "注"}, {"mozc", "あ"}};
             auto it = names.find(e->uniqueName());
             state.imLabels.push_back(e->isKeyboard()    ? "EN"
                                      : it != names.end() ? it->second
