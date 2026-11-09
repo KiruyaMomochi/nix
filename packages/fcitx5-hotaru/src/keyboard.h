@@ -128,6 +128,7 @@ public:
     void setPad(bool pad);
     // rime on its 注音 schema: the 大千 layout, ㄅㄆㄇㄈ on the keys.
     void setZhuyin(bool zhuyin) { zhuyin_ = zhuyin; }
+    bool zhuyin() const { return zhuyin_; }
     void setMenu(std::vector<MenuEntry> menu);
     // Double pinyin: print each key's final in its corner.
     void setHints(bool hints) { hints_ = hints; }

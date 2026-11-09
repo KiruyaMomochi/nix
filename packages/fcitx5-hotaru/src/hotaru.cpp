@@ -749,8 +749,10 @@ void Connection::lift(int32_t id) {
             return;
         }
         // A symbol types like the key it stands for, so rime still turns it
-        // full width; letters and the rest go in as they are.
-        if (text.size() == 1 && !std::isalpha(static_cast<unsigned char>(text[0]))) {
+        // full width; letters and the rest go in as they are. Under 注音 rime
+        // would read a digit or / as a symbol, so those go in as they are too.
+        if (!keyboard_.zhuyin() && text.size() == 1 &&
+            !std::isalpha(static_cast<unsigned char>(text[0]))) {
             addon_->type(static_cast<unsigned char>(text[0]));
         } else {
             addon_->commitText(text);

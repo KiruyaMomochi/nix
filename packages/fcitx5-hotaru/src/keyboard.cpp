@@ -867,9 +867,44 @@ std::vector<std::string> Keyboard::alternates(int key, int *anchor) const {
         return {};
     }
     if (!k->face.empty()) {
-        // What the 注音 key is on a plain keyboard is printed in its corner
-        // instead; holding it does nothing yet.
-        return {};
+        // The 注音 symbol stays under the finger, what the key is on a plain
+        // keyboard goes either side of it. The outer columns keep the row on
+        // screen by putting the symbol at their end, since a row pulled in
+        // from the edge would leave the finger over another item.
+        static const std::map<std::string, std::vector<std::string>> stops = {
+            {";", {"：", "；"}},
+            {",", {"……", "，"}},
+            {".", {"！", "。"}},
+            {"/", {"？", "/"}},
+        };
+        std::vector<std::string> sides{k->label};
+        if (auto it = stops.find(k->label); it != stops.end()) {
+            sides = it->second;
+        } else if (std::isalpha(static_cast<unsigned char>(k->label[0]))) {
+            std::string upper = k->label;
+            upper[0] = std::toupper(upper[0]);
+            sides = {upper, k->label};
+        }
+        const int column = key % RowStride;
+        std::vector<std::string> items;
+        int at = 0;
+        if (column == 0) {
+            items = {k->face};
+            items.insert(items.end(), sides.begin(), sides.end());
+        } else if (column == 9) {
+            items = sides;
+            items.push_back(k->face);
+            at = items.size() - 1;
+        } else if (sides.size() == 2) {
+            items = {sides[0], k->face, sides[1]};
+            at = 1;
+        } else {
+            items = {k->face, sides[0]};
+        }
+        if (anchor) {
+            *anchor = at;
+        }
+        return items;
     }
     // Gboard's: digits along the top row, its symbols under the rest, so
     // the thumbs already know where they are. ASCII goes through the input
@@ -956,6 +991,10 @@ std::string Keyboard::closePopup() {
         text = popup_.items[popup_.selected];
         if (text == "换行") {
             text = "\n";
+        }
+        // The key's own 注音 symbol: nothing to insert, it's a plain tap.
+        if (const auto *k = find(popup_.key); k && text == k->face) {
+            text.clear();
         }
     }
     popup_ = {};
@@ -1338,7 +1377,18 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
                 pango_font_description_set_absolute_size(
                     font, k.h * 0.2 * PANGO_SCALE);
                 pango_layout_set_font_description(layout, font);
-                pango_layout_set_text(layout, k.label.c_str(), -1);
+                // Letters and digits print themselves; the keys whose plain
+                // character is punctuation print the stop they give.
+                std::string corner = k.label;
+                if (!std::isalnum(static_cast<unsigned char>(corner[0]))) {
+                    for (const auto &item : alternates(r * RowStride + c)) {
+                        if (item != k.face) {
+                            corner = item;
+                            break;
+                        }
+                    }
+                }
+                pango_layout_set_text(layout, corner.c_str(), -1);
                 int tw, th;
                 pango_layout_get_pixel_size(layout, &tw, &th);
                 setColor(cr, faded(theme.text, 0.4));
