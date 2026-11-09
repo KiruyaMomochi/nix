@@ -147,6 +147,9 @@ public:
     // rime on its 注音 schema: the 大千 layout, ㄅㄆㄇㄈ on the keys.
     void setZhuyin(bool zhuyin) { zhuyin_ = zhuyin; }
     bool zhuyin() const { return zhuyin_; }
+    bool composing() const;
+    // Two keys next to each other, sideways or diagonally.
+    bool adjacent(int a, int b) const;
     // Japanese: letters for romaji, 12-key kana where the number pad goes.
     void setKana(bool kana) { kana_ = kana; }
     void setMenu(std::vector<MenuEntry> menu);
@@ -178,7 +181,6 @@ private:
     bool visible(const Key &key) const { return !key.pad || padShown(); }
     const Key *find(int key) const;
     std::string label(const Key &key) const;
-    bool composing() const;
     double textWidth(const std::string &text, double size) const;
     void layoutKeys();
     void layoutBar();

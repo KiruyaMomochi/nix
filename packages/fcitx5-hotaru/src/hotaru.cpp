@@ -144,19 +144,61 @@ void saveRecent(const std::vector<std::string> &emoji,
 class TouchStats {
 public:
     TouchStats() {
-        std::ifstream in(recentPath("touches.tsv"));
-        std::string page, orientation, key;
-        Sum s;
-        while (in >> page >> orientation >> key >> s.n >> s.x >> s.y >> s.xx >>
-               s.yy) {
-            sums_[{page, orientation, key}] = s;
-        }
+        load("touches.tsv", sums_);
+        load("corrections.tsv", fixes_);
     }
     ~TouchStats() { save(); }
 
     void add(const std::string &page, const char *rotation,
              const std::string &key, double dx, double dy) {
-        auto &s = sums_[{page, rotation, key}];
+        count(sums_[{page, rotation, key}], dx, dy);
+    }
+
+    // A press on `from` taken back and retyped as its neighbour `to`: where
+    // that press landed on `from`.
+    void addCorrection(const std::string &page, const char *rotation,
+                       const std::string &from, const std::string &to,
+                       double dx, double dy) {
+        count(fixes_[{page, rotation, from + ">" + to}], dx, dy);
+    }
+
+private:
+    struct Sum {
+        long n = 0;
+        double x = 0, y = 0, xx = 0, yy = 0;
+    };
+    using Sums = std::map<std::tuple<std::string, std::string, std::string>, Sum>;
+
+    static void load(const char *name, Sums &sums) {
+        std::ifstream in(recentPath(name));
+        std::string page, rotation, key;
+        Sum s;
+        while (in >> page >> rotation >> key >> s.n >> s.x >> s.y >> s.xx >>
+               s.yy) {
+            sums[{page, rotation, key}] = s;
+        }
+    }
+
+    static void write(const char *name, const Sums &sums) {
+        const std::filesystem::path path = recentPath(name);
+        std::error_code ec;
+        std::filesystem::create_directories(path.parent_path(), ec);
+        auto temp = path;
+        temp += ".new";
+        {
+            std::ofstream out(temp);
+            out.precision(12);
+            for (const auto &[where, s] : sums) {
+                const auto &[page, rotation, key] = where;
+                out << page << '\t' << rotation << '\t' << key << '\t' << s.n
+                    << '\t' << s.x << '\t' << s.y << '\t' << s.xx << '\t'
+                    << s.yy << '\n';
+            }
+        }
+        std::filesystem::rename(temp, path, ec);
+    }
+
+    void count(Sum &s, double dx, double dy) {
         s.n++;
         s.x += dx;
         s.y += dy;
@@ -167,36 +209,16 @@ public:
         }
     }
 
-private:
-    struct Sum {
-        long n = 0;
-        double x = 0, y = 0, xx = 0, yy = 0;
-    };
-
     void save() {
         if (!unsaved_) {
             return;
         }
         unsaved_ = 0;
-        const std::filesystem::path path = recentPath("touches.tsv");
-        std::error_code ec;
-        std::filesystem::create_directories(path.parent_path(), ec);
-        auto temp = path;
-        temp += ".new";
-        {
-            std::ofstream out(temp);
-            out.precision(12);
-            for (const auto &[where, s] : sums_) {
-                const auto &[page, orientation, key] = where;
-                out << page << '\t' << orientation << '\t' << key << '\t'
-                    << s.n << '\t' << s.x << '\t' << s.y << '\t' << s.xx
-                    << '\t' << s.yy << '\n';
-            }
-        }
-        std::filesystem::rename(temp, path, ec);
+        write("touches.tsv", sums_);
+        write("corrections.tsv", fixes_);
     }
 
-    std::map<std::tuple<std::string, std::string, std::string>, Sum> sums_;
+    Sums sums_, fixes_;
     int unsaved_ = 0;
 };
 
@@ -290,6 +312,14 @@ private:
     Keyboard keyboard_;
     Theme theme_;
     TouchStats touches_;
+    void countPress(int32_t id, int key, double x, double y);
+    // The last key pressed, while it could still turn out to be a miss.
+    struct Typed {
+        int key = -1;
+        Keyboard::Landing at;
+        uint64_t when = 0;
+        bool erased = false;
+    } typed_;
     bool privateField_ = false; // passwords and the like: nothing is counted
     // Backspace repeating and the long press timer, and whose they are.
     std::unique_ptr<fcitx::EventSourceTime> repeat_, longPress_;
@@ -711,12 +741,7 @@ void Connection::press(int32_t id, double x, double y) {
         finger.done = true;
     }
     const int key = keyboard_.keyAt(x, y);
-    if (const auto at = keyboard_.landing(key, x, y);
-        at && id != Mouse && !privateField_) {
-        static const char *const rotations[] = {"0", "90", "180", "270"};
-        touches_.add(at->page, rotations[transform_ & 3], at->key, at->dx,
-                     at->dy);
-    }
+    countPress(id, key, x, y);
     fingers_[id] = {key, x, x};
     keyboard_.hold(key);
     if (keyboard_.repeats(key)) {
@@ -733,6 +758,37 @@ void Connection::press(int32_t id, double x, double y) {
         startLongPress(id);
     }
     draw();
+}
+
+void Connection::countPress(int32_t id, int key, double x, double y) {
+    // X, ⌫ soon after while still composing, then a neighbour of X: X was a
+    // miss. Anything else in between and it was a change of mind.
+    constexpr uint64_t Window = 1500000;
+    const uint64_t now = fcitx::now(CLOCK_MONOTONIC);
+    const bool recent = typed_.key >= 0 && now - typed_.when < Window;
+    if (keyboard_.repeats(key)) {
+        if (recent && !typed_.erased && keyboard_.composing()) {
+            typed_.erased = true;
+            typed_.when = now;
+        } else {
+            typed_ = {};
+        }
+        return;
+    }
+    const auto at = keyboard_.landing(key, x, y);
+    if (!at || id == Mouse || privateField_) {
+        typed_ = {};
+        return;
+    }
+    static const char *const rotations[] = {"0", "90", "180", "270"};
+    const char *rotation = rotations[transform_ & 3];
+    if (recent && typed_.erased && typed_.at.page == at->page &&
+        keyboard_.adjacent(typed_.key, key)) {
+        touches_.addCorrection(at->page, rotation, typed_.at.key, at->key,
+                               typed_.at.dx, typed_.at.dy);
+    }
+    touches_.add(at->page, rotation, at->key, at->dx, at->dy);
+    typed_ = {key, *at, now, false};
 }
 
 void Connection::move(int32_t id, double x, double y) {
@@ -907,6 +963,7 @@ void Connection::startRepeat(int32_t id) {
     repeat_ = loop.addTimeEvent(
         CLOCK_MONOTONIC, fcitx::now(CLOCK_MONOTONIC) + 400000, 0,
         [this](fcitx::EventSourceTime *source, uint64_t) {
+            typed_ = {}; // holding ⌫ takes back more than one key
             addon_->type(0xff08);
             source->setNextInterval(60000);
             source->setOneShot();

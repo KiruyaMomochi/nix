@@ -947,6 +947,13 @@ std::string Keyboard::label(const Key &key) const {
     return key.label;
 }
 
+bool Keyboard::adjacent(int a, int b) const {
+    const auto *p = find(a), *q = find(b);
+    return p && q && p != q &&
+           std::abs(p->x + p->w / 2 - q->x - q->w / 2) < 1.5 * p->w &&
+           std::abs(p->y + p->h / 2 - q->y - q->h / 2) < 1.5 * p->h;
+}
+
 bool Keyboard::repeats(int key) const {
     const auto *k = find(key);
     return k && k->kind == KeyKind::Backspace;
