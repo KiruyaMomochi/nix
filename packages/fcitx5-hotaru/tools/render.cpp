@@ -57,14 +57,13 @@ int main(int argc, char **argv) {
         kb.setPad(false);
         kb.setKana(true);
         if (mode != "kana") {
-            const int key = mode == "kana-flick" ? 16 + 11 - 1
+            const int key = mode == "kana-flick" ? 10
                             : mode == "kana-still" ? 3 * 16 + 7
                                                    : 2 * 16 + 11;
             kb.hold(key);
             kb.flickStart(key, 0, 0);
             if (mode != "kana-still") {
-                kb.flickMove(mode == "kana-flick" ? -100 : 0,
-                             mode == "kana-flick" ? 0 : 100);
+                kb.flickMove(0, mode == "kana-flick" ? -100 : 100);
             }
         }
     } else if (mode == "menu") {

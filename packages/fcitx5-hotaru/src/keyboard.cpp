@@ -1730,15 +1730,16 @@ void Keyboard::paintFlick(cairo_t *cr, const Theme &theme,
     if (!items) {
         return;
     }
-    // A disc above the key, clear of the thumb and never off the bottom row:
-    // all five while the finger is still, then the one it's sliding to.
-    const double size = std::min(k->w, k->h) * 1.35;
+    // A card above the key, clear of the thumb and never off the bottom row:
+    // all five while the finger is still, then the one it's sliding to. On
+    // the top row it shrinks to the strip rather than cover the key.
+    const double size = std::min(std::min(k->w, k->h) * 1.35, k->y - Edge);
     const double cx = std::clamp(k->x + k->w / 2, Edge + size / 2,
                                  width_ - Edge - size / 2);
     const double cy = std::max(Edge + size / 2, k->y - size / 2);
     auto disc = [&](double x, double y, double d, const Color &fill,
                     const Color &line) {
-        roundedRect(cr, x - d / 2, y - d / 2, d, d, d / 2);
+        roundedRect(cr, x - d / 2, y - d / 2, d, d, 9);
         setColor(cr, fill);
         cairo_fill_preserve(cr);
         setColor(cr, line);
@@ -1770,20 +1771,25 @@ void Keyboard::paintFlick(cairo_t *cr, const Theme &theme,
     disc(cx, cy, size, theme.key, faded(theme.text, 0.2));
     text((*items)[flick_.direction], size * 0.5, cx, cy);
     // On the key, a wedge from its middle out to the side being slid to.
-    const double left = k->x + 2, right = k->x + k->w - 2;
-    const double top = k->y + 2, bottom = k->y + k->h - 2;
+    const double gap = 3, radius = 5;
+    const double left = k->x + gap, right = k->x + k->w - gap;
+    const double top = k->y + gap, bottom = k->y + k->h - gap;
     const double corners[5][2][2] = {{},
                                      {{left, bottom}, {left, top}},
                                      {{left, top}, {right, top}},
                                      {{right, top}, {right, bottom}},
                                      {{right, bottom}, {left, bottom}}};
     const auto &edge = corners[flick_.direction];
+    cairo_save(cr);
+    roundedRect(cr, left, top, right - left, bottom - top, radius);
+    cairo_clip(cr);
     cairo_move_to(cr, k->x + k->w / 2, k->y + k->h / 2);
     cairo_line_to(cr, edge[0][0], edge[0][1]);
     cairo_line_to(cr, edge[1][0], edge[1][1]);
     cairo_close_path(cr);
     setColor(cr, theme.accent);
     cairo_fill(cr);
+    cairo_restore(cr);
 }
 
 void Keyboard::paintPopup(cairo_t *cr, const Theme &theme,
