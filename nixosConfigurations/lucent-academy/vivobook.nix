@@ -23,6 +23,19 @@ in
       '';
     };
     experimentalEC = lib.mkEnableOption "the EC node (fan control via qcom-hamoa-ec). Read upstream docs/ec-fan-control.md first";
+    panelPowerOff = lib.mkEnableOption ''
+      dropping regulator-always-on from VREG_EDP_3P3 so the OLED panel loses
+      power in s2idle (justririll/x1e-sleep measured ~1.2 W saved). An overlay
+      can't delete a property, so the base dtb is edited with fdtput'';
+    ignoreUnused = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Pass pd_ignore_unused/clk_ignore_unused so the kernel never powers off
+        domains/clocks it thinks are unused. Early x1e boots needed this; with it
+        on, unused GDSCs (ufs, usb phys, gpu) stay up in idle and suspend.
+      '';
+    };
   };
 
   config = {
@@ -30,6 +43,17 @@ in
 
     hardware.deviceTree = {
       enable = true;
+      dtbSource = lib.mkIf cfg.panelPowerOff (
+        pkgs.runCommand "vivobook-s15-dtbs-panel-power-off"
+          { nativeBuildInputs = [ pkgs.dtc ]; }
+          ''
+            cp -r ${config.boot.kernelPackages.kernel}/dtbs $out
+            chmod -R u+w $out
+            f=$out/${config.hardware.deviceTree.name}
+            fdtget $f /regulator-edp-3p3 regulator-name
+            fdtput -d $f /regulator-edp-3p3 regulator-always-on
+          ''
+      );
       name = "qcom/x1e80100-asus-vivobook-s15.dtb";
       overlays = [
         {
@@ -81,9 +105,10 @@ in
     boot.extraModprobeConfig = lib.mkIf cfg.experimentalEC "options qcom_hamoa_ec allow_suspend=1";
     systemd.sleep.settings.Sleep.MemorySleepMode = lib.mkIf cfg.experimentalEC "s2idle";
 
-    boot.kernelParams = [
+    boot.kernelParams = lib.optionals cfg.ignoreUnused [
       "pd_ignore_unused"
       "clk_ignore_unused"
+    ] ++ [
       # Firmware advertises the Qualcomm fTPM but Linux has no driver for it yet, so
       # systemd-tpm2-generator would wait 2x45s for /dev/tpmrm0. Drop once a driver lands.
       "systemd.tpm2_wait=0"

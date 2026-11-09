@@ -32,12 +32,19 @@ wanted=()
 mapfile -t gens < <(find /nix/var/nix/profiles -maxdepth 1 -name 'system-*-link' -printf '%f\n' \
   | sed -E 's/^system-([0-9]+)-link$/\1/' | sort -n | tail -n "$KEEP")
 
-for g in "${gens[@]}"; do
-  top=$(readlink -f "$profile-$g-link")
-  uki="nixos-generation-$g-$(basename "$top" | cut -c1-8).efi"
-  entry="nixos-generation-$g.conf"
+# install_one GEN TOPLEVEL [SPECIALISATION]
+install_one() {
+  local g=$1 top=$2 spec=${3:-} uki entry out label built title
+  if [ -n "$spec" ]; then
+    uki="nixos-generation-$g-$spec-$(basename "$top" | cut -c1-8).efi"
+    entry="nixos-generation-$g-specialisation-$spec.conf"
+    title="NixOS ($spec)"
+  else
+    uki="nixos-generation-$g-$(basename "$top" | cut -c1-8).efi"
+    entry="nixos-generation-$g.conf"
+    title="NixOS"
+  fi
   wanted+=("$uki" "$entry")
-  if [ "$top" = "$current" ]; then default=$entry; fi
   out="$xbl/EFI/nixos/$uki"
 
   # Already there, and signed if we sign: keep it.
@@ -59,12 +66,24 @@ for g in "${gens[@]}"; do
   label=$(jq -r '."org.nixos.bootspec.v1".label' "$top/boot.json")
   built=$(date -d "@$(stat -L -c %Z "$profile-$g-link")" +%F)
   {
-    echo "title NixOS"
+    echo "title $title"
     echo "version Generation $g $label, built on $built"
     echo "uki /EFI/nixos/$uki"
     echo "sort-key nixos"
   } > "$xbl/loader/entries/$entry.tmp"
   mv "$xbl/loader/entries/$entry.tmp" "$xbl/loader/entries/$entry"
+}
+
+for g in "${gens[@]}"; do
+  top=$(readlink -f "$profile-$g-link")
+  if [ "$top" = "$current" ]; then default="nixos-generation-$g.conf"; fi
+  install_one "$g" "$top"
+  # Specialisations get their own UKI: with Secure Boot the stub won't take a
+  # cmdline from the entry, so a different kernel-params needs a different image.
+  for s in "$top"/specialisation/*; do
+    [ -e "$s" ] || continue
+    install_one "$g" "$(readlink -f "$s")" "$(basename "$s")"
+  done
 done
 
 for f in "$xbl"/EFI/nixos/nixos-generation-*.efi "$xbl"/loader/entries/nixos-generation-*.conf; do
@@ -76,7 +95,7 @@ for f in "$xbl"/EFI/nixos/nixos-generation-*.efi "$xbl"/loader/entries/nixos-gen
   if [ $found = 0 ]; then rm -f "$f"; echo "removed $(basename "$f")"; fi
 done
 
-if [ -z "$default" ]; then default=${wanted[-1]}; fi
+if [ -z "$default" ]; then default="nixos-generation-${gens[-1]}.conf"; fi
 printf 'timeout 5\ndefault %s\nconsole-mode keep\n' "$default" > "$esp/loader/loader.conf.tmp"
 mv "$esp/loader/loader.conf.tmp" "$esp/loader/loader.conf"
 sync

@@ -5,10 +5,28 @@
     ./vivobook.nix
     ./boot.nix
     ./face-unlock.nix
+    ./sleep.nix
   ];
 
   # Fan control via the EC. Read vivobook-s15-fedora docs/ec-fan-control.md first.
   hardware.vivobook-s15.experimentalEC = true;
+
+  # Boot-menu entries for sleep power experiments.
+  specialisation.no-ignore-unused.configuration = {
+    system.nixos.tags = [ "no-ignore-unused" ];
+    hardware.vivobook-s15.ignoreUnused = false;
+  };
+  specialisation.panel-off.configuration = {
+    system.nixos.tags = [ "panel-off" ];
+    hardware.vivobook-s15.ignoreUnused = false;
+    hardware.vivobook-s15.panelPowerOff = true;
+  };
+  # Vote-leak fixes from justririll/x1e-sleep, see sleep/README.md. Own kernel build.
+  specialisation.cxsd.configuration = {
+    system.nixos.tags = [ "cxsd" ];
+    hardware.vivobook-s15.deepSleep.enable = true;
+    hardware.vivobook-s15.panelPowerOff = true;
+  };
 
   kyaru.enable = true;
   kyaru.desktop.enable = true;

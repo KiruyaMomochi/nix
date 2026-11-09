@@ -1,0 +1,43 @@
+arm64: dts: hamoa: add the platform.SS1 system idle state
+
+ACPI _LPI of \_SB.SYSM lists platform.SS1 (EntryMethod 0x100), SS2 (0x200)
+and DRIPS (0xc300). Windows keeps DRIPS vetoed while the screen is on and only
+uses it in Modern Standby; add SS1 so runtime idle has a shallower system state
+while DRIPS (domain_ss3) is marked system-sleep-only and used only in s2idle.
+
+diff -ru a/arch/arm64/boot/dts/qcom/hamoa.dtsi b/arch/arm64/boot/dts/qcom/hamoa.dtsi
+--- a/arch/arm64/boot/dts/qcom/hamoa.dtsi	2026-10-03 10:27:29.171413908 +0300
++++ b/arch/arm64/boot/dts/qcom/hamoa.dtsi	2026-10-03 10:27:29.172113391 +0300
+@@ -305,12 +305,23 @@
+ 				min-residency-us = <7000>;
+ 			};
+ 
++			/* ACPI \_SB.SYSM _LPI "platform.SS1": 7.5 ms residency, 0.5 ms latency */
++			domain_ss1: domain-sleep-1 {
++				compatible = "domain-idle-state";
++				arm,psci-suspend-param = <0x02000154>;
++				entry-latency-us = <250>;
++				exit-latency-us = <250>;
++				min-residency-us = <7500>;
++			};
++
+ 			domain_ss3: domain-sleep-0 {
+ 				compatible = "domain-idle-state";
+ 				arm,psci-suspend-param = <0x0200c354>;
+ 				entry-latency-us = <2500>;
+ 				exit-latency-us = <2500>;
+ 				min-residency-us = <9000>;
++				/* DRIPS from runtime idle hangs the SoC after the first s2idle */
++				system-sleep-only;
+ 			};
+ 		};
+ 	};
+@@ -474,7 +485,7 @@
+ 
+ 		system_pd: power-domain-system {
+ 			#power-domain-cells = <0>;
+-			domain-idle-states = <&domain_ss3>;
++			domain-idle-states = <&domain_ss1>, <&domain_ss3>;
+ 		};
+ 	};
+ 

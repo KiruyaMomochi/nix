@@ -1,0 +1,66 @@
+pmdomain: allow a domain idle state to be used only for system sleep
+
+Add a "system-sleep-only" property for domain idle states. Such a state
+is skipped by the runtime genpd governors but still picked when the
+domain is powered off during system-wide suspend (genpd_sync_power_off,
+e.g. s2idle).
+
+On Qualcomm X1E (hamoa) the deepest system state (DRIPS, PSCI
+0x0200c354) hangs the SoC when entered from runtime idle after the
+first s2idle; Windows does the same thing by vetoing DRIPS in its PEP
+while the screen is on and only entering it in Modern Standby.
+
+diff -ru a/Documentation/devicetree/bindings/power/domain-idle-state.yaml b/Documentation/devicetree/bindings/power/domain-idle-state.yaml
+--- a/Documentation/devicetree/bindings/power/domain-idle-state.yaml	2026-10-03 17:40:10.377170892 +0300
++++ b/Documentation/devicetree/bindings/power/domain-idle-state.yaml	2026-10-03 17:40:10.403962015 +0300
+@@ -59,6 +59,14 @@
+         description:
+           A string used as a descriptive name for the idle state.
+ 
++      system-sleep-only:
++        type: boolean
++        description:
++          The state may only be entered as part of system-wide suspend
++          (e.g. s2idle), never from runtime idle. For platforms whose
++          firmware only supports the state, or only reaches it reliably,
++          when the system is suspended.
++
+     required:
+       - compatible
+       - entry-latency-us
+diff -ru a/drivers/pmdomain/core.c b/drivers/pmdomain/core.c
+--- a/drivers/pmdomain/core.c	2026-10-03 17:40:10.356170135 +0300
++++ b/drivers/pmdomain/core.c	2026-10-03 17:40:10.401836001 +0300
+@@ -3584,6 +3584,7 @@
+ 		genpd_state->residency_ns = 1000LL * residency;
+ 
+ 	of_property_read_string(state_node, "idle-state-name", &genpd_state->name);
++	genpd_state->system_sleep_only = of_property_read_bool(state_node, "system-sleep-only");
+ 
+ 	genpd_state->power_on_latency_ns = 1000LL * exit_latency;
+ 	genpd_state->power_off_latency_ns = 1000LL * entry_latency;
+diff -ru a/drivers/pmdomain/governor.c b/drivers/pmdomain/governor.c
+--- a/drivers/pmdomain/governor.c	2026-10-03 17:40:10.367170532 +0300
++++ b/drivers/pmdomain/governor.c	2026-10-03 17:40:10.403622888 +0300
+@@ -183,6 +183,10 @@
+ 	s64 min_off_time_ns;
+ 	s64 off_on_time_ns;
+ 
++	/* Some states may only be entered from system-wide suspend. */
++	if (genpd->states[state].system_sleep_only)
++		return false;
++
+ 	off_on_time_ns = genpd->states[state].power_off_latency_ns +
+ 		genpd->states[state].power_on_latency_ns;
+ 
+diff -ru a/include/linux/pm_domain.h b/include/linux/pm_domain.h
+--- a/include/linux/pm_domain.h	2026-10-03 17:40:10.348169847 +0300
++++ b/include/linux/pm_domain.h	2026-10-03 17:40:10.399171686 +0300
+@@ -184,6 +184,7 @@
+ 	u64 above;
+ 	u64 below;
+ 	u64 usage_s2idle;
++	bool system_sleep_only;
+ 	struct fwnode_handle *fwnode;
+ 	u64 idle_time;
+ 	void *data;
