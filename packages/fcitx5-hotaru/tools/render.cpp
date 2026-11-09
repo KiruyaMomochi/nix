@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
         kb.setKana(true);
         if (mode != "kana") {
             const int key = mode == "kana-flick" ? 10
-                            : mode == "kana-still" ? 3 * 16 + 7
+                            : mode == "kana-still" ? 3 * 16 + 6
                                                    : 2 * 16 + 11;
             kb.hold(key);
             kb.flickStart(key, 0, 0);
