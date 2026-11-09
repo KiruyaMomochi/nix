@@ -154,9 +154,9 @@ public:
     }
     ~TouchStats() { save(); }
 
-    void add(const std::string &page, const char *orientation,
+    void add(const std::string &page, const char *rotation,
              const std::string &key, double dx, double dy) {
-        auto &s = sums_[{page, orientation, key}];
+        auto &s = sums_[{page, rotation, key}];
         s.n++;
         s.x += dx;
         s.y += dy;
@@ -269,6 +269,7 @@ private:
 
     int32_t scale_ = 1;
     int32_t logicalWidth_ = 0, logicalHeight_ = 0;
+    int32_t transform_ = WL_OUTPUT_TRANSFORM_NORMAL;
     int32_t width_ = 0, height_ = 0;
     bool userHidden_ = false;
     bool focused_ = false;
@@ -431,9 +432,11 @@ void Connection::global(wl_registry *registry, uint32_t name,
         output_ = static_cast<wl_output *>(wl_registry_bind(
             registry, name, &wl_output_interface, std::min(version, 2u)));
         static const wl_output_listener listener = {
-            .geometry = [](void *, wl_output *, int32_t, int32_t, int32_t,
-                           int32_t, int32_t, const char *, const char *,
-                           int32_t) {},
+            .geometry =
+                [](void *data, wl_output *, int32_t, int32_t, int32_t, int32_t,
+                   int32_t, const char *, const char *, int32_t transform) {
+                    static_cast<Connection *>(data)->transform_ = transform;
+                },
             .mode = [](void *, wl_output *, uint32_t, int32_t, int32_t,
                        int32_t) {},
             .done = [](void *data,
@@ -708,9 +711,9 @@ void Connection::press(int32_t id, double x, double y) {
     const int key = keyboard_.keyAt(x, y);
     if (const auto at = keyboard_.landing(key, x, y);
         at && id != Mouse && !privateField_) {
-        touches_.add(at->page,
-                     logicalWidth_ >= logicalHeight_ ? "landscape" : "portrait",
-                     at->key, at->dx, at->dy);
+        static const char *const rotations[] = {"0", "90", "180", "270"};
+        touches_.add(at->page, rotations[transform_ & 3], at->key, at->dx,
+                     at->dy);
     }
     fingers_[id] = {key, x, x};
     keyboard_.hold(key);
