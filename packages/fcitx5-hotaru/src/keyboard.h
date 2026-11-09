@@ -106,6 +106,11 @@ public:
     // key's).
     int popupPicked() const { return popupPicked_; }
     bool isLang(int key) const;
+    // Kana keys pick by direction from where the finger came down. The key
+    // types what's picked when it's released.
+    bool isFlick(int key) const;
+    void flickStart(int key, double x, double y);
+    void flickMove(double x, double y);
     bool popupOpen() const { return popup_.key >= 0; }
     // The finger is sliding along space: arrow keys to move the cursor by.
     std::vector<uint32_t> dragSpace(double x);
@@ -137,6 +142,8 @@ public:
     // rime on its 注音 schema: the 大千 layout, ㄅㄆㄇㄈ on the keys.
     void setZhuyin(bool zhuyin) { zhuyin_ = zhuyin; }
     bool zhuyin() const { return zhuyin_; }
+    // Japanese: letters for romaji, 12-key kana where the number pad goes.
+    void setKana(bool kana) { kana_ = kana; }
     void setMenu(std::vector<MenuEntry> menu);
     // Double pinyin: print each key's final in its corner.
     void setHints(bool hints) { hints_ = hints; }
@@ -162,7 +169,7 @@ public:
 private:
     std::vector<std::vector<Key>> &rows();
     const std::vector<std::vector<Key>> &rows() const;
-    bool padShown() const { return pad_ || symbols_; }
+    bool padShown() const { return pad_ || symbols_ || kana_; }
     bool visible(const Key &key) const { return !key.pad || padShown(); }
     const Key *find(int key) const;
     std::string label(const Key &key) const;
@@ -179,8 +186,16 @@ private:
                   PangoFontDescription *font) const;
 
     enum class Shift { Off, Once, Locked };
-    std::vector<std::vector<Key>> letters_, symbolRows_, zhuyinRows_;
+    std::vector<std::vector<Key>> letters_, symbolRows_, zhuyinRows_, kanaRows_;
     bool zhuyin_ = false;
+    bool kana_ = false;
+    struct Flick {
+        int key = -1;
+        double x = 0, y = 0;
+        int direction = 0; // into the key's five: centre, left, up, right, down
+    } flick_;
+    void paintFlick(cairo_t *cr, const Theme &theme, PangoLayout *layout,
+                    PangoFontDescription *font) const;
     std::vector<Key> bar_, menuKeys_;
     std::vector<MenuEntry> menu_;
     Candidates candidates_;

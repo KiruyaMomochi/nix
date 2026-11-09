@@ -209,6 +209,7 @@ struct State {
     bool pad = false;
     bool hints = false;
     bool zhuyin = false;
+    bool kana = false;
     std::vector<MenuEntry> menu;
 };
 
@@ -610,6 +611,7 @@ void Connection::setState(const State &state) {
     keyboard_.setPad(state.pad);
     privateField_ = state.pad;
     keyboard_.setZhuyin(state.zhuyin);
+    keyboard_.setKana(state.kana && !state.pad);
     keyboard_.setHints(state.hints);
     keyboard_.setMenu(state.menu);
     draw();
@@ -724,6 +726,8 @@ void Connection::press(int32_t id, double x, double y) {
         keyboard_.dragSpace(x);
     } else if (keyboard_.isShift(key)) {
         keyboard_.shiftDown();
+    } else if (keyboard_.isFlick(key)) {
+        keyboard_.flickStart(key, x, y);
     }
     if (keyboard_.longPresses(key)) {
         startLongPress(id);
@@ -750,6 +754,11 @@ void Connection::move(int32_t id, double x, double y) {
     }
     if (finger.popup) {
         keyboard_.popupMove(x, y);
+        draw();
+        return;
+    }
+    if (keyboard_.isFlick(finger.key)) {
+        keyboard_.flickMove(x, y);
         draw();
         return;
     }
@@ -1102,6 +1111,7 @@ void Addon::refresh() {
         const auto *entry = instance_->inputMethodEntry(ic);
         state.chinese = entry && !entry->isKeyboard();
         const bool rime = entry && entry->uniqueName() == "rime";
+        state.kana = entry && entry->uniqueName() == "mozc";
         // rime's schema now, by its name, e.g. 注音·臺灣正體.
         std::string schema;
         if (rime) {

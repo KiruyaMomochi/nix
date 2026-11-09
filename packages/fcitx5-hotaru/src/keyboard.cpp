@@ -1,5 +1,6 @@
 #include "keyboard.h"
 
+#include <array>
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -246,6 +247,25 @@ bool drawIcon(cairo_t *cr, const std::string &name, double cx, double cy,
     return known;
 }
 
+// Centre, left, up, right, down, as Gboard has them. Empty: nothing that way.
+using FlickItems = std::array<const char *, 5>;
+const FlickItems *flickItems(const std::string &label) {
+    static const std::map<std::string, FlickItems> table = {
+        {"あ", {"あ", "い", "う", "え", "お"}},
+        {"か", {"か", "き", "く", "け", "こ"}},
+        {"さ", {"さ", "し", "す", "せ", "そ"}},
+        {"た", {"た", "ち", "つ", "て", "と"}},
+        {"な", {"な", "に", "ぬ", "ね", "の"}},
+        {"は", {"は", "ひ", "ふ", "へ", "ほ"}},
+        {"ま", {"ま", "み", "む", "め", "も"}},
+        {"や", {"や", "（", "ゆ", "）", "よ"}},
+        {"ら", {"ら", "り", "る", "れ", "ろ"}},
+        {"わ", {"わ", "を", "ん", "ー", ""}},
+    };
+    auto it = table.find(label);
+    return it != table.end() ? &it->second : nullptr;
+}
+
 bool pinnedKey(const Key &k) {
     return k.kind == KeyKind::Layer || k.kind == KeyKind::Lang;
 }
@@ -291,6 +311,24 @@ Keyboard::Keyboard() {
                    enter},
                pad4),
     };
+    // The letters stay for romaji; the kana take the number pad's place.
+    kanaRows_ = letters_;
+    const char *const kana[4][3] = {{"あ", "か", "さ"},
+                                    {"た", "な", "は"},
+                                    {"ま", "や", "ら"},
+                                    {nullptr, "わ", nullptr}};
+    for (size_t r = 0; r < kanaRows_.size(); r++) {
+        int c = 0;
+        for (auto &k : kanaRows_[r]) {
+            if (!k.pad) {
+                continue;
+            }
+            if (kana[r][c]) {
+                k.label = kana[r][c];
+            }
+            c++;
+        }
+    }
     // 大千, as Gboard lays it out: four rows of ten, ㄦ by the space bar,
     // no shift. Each key sends what rime's bopomofo schema reads as that
     // symbol, the key it sits on in 大千.
@@ -467,11 +505,11 @@ void Keyboard::layoutPicker() {
 }
 
 std::vector<std::vector<Key>> &Keyboard::rows() {
-    return symbols_ ? symbolRows_ : zhuyin_ ? zhuyinRows_ : letters_;
+    return symbols_ ? symbolRows_ : kana_ ? kanaRows_ : zhuyin_ ? zhuyinRows_ : letters_;
 }
 
 const std::vector<std::vector<Key>> &Keyboard::rows() const {
-    return symbols_ ? symbolRows_ : zhuyin_ ? zhuyinRows_ : letters_;
+    return symbols_ ? symbolRows_ : kana_ ? kanaRows_ : zhuyin_ ? zhuyinRows_ : letters_;
 }
 
 void Keyboard::resize(double width, double height) {
@@ -495,10 +533,11 @@ void Keyboard::layoutKeys() {
     // letters take the whole width, for two thumbs.
     const double padUnit = inner * 0.27 / 3;
     const double padX = Edge + inner - 3 * padUnit;
-    for (auto *layer : {&letters_, &symbolRows_, &zhuyinRows_}) {
+    for (auto *layer : {&letters_, &symbolRows_, &zhuyinRows_, &kanaRows_}) {
         // 注音 has a row more than the others; its keys are that much lower.
         const double rowH = (height_ - Edge - top) / layer->size();
-        const bool withPad = layer == &symbolRows_ || pad_;
+        const bool withPad =
+            layer == &symbolRows_ || layer == &kanaRows_ || pad_;
         const double unit = withPad ? inner * 0.70 / 10 : inner / 10;
         if (layer == &letters_) {
             letterUnit_ = unit;
@@ -956,6 +995,30 @@ std::vector<std::string> Keyboard::alternates(int key, int *anchor) const {
     return it != table.end() ? it->second : std::vector<std::string>{};
 }
 
+bool Keyboard::isFlick(int key) const {
+    const auto *k = find(key);
+    return k && k->pad && flickItems(k->label);
+}
+
+void Keyboard::flickStart(int key, double x, double y) {
+    flick_ = {key, x, y, 0};
+}
+
+void Keyboard::flickMove(double x, double y) {
+    const auto *k = find(flick_.key);
+    const auto *items = k ? flickItems(k->label) : nullptr;
+    if (!items) {
+        return;
+    }
+    const double dx = x - flick_.x, dy = y - flick_.y;
+    int direction = 0;
+    if (std::hypot(dx, dy) >= 0.35 * std::min(k->w, k->h)) {
+        direction = std::abs(dx) > std::abs(dy) ? (dx < 0 ? 1 : 3)
+                                                : (dy < 0 ? 2 : 4);
+    }
+    flick_.direction = *(*items)[direction] ? direction : 0;
+}
+
 bool Keyboard::longPresses(int key) const {
     const auto *k = find(key);
     return k && !alternates(key).empty();
@@ -1048,6 +1111,13 @@ Keyboard::Action Keyboard::release(int key) {
     case KeyKind::Char: {
         // Send the key itself, not what's printed on it: rime decides
         // whether ',' becomes '，'.
+        if (flick_.key == key) {
+            if (const auto *items = flickItems(k->label)) {
+                a.text = (*items)[flick_.direction];
+            }
+            flick_ = {};
+            break;
+        }
         auto s = k->label;
         if (static_cast<unsigned char>(s[0]) >= 0x80) {
             // Not a key at all (注音's ，): straight in.
@@ -1173,6 +1243,7 @@ void Keyboard::reset() {
     shiftHeld_ = shiftUsed_ = false;
     held_.clear();
     popup_ = {};
+    flick_ = {};
     dragging_ = dragMoved_ = false;
 }
 
@@ -1437,6 +1508,7 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
         }
     }
     paintPopup(cr, theme, layout, font);
+    paintFlick(cr, theme, layout, font);
     pango_font_description_free(font);
     g_object_unref(layout);
 }
@@ -1532,6 +1604,60 @@ void Keyboard::paintPicker(cairo_t *cr, const Theme &theme,
         cairo_rectangle(cr, Edge + pickerPage_ * w, y, w, 2);
         cairo_fill(cr);
     }
+}
+
+void Keyboard::paintFlick(cairo_t *cr, const Theme &theme,
+                          PangoLayout *layout,
+                          PangoFontDescription *font) const {
+    const auto *k = find(flick_.key);
+    const auto *items = k ? flickItems(k->label) : nullptr;
+    if (!items) {
+        return;
+    }
+    const double w = k->w, h = k->h;
+    // Pulled in from the screen's edges; only the direction counts, so the
+    // cross needn't be centred on the finger.
+    const double cx = std::clamp(k->x + w / 2, Edge + 1.5 * w,
+                                 width_ - Edge - 1.5 * w);
+    const double cy = std::clamp(k->y + h / 2, Edge + 1.5 * h,
+                                 height_ - Edge - 1.5 * h);
+    auto text = [&](const char *s, double size, double mx, double my) {
+        pango_font_description_set_absolute_size(font, size * PANGO_SCALE);
+        pango_layout_set_font_description(layout, font);
+        pango_layout_set_text(layout, s, -1);
+        int tw, th;
+        pango_layout_get_pixel_size(layout, &tw, &th);
+        setColor(cr, theme.text);
+        cairo_move_to(cr, mx - tw / 2.0, my - th / 2.0);
+        pango_cairo_show_layout(cr, layout);
+    };
+    const double offset[5][2] = {{0, 0}, {-1, 0}, {0, -1}, {1, 0}, {0, 1}};
+    for (int i = 0; i < 5; i++) {
+        if (!*(*items)[i]) {
+            continue;
+        }
+        const double mx = cx + offset[i][0] * w, my = cy + offset[i][1] * h;
+        const bool selected = i == flick_.direction;
+        roundedRect(cr, mx - w / 2 + 1, my - h / 2 + 1, w - 2, h - 2, 7);
+        setColor(cr, selected ? mix(theme.key, theme.accent, 0.3) : theme.key);
+        cairo_fill_preserve(cr);
+        setColor(cr, selected ? theme.accent : faded(theme.text, 0.2));
+        cairo_set_line_width(cr, selected ? 1.5 : 1);
+        cairo_stroke(cr);
+        text((*items)[i], h * 0.42, mx, my);
+    }
+    // The thumb covers the cross's middle and lower half, so what's picked
+    // is shown again out to its left.
+    const double size = h * 1.3;
+    const double px = cx - 1.5 * w - 8 - size;
+    const double py = std::max(Edge, cy - size / 2);
+    roundedRect(cr, px, py, size, size, 9);
+    setColor(cr, mix(theme.key, theme.accent, 0.3));
+    cairo_fill_preserve(cr);
+    setColor(cr, theme.accent);
+    cairo_set_line_width(cr, 1.5);
+    cairo_stroke(cr);
+    text((*items)[flick_.direction], size * 0.6, px + size / 2, py + size / 2);
 }
 
 void Keyboard::paintPopup(cairo_t *cr, const Theme &theme,
