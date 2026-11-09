@@ -274,6 +274,7 @@ const FlickItems *flickItems(const std::string &label) {
         {"ら", {"ら", "り", "る", "れ", "ろ"}},
         {"わ", {"わ", "を", "ん", "ー", ""}},
         {"、。", {"、", "。", "？", "！", "…"}},
+        {"゛小", {"゛小", "゛", "", "゜", "小"}},
     };
     auto it = table.find(label);
     return it != table.end() ? &it->second : nullptr;
@@ -310,20 +311,41 @@ std::string romajiOf(const std::string &kana) {
     return it != table.end() ? it->second : std::string{};
 }
 
-// The next form ゛小 turns a kana into, going round. "" if it has no others.
-std::string nextKanaForm(const std::string &kana) {
-    static const char *const groups[] = {
-        "かが", "きぎ", "くぐ", "けげ", "こご", "さざ", "しじ", "すず",
-        "せぜ", "そぞ", "ただ", "ちぢ", "つっづ", "てで", "とど",
-        "はばぱ", "ひびぴ", "ふぶぷ", "へべぺ", "ほぼぽ", "あぁ", "いぃ",
-        "うぅゔ", "えぇ", "おぉ", "やゃ", "ゆゅ", "よょ", "わゎ",
+// What ゛小 turns a kana into. which: 0 goes round its forms; 1 ゛, 2 ゜ and
+// 3 small go to that form, or back if it's already there. "" for no such form.
+std::string nextKanaForm(const std::string &kana, int which) {
+    // Plain, ゛, ゜, small.
+    static const std::array<const char *, 4> forms[] = {
+        {"か", "が", "", ""},   {"き", "ぎ", "", ""},   {"く", "ぐ", "", ""},
+        {"け", "げ", "", ""},   {"こ", "ご", "", ""},   {"さ", "ざ", "", ""},
+        {"し", "じ", "", ""},   {"す", "ず", "", ""},   {"せ", "ぜ", "", ""},
+        {"そ", "ぞ", "", ""},   {"た", "だ", "", ""},   {"ち", "ぢ", "", ""},
+        {"つ", "づ", "", "っ"}, {"て", "で", "", ""},   {"と", "ど", "", ""},
+        {"は", "ば", "ぱ", ""}, {"ひ", "び", "ぴ", ""}, {"ふ", "ぶ", "ぷ", ""},
+        {"へ", "べ", "ぺ", ""}, {"ほ", "ぼ", "ぽ", ""}, {"あ", "", "", "ぁ"},
+        {"い", "", "", "ぃ"},   {"う", "ゔ", "", "ぅ"}, {"え", "", "", "ぇ"},
+        {"お", "", "", "ぉ"},   {"や", "", "", "ゃ"},   {"ゆ", "", "", "ゅ"},
+        {"よ", "", "", "ょ"},   {"わ", "", "", "ゎ"},
     };
-    for (const std::string group : groups) {
-        for (size_t i = 0; i < group.size(); i += 3) {
-            if (group.compare(i, 3, kana) == 0) {
-                return group.substr((i + 3) % group.size(), 3);
+    for (const auto &row : forms) {
+        if (std::find(row.begin(), row.end(), kana) == row.end()) {
+            continue;
+        }
+        if (which > 0) {
+            if (!*row[which]) {
+                return {};
+            }
+            return kana == row[which] ? row[0] : row[which];
+        }
+        // Round: plain, small, ゛, ゜.
+        std::vector<std::string> round;
+        for (int form : {0, 3, 1, 2}) {
+            if (*row[form]) {
+                round.push_back(row[form]);
             }
         }
+        const auto at = std::find(round.begin(), round.end(), kana);
+        return round[(at - round.begin() + 1) % round.size()];
     }
     return {};
 }
@@ -1180,19 +1202,20 @@ Keyboard::Action Keyboard::release(int key) {
         // Send the key itself, not what's printed on it: rime decides
         // whether ',' becomes '，'.
         if (flick_.key == key) {
-            if (const auto *items = flickItems(k->label)) {
+            if (k->label == "゛小") {
+                static const int which[5] = {0, 1, 0, 2, 3};
+                lastKana_ = nextKanaForm(lastKana, which[flick_.direction]);
+                if (!lastKana_.empty()) {
+                    a.romaji = romajiOf(lastKana_);
+                    a.eraseFirst = true;
+                } else {
+                    lastKana_ = lastKana;
+                }
+            } else if (const auto *items = flickItems(k->label)) {
                 lastKana_ = (*items)[flick_.direction];
                 a.romaji = romajiOf(lastKana_);
             }
             flick_ = {};
-            break;
-        }
-        if (k->label == "゛小") {
-            lastKana_ = nextKanaForm(lastKana);
-            if (!lastKana_.empty()) {
-                a.romaji = romajiOf(lastKana_);
-                a.eraseFirst = true;
-            }
             break;
         }
         auto s = k->label;
