@@ -313,13 +313,19 @@ private:
     Theme theme_;
     TouchStats touches_;
     void countPress(int32_t id, int key, double x, double y);
-    // The last key pressed, while it could still turn out to be a miss.
-    struct Typed {
+    void countErase();
+    void forgetPresses();
+    // The keys behind the current composition, only in memory and only until
+    // it ends, to tell which of them got erased and typed differently.
+    struct Pressed {
         int key = -1;
         Keyboard::Landing at;
-        uint64_t when = 0;
-        bool erased = false;
-    } typed_;
+    };
+    std::vector<Pressed> pressed_, erased_;
+    Pressed miss_, missedTo_;
+    int differing_ = 0;
+    bool retyping_ = false;
+    uint64_t erasedAt_ = 0;
     bool privateField_ = false; // passwords and the like: nothing is counted
     // Backspace repeating and the long press timer, and whose they are.
     std::unique_ptr<fcitx::EventSourceTime> repeat_, longPress_;
@@ -760,35 +766,72 @@ void Connection::press(int32_t id, double x, double y) {
     draw();
 }
 
+void Connection::forgetPresses() {
+    pressed_.clear();
+    erased_.clear();
+    differing_ = 0;
+    retyping_ = false;
+}
+
+void Connection::countErase() {
+    // Under mozc one ⌫ takes back a whole kana, not one key.
+    if (pressed_.empty() || !keyboard_.composing() || keyboard_.kana()) {
+        forgetPresses();
+        return;
+    }
+    if (retyping_) {
+        erased_.clear();
+        differing_ = 0;
+        retyping_ = false;
+    }
+    erased_.push_back(pressed_.back());
+    pressed_.pop_back();
+    erasedAt_ = fcitx::now(CLOCK_MONOTONIC);
+}
+
 void Connection::countPress(int32_t id, int key, double x, double y) {
-    // X, ⌫ soon after while still composing, then a neighbour of X: X was a
-    // miss. Anything else in between and it was a change of mind.
-    constexpr uint64_t Window = 1500000;
-    const uint64_t now = fcitx::now(CLOCK_MONOTONIC);
-    const bool recent = typed_.key >= 0 && now - typed_.when < Window;
     if (keyboard_.repeats(key)) {
-        if (recent && !typed_.erased && keyboard_.composing()) {
-            typed_.erased = true;
-            typed_.when = now;
-        } else {
-            typed_ = {};
-        }
+        countErase();
         return;
     }
     const auto at = keyboard_.landing(key, x, y);
     if (!at || id == Mouse || privateField_) {
-        typed_ = {};
+        forgetPresses();
         return;
+    }
+    // The composition ended, or what was erased has gone stale.
+    constexpr uint64_t StaleErase = 5000000;
+    if (pressed_.empty() ? fcitx::now(CLOCK_MONOTONIC) - erasedAt_ > StaleErase
+                         : !keyboard_.composing()) {
+        forgetPresses();
     }
     static const char *const rotations[] = {"0", "90", "180", "270"};
     const char *rotation = rotations[transform_ & 3];
-    if (recent && typed_.erased && typed_.at.page == at->page &&
-        keyboard_.adjacent(typed_.key, key)) {
-        touches_.addCorrection(at->page, rotation, typed_.at.key, at->key,
-                               typed_.at.dx, typed_.at.dy);
-    }
     touches_.add(at->page, rotation, at->key, at->dx, at->dy);
-    typed_ = {key, *at, now, false};
+    // What was erased and typed again, position by position. One key changed
+    // and it's next to the old one: that key was a miss. More than one
+    // changed: a different word.
+    if (!erased_.empty()) {
+        const Pressed was = erased_.back();
+        erased_.pop_back();
+        retyping_ = true;
+        if (was.key != key) {
+            differing_++;
+            miss_ = was;
+            missedTo_ = {key, *at};
+        }
+        if (erased_.empty()) {
+            if (differing_ == 1 && miss_.at.page == missedTo_.at.page &&
+                keyboard_.adjacent(miss_.key, missedTo_.key)) {
+                touches_.addCorrection(miss_.at.page, rotation, miss_.at.key,
+                                       missedTo_.at.key, miss_.at.dx,
+                                       miss_.at.dy);
+            }
+            differing_ = 0;
+            retyping_ = false;
+        }
+    }
+    pressed_.push_back({key, *at});
 }
 
 void Connection::move(int32_t id, double x, double y) {
@@ -963,7 +1006,7 @@ void Connection::startRepeat(int32_t id) {
     repeat_ = loop.addTimeEvent(
         CLOCK_MONOTONIC, fcitx::now(CLOCK_MONOTONIC) + 400000, 0,
         [this](fcitx::EventSourceTime *source, uint64_t) {
-            typed_ = {}; // holding ⌫ takes back more than one key
+            countErase();
             addon_->type(0xff08);
             source->setNextInterval(60000);
             source->setOneShot();

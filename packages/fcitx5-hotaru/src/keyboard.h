@@ -152,6 +152,7 @@ public:
     bool adjacent(int a, int b) const;
     // Japanese: letters for romaji, 12-key kana where the number pad goes.
     void setKana(bool kana) { kana_ = kana; }
+    bool kana() const { return kana_; }
     void setMenu(std::vector<MenuEntry> menu);
     // Double pinyin: print each key's final in its corner.
     void setHints(bool hints) { hints_ = hints; }

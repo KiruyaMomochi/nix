@@ -1730,15 +1730,23 @@ void Keyboard::paintFlick(cairo_t *cr, const Theme &theme,
     if (!items) {
         return;
     }
-    const double w = k->w, h = k->h;
-    // Pulled in from the screen's edges; only the direction counts, so the
-    // cross needn't be centred on the finger.
-    const double cx = std::clamp(k->x + w / 2, Edge + 1.5 * w,
-                                 width_ - Edge - 1.5 * w);
-    const double cy = std::clamp(k->y + h / 2, Edge + 1.5 * h,
-                                 height_ - Edge - 1.5 * h);
-    auto text = [&](const char *s, double size, double mx, double my) {
-        pango_font_description_set_absolute_size(font, size * PANGO_SCALE);
+    // A disc above the key, clear of the thumb and never off the bottom row:
+    // all five while the finger is still, then the one it's sliding to.
+    const double size = std::min(k->w, k->h) * 1.35;
+    const double cx = std::clamp(k->x + k->w / 2, Edge + size / 2,
+                                 width_ - Edge - size / 2);
+    const double cy = std::max(Edge + size / 2, k->y - size / 2);
+    auto disc = [&](double x, double y, double d, const Color &fill,
+                    const Color &line) {
+        roundedRect(cr, x - d / 2, y - d / 2, d, d, d / 2);
+        setColor(cr, fill);
+        cairo_fill_preserve(cr);
+        setColor(cr, line);
+        cairo_set_line_width(cr, 1.5);
+        cairo_stroke(cr);
+    };
+    auto text = [&](const char *s, double textSize, double mx, double my) {
+        pango_font_description_set_absolute_size(font, textSize * PANGO_SCALE);
         pango_layout_set_font_description(layout, font);
         pango_layout_set_text(layout, s, -1);
         int tw, th;
@@ -1748,32 +1756,34 @@ void Keyboard::paintFlick(cairo_t *cr, const Theme &theme,
         pango_cairo_show_layout(cr, layout);
     };
     const double offset[5][2] = {{0, 0}, {-1, 0}, {0, -1}, {1, 0}, {0, 1}};
-    for (int i = 0; i < 5; i++) {
-        if (!*(*items)[i]) {
-            continue;
+    if (flick_.direction == 0) {
+        disc(cx, cy, size, theme.key, faded(theme.text, 0.2));
+        text((*items)[0], size * 0.36, cx, cy);
+        for (int i = 1; i < 5; i++) {
+            if (*(*items)[i]) {
+                text((*items)[i], size * 0.17, cx + offset[i][0] * size * 0.36,
+                     cy + offset[i][1] * size * 0.36);
+            }
         }
-        const double mx = cx + offset[i][0] * w, my = cy + offset[i][1] * h;
-        const bool selected = i == flick_.direction;
-        roundedRect(cr, mx - w / 2 + 1, my - h / 2 + 1, w - 2, h - 2, 7);
-        setColor(cr, selected ? mix(theme.key, theme.accent, 0.3) : theme.key);
-        cairo_fill_preserve(cr);
-        setColor(cr, selected ? theme.accent : faded(theme.text, 0.2));
-        cairo_set_line_width(cr, selected ? 1.5 : 1);
-        cairo_stroke(cr);
-        text((*items)[i], h * 0.42, mx, my);
+        return;
     }
-    // The thumb covers the cross's middle and lower half, so what's picked
-    // is shown again out to its left.
-    const double size = h * 1.3;
-    const double px = cx - 1.5 * w - 8 - size;
-    const double py = std::max(Edge, cy - size / 2);
-    roundedRect(cr, px, py, size, size, 9);
-    setColor(cr, mix(theme.key, theme.accent, 0.3));
-    cairo_fill_preserve(cr);
+    disc(cx, cy, size, theme.key, faded(theme.text, 0.2));
+    text((*items)[flick_.direction], size * 0.5, cx, cy);
+    // On the key, a wedge from its middle out to the side being slid to.
+    const double left = k->x + 2, right = k->x + k->w - 2;
+    const double top = k->y + 2, bottom = k->y + k->h - 2;
+    const double corners[5][2][2] = {{},
+                                     {{left, bottom}, {left, top}},
+                                     {{left, top}, {right, top}},
+                                     {{right, top}, {right, bottom}},
+                                     {{right, bottom}, {left, bottom}}};
+    const auto &edge = corners[flick_.direction];
+    cairo_move_to(cr, k->x + k->w / 2, k->y + k->h / 2);
+    cairo_line_to(cr, edge[0][0], edge[0][1]);
+    cairo_line_to(cr, edge[1][0], edge[1][1]);
+    cairo_close_path(cr);
     setColor(cr, theme.accent);
-    cairo_set_line_width(cr, 1.5);
-    cairo_stroke(cr);
-    text((*items)[flick_.direction], size * 0.6, px + size / 2, py + size / 2);
+    cairo_fill(cr);
 }
 
 void Keyboard::paintPopup(cairo_t *cr, const Theme &theme,

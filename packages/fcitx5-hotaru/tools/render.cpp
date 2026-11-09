@@ -51,16 +51,21 @@ int main(int argc, char **argv) {
             kb.hold(1 * 16 + 5); // ㄗ
             kb.openPopup(1 * 16 + 5);
         }
-    } else if (mode == "kana" || mode == "kana-flick" || mode == "kana-edge") {
+    } else if (mode == "kana" || mode == "kana-flick" || mode == "kana-edge" ||
+               mode == "kana-still") {
         kb.setInputMethods({"EN", "中", "注", "あ"}, 3);
         kb.setPad(false);
         kb.setKana(true);
         if (mode != "kana") {
-            const int key = mode == "kana-flick" ? 16 + 11 - 1 : 2 * 16 + 11;
+            const int key = mode == "kana-flick" ? 16 + 11 - 1
+                            : mode == "kana-still" ? 3 * 16 + 7
+                                                   : 2 * 16 + 11;
             kb.hold(key);
             kb.flickStart(key, 0, 0);
-            kb.flickMove(mode == "kana-flick" ? -100 : 0,
-                         mode == "kana-flick" ? 0 : 100);
+            if (mode != "kana-still") {
+                kb.flickMove(mode == "kana-flick" ? -100 : 0,
+                             mode == "kana-flick" ? 0 : 100);
+            }
         }
     } else if (mode == "menu") {
         kb.setMenu({{"中文", true}, {"半角", false}, {"汉字", true},
