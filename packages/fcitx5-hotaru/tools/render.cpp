@@ -52,11 +52,17 @@ int main(int argc, char **argv) {
             kb.openPopup(1 * 16 + 5);
         }
     } else if (mode == "kana" || mode == "kana-flick" || mode == "kana-edge" ||
-               mode == "kana-still") {
+               mode == "kana-still" || mode == "kana-marks") {
         kb.setInputMethods({"EN", "中", "注", "あ"}, 3);
         kb.setPad(false);
         kb.setKana(true);
-        if (mode != "kana") {
+        if (mode == "kana-marks") {
+            // か just typed, then a finger on ゛小.
+            kb.flickStart(10, 0, 0);
+            kb.release(10);
+            kb.hold(3 * 16 + 6);
+            kb.flickStart(3 * 16 + 6, 0, 0);
+        } else if (mode != "kana") {
             const int key = mode == "kana-flick" ? 10
                             : mode == "kana-still" ? 3 * 16 + 6
                                                    : 2 * 16 + 11;

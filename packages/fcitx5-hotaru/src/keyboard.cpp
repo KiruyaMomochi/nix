@@ -1839,20 +1839,17 @@ void Keyboard::paintFlick(cairo_t *cr, const Theme &theme,
         cairo_set_line_width(cr, 1.5);
         cairo_stroke(cr);
     };
-    // What each direction will give. On ゛小 that's the changed kana; with
-    // nothing to change, the marks themselves.
+    // What each direction will give. On ゛小 that's the changed kana, and
+    // with no kana to change there's nothing to show at all.
     std::array<std::string, 5> shown;
     for (int i = 0; i < 5; i++) {
-        shown[i] = (*items)[i];
-        if (k->label == "゛小") {
-            const auto form = nextKanaForm(lastKana_, markForm[i]);
-            if (!form.empty()) {
-                shown[i] = form;
-            } else if (i == 0) {
-                shown[i].clear();
-            }
-        }
+        shown[i] = k->label == "゛小" ? nextKanaForm(lastKana_, markForm[i])
+                                      : (*items)[i];
     }
+    if (shown[0].empty()) {
+        return;
+    }
+    const int direction = shown[flick_.direction].empty() ? 0 : flick_.direction;
     auto text = [&](const std::string &s, double textSize, double mx,
                     double my) {
         // These sit in a corner of their square: bring them to the middle.
@@ -1873,11 +1870,11 @@ void Keyboard::paintFlick(cairo_t *cr, const Theme &theme,
         pango_cairo_show_layout(cr, layout);
     };
     const double offset[5][2] = {{0, 0}, {-1, 0}, {0, -1}, {1, 0}, {0, 1}};
-    if (flick_.direction == 0) {
+    if (direction == 0) {
         disc(cx, cy, size, theme.key, faded(theme.text, 0.2));
         text(shown[0], size * 0.36, cx, cy);
         for (int i = 1; i < 5; i++) {
-            if (*(*items)[i]) {
+            if (!shown[i].empty()) {
                 text(shown[i], size * 0.17, cx + offset[i][0] * size * 0.36,
                      cy + offset[i][1] * size * 0.36);
             }
@@ -1885,7 +1882,7 @@ void Keyboard::paintFlick(cairo_t *cr, const Theme &theme,
         return;
     }
     disc(cx, cy, size, theme.key, faded(theme.text, 0.2));
-    text(shown[flick_.direction], size * 0.5, cx, cy);
+    text(shown[direction], size * 0.5, cx, cy);
     // On the key, a wedge from its middle out to the side being slid to.
     const double gap = 3, radius = 5;
     const double left = k->x + gap, right = k->x + k->w - gap;
@@ -1895,7 +1892,7 @@ void Keyboard::paintFlick(cairo_t *cr, const Theme &theme,
                                      {{left, top}, {right, top}},
                                      {{right, top}, {right, bottom}},
                                      {{right, bottom}, {left, bottom}}};
-    const auto &edge = corners[flick_.direction];
+    const auto &edge = corners[direction];
     cairo_save(cr);
     roundedRect(cr, left, top, right - left, bottom - top, radius);
     cairo_clip(cr);
