@@ -25,6 +25,7 @@
   specialisation.cxsd.configuration = {
     system.nixos.tags = [ "cxsd" ];
     hardware.vivobook-s15.deepSleep.enable = true;
+    hardware.vivobook-s15.deepSleep.pcieDiagnostics = true;
     hardware.vivobook-s15.panelPowerOff = true;
   };
 

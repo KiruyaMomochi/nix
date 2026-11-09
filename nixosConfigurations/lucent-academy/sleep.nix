@@ -28,16 +28,18 @@ let
       src = ./sleep + "/${dir}";
       nativeBuildInputs = kernel.moduleBuildDependencies;
       hardeningDisable = [ "pic" ];
-      buildPhase = ''
-        runHook preBuild
-        make -C ${kernel.dev}/lib/modules/${kernel.modDirVersion}/build M=$PWD modules
-        runHook postBuild
-      '';
-      installPhase = ''
-        runHook preInstall
-        install -Dm444 ${module}.ko $out/lib/modules/${kernel.modDirVersion}/extra/${module}.ko
-        runHook postInstall
-      '';
+      # kbuild's modules_install with nixpkgs' kernelModuleMakeFlags signs the module
+      # and writes the <module>.ko.cer that aggregateModules concatenates into modules.cer.
+      makeFlags = config.boot.kernelPackages.kernelModuleMakeFlags ++ [
+        "-C"
+        "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
+        "M=$(PWD)"
+        "INSTALL_MOD_PATH=${placeholder "out"}"
+        "INSTALL_MOD_DIR=extra"
+        "DEPMOD=true"
+      ];
+      buildFlags = [ "modules" ];
+      installTargets = [ "modules_install" ];
       meta.platforms = [ "aarch64-linux" ];
     };
 in
@@ -58,6 +60,11 @@ in
       type = lib.types.bool;
       default = false;
       description = "Cap PCIe bandwidth votes at Gen1 x1. May hurt DMA throughput; not needed when root ports suspend.";
+    };
+    pcieDiagnostics = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Log which branch qcom_pcie_suspend_noirq takes and the ICC teardown results (dmesg 'CXSD audit'). Diagnostic only.";
     };
   };
 
@@ -89,6 +96,7 @@ in
         "dts-hamoa-add-ss1-idle-state"
       ]
       ++ lib.optional cfg.pcieGen1Vote "pcie-qcom-keep-gen1-icc-vote"
+      ++ lib.optional cfg.pcieDiagnostics "pcie-qcom-cxsd-suspend-diagnostics-v7.3"
     );
 
     boot.extraModulePackages = [

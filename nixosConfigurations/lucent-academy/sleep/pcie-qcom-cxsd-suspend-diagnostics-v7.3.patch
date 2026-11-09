@@ -1,0 +1,27 @@
+Subject: [LOCAL DIAGNOSTIC] PCI: qcom: report suspend branch and ICC teardown
+
+Diagnostic only. This does not claim to fix L2 entry or CXSD.
+Log state without accessing DBI after PME_Turn_Off. Remove after testing;
+printk may itself perturb suspend timing. Based on pristine Linux v7.3.
+
+--- a/drivers/pci/controller/dwc/pcie-qcom.c
++++ b/drivers/pci/controller/dwc/pcie-qcom.c
+@@ -2350,12 +2350,18 @@
+ 	if (ret)
+ 		return ret;
+ 
++	dev_info(dev, "CXSD audit: suspended=%d skip_pwrctrl_off=%d use_pm_opp=%d target=%d\n",
++		 pcie->pci->suspended, pcie->pci->pp.skip_pwrctrl_off,
++		 pcie->use_pm_opp, pm_suspend_target_state);
++
+ 	if (pcie->pci->suspended) {
+ 		ret = icc_disable(pcie->icc_mem);
++		dev_info(dev, "CXSD audit: icc_mem disable=%d\n", ret);
+ 		if (ret)
+ 			dev_err(dev, "Failed to disable PCIe-MEM interconnect path: %d\n", ret);
+ 
+ 		ret = icc_disable(pcie->icc_cpu);
++		dev_info(dev, "CXSD audit: icc_cpu disable=%d\n", ret);
+ 		if (ret)
+ 			dev_err(dev, "Failed to disable CPU-PCIe interconnect path: %d\n", ret);
+ 

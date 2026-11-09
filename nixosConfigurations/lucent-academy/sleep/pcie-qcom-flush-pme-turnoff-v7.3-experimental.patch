@@ -1,0 +1,18 @@
+Subject: [LOCAL EXPERIMENT] PCI: qcom: flush the PME_Turn_Off write
+
+Adapt only the posted-write flush from Johan Hovold CXSD WIP commit
+0d38770c129cdb3f64bd4645fdb1150af5a8b222. Not an upstream fix for WCN7850.
+Do not change timeout semantics or force D3cold on active endpoints.
+A negative result rejects this narrow ordering hypothesis; it does not
+justify increasing the timeout or suppressing the warning.
+
+--- a/drivers/pci/controller/dwc/pcie-qcom.c
++++ b/drivers/pci/controller/dwc/pcie-qcom.c
+@@ -1496,6 +1496,7 @@
+ 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+ 
+ 	writel(ELBI_SYS_CTRL_PME_TURNOFF_MSG, pci->elbi_base + ELBI_SYS_CTRL);
++	readl(pci->elbi_base + ELBI_SYS_CTRL);
+ }
+ 
+ static const struct dw_pcie_host_ops qcom_pcie_dw_ops = {
