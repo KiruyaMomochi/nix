@@ -98,6 +98,61 @@ void strokeRound(cairo_t *cr, const Color &color) {
     cairo_stroke(cr);
 }
 
+enum class Mark { Comma, Stop, Voiced, SemiVoiced };
+
+// A faint square with a mark hung on its corner, as the mark sits on a kana.
+// The square stops a little short of the mark, so the mark floats over it
+// and the two never touch.
+void markBox(cairo_t *cr, const Color &color, double x, double y, double s,
+             double lw, Mark mark) {
+    auto trace = [&] {
+        cairo_new_path(cr);
+        auto line = [&](double x0, double y0, double x1, double y1) {
+            cairo_move_to(cr, x + s * x0, y + s * y0);
+            cairo_line_to(cr, x + s * x1, y + s * y1);
+        };
+        auto ring = [&](double cx, double cy) {
+            cairo_new_sub_path(cr);
+            cairo_arc(cr, x + s * cx, y + s * cy, s * 0.2, 0, 2 * M_PI);
+        };
+        switch (mark) {
+        case Mark::Comma:
+            line(-0.12, 0.76, 0.14, 1.08);
+            break;
+        case Mark::Stop:
+            ring(0.02, 0.98);
+            break;
+        case Mark::Voiced:
+            line(0.76, -0.24, 0.9, 0.1);
+            line(1.06, -0.24, 1.2, 0.1);
+            break;
+        case Mark::SemiVoiced:
+            ring(0.98, 0.02);
+            break;
+        }
+    };
+    cairo_save(cr);
+    const double stroke = lw * 0.75;
+    cairo_push_group(cr);
+    cairo_set_line_width(cr, 1);
+    setColor(cr, faded(color, 0.45));
+    cairo_rectangle(cr, x, y, s, s);
+    cairo_stroke(cr);
+    cairo_set_operator(cr, CAIRO_OPERATOR_CLEAR);
+    cairo_set_line_width(cr, stroke + s * 0.3);
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+    trace();
+    cairo_stroke(cr);
+    cairo_pop_group_to_source(cr);
+    cairo_paint(cr);
+    setColor(cr, color);
+    cairo_set_line_width(cr, stroke);
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+    trace();
+    cairo_stroke(cr);
+    cairo_restore(cr);
+}
+
 // Line icons for the emoji tabs and the strip's emoji button, the way
 // Gboard draws them: one colour, so they read as buttons beside the
 // colour emoji they open. Named by the emoji the tab stands for; r is half
@@ -228,35 +283,22 @@ bool drawIcon(cairo_t *cr, const std::string &name, double cx, double cy,
         cairo_curve_to(cr, cx + r * 0.2, cy + r * 0.3, cx - r * 0.1,
                        cy - r * 0.2, cx - r * 0.6, cy);
         cairo_stroke(cr);
-    } else if (name == "、。" || name == "゛゜") {
-        // Punctuation and marks sit in a corner of their square, so alone
-        // they look off centre. Faint squares show the corner, as Gboard.
-        const double s = r, between = r * 0.3;
-        const double x0 = cx - s - between / 2, x1 = cx + between / 2;
-        const double y0 = cy - s / 2;
-        cairo_save(cr);
-        cairo_set_line_width(cr, 1);
-        setColor(cr, faded(color, 0.45));
-        cairo_rectangle(cr, x0, y0, s, s);
-        cairo_rectangle(cr, x1, y0, s, s);
-        cairo_stroke(cr);
-        cairo_restore(cr);
-        cairo_set_line_width(cr, lw * 0.7);
-        if (name == "、。") {
-            cairo_move_to(cr, x0 + s * 0.14, y0 + s * 0.62);
-            cairo_line_to(cr, x0 + s * 0.38, y0 + s * 0.88);
-            cairo_stroke(cr);
-            cairo_arc(cr, x1 + s * 0.26, y0 + s * 0.74, s * 0.17, 0, 2 * M_PI);
-            cairo_stroke(cr);
-        } else {
-            for (double dx : {0.62, 0.86}) {
-                cairo_move_to(cr, x0 + s * dx, y0 + s * 0.08);
-                cairo_line_to(cr, x0 + s * (dx + 0.1), y0 + s * 0.34);
-            }
-            cairo_stroke(cr);
-            cairo_arc(cr, x1 + s * 0.76, y0 + s * 0.24, s * 0.17, 0, 2 * M_PI);
-            cairo_stroke(cr);
+    } else if (name == "、。") {
+        // Where each way of flicking goes: 。 left, 、 middle, then ？！… are
+        // text or dots around them.
+        const double s = r * 0.62;
+        markBox(cr, color, cx - s / 2, cy - s / 2, s, lw, Mark::Comma);
+        markBox(cr, color, cx - s / 2 - s * 1.7, cy - s / 2, s, lw, Mark::Stop);
+        for (int d = -1; d <= 1; d++) {
+            cairo_new_sub_path(cr);
+            cairo_arc(cr, cx + d * s * 0.42, cy + s * 1.55, lw * 0.36, 0,
+                      2 * M_PI);
+            cairo_fill(cr);
         }
+    } else if (name == "゛゜") {
+        const double s = r * 0.62, between = s * 1.1;
+        markBox(cr, color, cx - s - between / 2, cy - s / 2, s, lw, Mark::Voiced);
+        markBox(cr, color, cx + between / 2, cy - s / 2, s, lw, Mark::SemiVoiced);
     } else if (name == "␣") {
         cairo_move_to(cr, cx - r * 0.8, cy - r * 0.25);
         cairo_line_to(cr, cx - r * 0.8, cy + r * 0.3);
@@ -1583,8 +1625,13 @@ void Keyboard::paint(cairo_t *cr, const Theme &theme) const {
                 continue;
             }
             if (text == "、。") {
-                drawIcon(cr, text, k.x + k.w / 2, k.y + k.h / 2, k.h * 0.26,
+                const double r = k.h * 0.26, s = r * 0.62;
+                const double cx = k.x + k.w / 2, cy = k.y + k.h / 2;
+                drawIcon(cr, text, cx, cy, r, theme.text);
+                drawText("?", k.h * 0.17, cx - s, cy - s * 2.2, s * 2, s * 1.4,
                          theme.text);
+                drawText("!", k.h * 0.17, cx + s * 1.05, cy - s * 0.7, s * 1.4,
+                         s * 1.4, theme.text);
                 continue;
             }
             if (text == "゛小") {

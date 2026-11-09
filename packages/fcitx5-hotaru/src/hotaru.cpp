@@ -20,6 +20,7 @@
 #include <map>
 #include <memory>
 #include <tuple>
+#include <vector>
 #include <cairo.h>
 #include <wayland-client.h>
 #include <wayland_public.h>
@@ -61,6 +62,9 @@ struct Buffer {
     wl_buffer *buffer = nullptr;
     void *data = nullptr;
     size_t size = 0;
+    int width = 0, height = 0;
+    bool busy = false;    // the compositor is holding it
+    bool retired = false; // to be freed as soon as it's let go
 
     static Buffer *create(wl_shm *shm, int width, int height) {
         const int stride = width * 4;
@@ -85,12 +89,18 @@ struct Buffer {
                                                  WL_SHM_FORMAT_ARGB8888);
         self->data = data;
         self->size = size;
+        self->width = width;
+        self->height = height;
         wl_shm_pool_destroy(pool);
         close(fd);
         static const wl_buffer_listener listener = {
             .release =
                 [](void *data, wl_buffer *) {
-                    delete static_cast<Buffer *>(data);
+                    auto *self = static_cast<Buffer *>(data);
+                    self->busy = false;
+                    if (self->retired) {
+                        delete self;
+                    }
                 },
         };
         wl_buffer_add_listener(self->buffer, &listener, self);
@@ -329,6 +339,11 @@ private:
     bool privateField_ = false; // passwords and the like: nothing is counted
     // Backspace repeating and the long press timer, and whose they are.
     std::unique_ptr<fcitx::EventSourceTime> repeat_, longPress_;
+    void drawFrame();
+    Buffer *acquireBuffer(int width, int height);
+    void retireBuffers();
+    std::unique_ptr<fcitx::EventSource> frame_;
+    std::vector<Buffer *> buffers_;
     int32_t repeatFinger_ = 0, longPressFinger_ = 0;
 };
 
@@ -403,7 +418,7 @@ private:
         closed_;
     std::vector<std::unique_ptr<fcitx::HandlerTableEntry<fcitx::EventHandler>>>
         events_;
-    std::unique_ptr<fcitx::EventSource> focusCheck_;
+    std::unique_ptr<fcitx::EventSource> focusCheck_, panelCheck_;
 };
 
 Connection::Connection(Addon *addon, wl_display *display)
@@ -687,9 +702,53 @@ void Connection::hide() {
         wl_display_flush(display_);
         HOTARU_DEBUG() << "hidden";
     }
+    retireBuffers();
+}
+
+void Connection::retireBuffers() {
+    for (auto *buffer : buffers_) {
+        if (buffer->busy) {
+            buffer->retired = true;
+        } else {
+            delete buffer;
+        }
+    }
+    buffers_.clear();
+}
+
+Buffer *Connection::acquireBuffer(int width, int height) {
+    if (!buffers_.empty() &&
+        (buffers_[0]->width != width || buffers_[0]->height != height)) {
+        retireBuffers();
+    }
+    for (auto *buffer : buffers_) {
+        if (!buffer->busy) {
+            return buffer;
+        }
+    }
+    auto *buffer = Buffer::create(shm_, width, height);
+    if (buffer) {
+        buffers_.push_back(buffer);
+    }
+    return buffer;
 }
 
 void Connection::draw() {
+    if (!surface_ || frame_) {
+        return;
+    }
+    // Once per turn of the event loop, however many things changed in it: a
+    // key is a press and a release through the input method, and what the
+    // input method shows between them must not reach the screen.
+    frame_ = addon_->instance()->eventLoop().addDeferEvent(
+        [this](fcitx::EventSource *) {
+            drawFrame();
+            frame_.reset();
+            return true;
+        });
+}
+
+void Connection::drawFrame() {
     if (!surface_) {
         return;
     }
@@ -705,7 +764,7 @@ void Connection::draw() {
         keyboard_.resize(w, h);
     }
 
-    auto *buffer = Buffer::create(shm_, w * scale_, h * scale_);
+    auto *buffer = acquireBuffer(w * scale_, h * scale_);
     if (!buffer) {
         HOTARU_WARN() << "cannot allocate a buffer";
         return;
@@ -714,6 +773,10 @@ void Connection::draw() {
         static_cast<unsigned char *>(buffer->data), CAIRO_FORMAT_ARGB32,
         w * scale_, h * scale_, w * scale_ * 4);
     auto *cr = cairo_create(image);
+    // A reused buffer still has the last frame on it.
+    cairo_set_operator(cr, CAIRO_OPERATOR_CLEAR);
+    cairo_paint(cr);
+    cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
     cairo_scale(cr, scale_, scale_);
     keyboard_.paint(cr, theme_);
     cairo_destroy(cr);
@@ -721,6 +784,7 @@ void Connection::draw() {
 
     auto *surface = rawSurface();
     wl_surface_set_buffer_scale(surface, scale_);
+    buffer->busy = true;
     wl_surface_attach(surface, buffer->buffer, 0, 0);
     wl_surface_damage(surface, 0, 0, w, h);
     wl_surface_commit(surface);
@@ -1155,8 +1219,16 @@ void Addon::showVirtualKeyboard() {
 
 void Addon::update(fcitx::UserInterfaceComponent component,
                    fcitx::InputContext *) {
-    if (component == fcitx::UserInterfaceComponent::InputPanel) {
-        refresh();
+    if (component == fcitx::UserInterfaceComponent::InputPanel &&
+        !panelCheck_) {
+        // Once per turn of the event loop, as with drawing: reading the
+        // whole candidate list on every press and release adds up.
+        panelCheck_ = instance_->eventLoop().addDeferEvent(
+            [this](fcitx::EventSource *) {
+                refresh();
+                panelCheck_.reset();
+                return true;
+            });
     }
 }
 
