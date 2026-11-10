@@ -1,0 +1,83 @@
+Subject: [EXPERIMENTAL] PCI: qcom: hold 2.7.0 RC reset across teardown
+
+Port only the missing RC-reset parts of Johan Hovold's CXSD WIP:
+6813395a52f5dad7de7295346ee7ab127230ca0e and
+0d38770c129cdb3f64bd4645fdb1150af5a8b222.
+https://github.com/jhovold/linux/tree/wip/x1e80100-6.16-cxsd
+
+The init ordering change is required together with reset assertion:
+SC8280XP AUX_CLK can stay off while reset is asserted. Keep v7.3 DWC,
+D3cold eligibility, pwrctrl and ICC behavior unchanged. This touches all
+controllers using the 2.7.0 helpers, not just X1E. Unreviewed, uncompiled,
+not hardware tested. A successful apply is not evidence of CXSD entry.
+Do not combine with the original full shutdown series.
+
+--- a/drivers/pci/controller/dwc/pcie-qcom.c
++++ b/drivers/pci/controller/dwc/pcie-qcom.c
+@@ -1034,26 +1034,26 @@
+ 		return ret;
+ 	}
+ 
++	ret = reset_control_assert(res->rst);
++	if (ret) {
++		dev_err(dev, "reset assert failed (%d)\n", ret);
++		goto err_disable_regulators;
++	}
++
++	usleep_range(1000, 1500);
++
++	ret = reset_control_deassert(res->rst);
++	if (ret) {
++		dev_err(dev, "reset deassert failed (%d)\n", ret);
++		goto err_disable_regulators;
++	}
++
++	/* Wait for reset to complete, required on SM8450 */
++	usleep_range(1000, 1500);
++
+ 	ret = clk_bulk_prepare_enable(res->num_clks, res->clks);
+ 	if (ret < 0)
+ 		goto err_disable_regulators;
+-
+-	ret = reset_control_assert(res->rst);
+-	if (ret) {
+-		dev_err(dev, "reset assert failed (%d)\n", ret);
+-		goto err_disable_clocks;
+-	}
+-
+-	usleep_range(1000, 1500);
+-
+-	ret = reset_control_deassert(res->rst);
+-	if (ret) {
+-		dev_err(dev, "reset deassert failed (%d)\n", ret);
+-		goto err_disable_clocks;
+-	}
+-
+-	/* Wait for reset to complete, required on SM8450 */
+-	usleep_range(1000, 1500);
+ 
+ 	/* configure PCIe to RC mode */
+ 	writel(DEVICE_TYPE_RC, pcie->parf + PARF_DEVICE_TYPE);
+@@ -1086,8 +1086,6 @@
+ 	writel(val, pcie->parf + PARF_AXI_MSTR_WR_ADDR_HALT_V2);
+ 
+ 	return 0;
+-err_disable_clocks:
+-	clk_bulk_disable_unprepare(res->num_clks, res->clks);
+ err_disable_regulators:
+ 	regulator_bulk_disable(ARRAY_SIZE(res->supplies), res->supplies);
+ 
+@@ -1135,8 +1133,13 @@
+ 	val = readl(pcie->parf + PARF_PHY_CTRL);
+ 	val |= PHY_TEST_PWR_DOWN;
+ 	writel(val, pcie->parf + PARF_PHY_CTRL);
++	readl(pcie->parf + PARF_PHY_CTRL);
+ 
+ 	clk_bulk_disable_unprepare(res->num_clks, res->clks);
++
++	/* Experiment: hold the controller reset across system suspend. */
++	reset_control_assert(res->rst);
++	usleep_range(2000, 2500);
+ 
+ 	regulator_bulk_disable(ARRAY_SIZE(res->supplies), res->supplies);
+ }

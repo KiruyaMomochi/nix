@@ -27,6 +27,9 @@ in
       dropping regulator-always-on from VREG_EDP_3P3 so the OLED panel loses
       power in s2idle (justririll/x1e-sleep measured ~1.2 W saved). An overlay
       can't delete a property, so the base dtb is edited with fdtput'';
+    disableAdsp = lib.mkEnableOption ''
+      ADSP status = "disabled" in the base dtb (Johan's CRD CXSD setup). Kills
+      battmgr, audio and USB-C status; diagnostic boots only'';
     ignoreUnused = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -43,16 +46,24 @@ in
 
     hardware.deviceTree = {
       enable = true;
-      dtbSource = lib.mkIf cfg.panelPowerOff (
-        pkgs.runCommand "vivobook-s15-dtbs-panel-power-off"
+      dtbSource = lib.mkIf (cfg.panelPowerOff || cfg.disableAdsp) (
+        pkgs.runCommand "vivobook-s15-dtbs-edited"
           { nativeBuildInputs = [ pkgs.dtc ]; }
-          ''
-            cp -r ${config.boot.kernelPackages.kernel}/dtbs $out
-            chmod -R u+w $out
-            f=$out/${config.hardware.deviceTree.name}
-            fdtget $f /regulator-edp-3p3 regulator-name
-            fdtput -d $f /regulator-edp-3p3 regulator-always-on
-          ''
+          (
+            ''
+              cp -r ${config.boot.kernelPackages.kernel}/dtbs $out
+              chmod -R u+w $out
+              f=$out/${config.hardware.deviceTree.name}
+            ''
+            + lib.optionalString cfg.panelPowerOff ''
+              fdtget $f /regulator-edp-3p3 regulator-name
+              fdtput -d $f /regulator-edp-3p3 regulator-always-on
+            ''
+            + lib.optionalString cfg.disableAdsp ''
+              fdtget $f /soc@0/remoteproc@6800000 compatible
+              fdtput -t s $f /soc@0/remoteproc@6800000 status disabled
+            ''
+          )
       );
       name = "qcom/x1e80100-asus-vivobook-s15.dtb";
       overlays = [

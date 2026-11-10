@@ -12,10 +12,6 @@
   hardware.vivobook-s15.experimentalEC = true;
 
   # Boot-menu entries for sleep power experiments.
-  specialisation.no-ignore-unused.configuration = {
-    system.nixos.tags = [ "no-ignore-unused" ];
-    hardware.vivobook-s15.ignoreUnused = false;
-  };
   specialisation.panel-off.configuration = {
     system.nixos.tags = [ "panel-off" ];
     hardware.vivobook-s15.ignoreUnused = false;
@@ -27,6 +23,16 @@
     hardware.vivobook-s15.deepSleep.enable = true;
     hardware.vivobook-s15.deepSleep.pcieDiagnostics = true;
     hardware.vivobook-s15.panelPowerOff = true;
+  };
+  # Diagnostic: cxsd without ADSP (no battery readout, no audio). Wake by power key.
+  specialisation.cxsd-noadsp.configuration = {
+    system.nixos.tags = [ "cxsd-noadsp" ];
+    hardware.vivobook-s15.deepSleep.enable = true;
+    hardware.vivobook-s15.deepSleep.pcieDiagnostics = true;
+    hardware.vivobook-s15.deepSleep.adspPowerLimits = false;
+    hardware.vivobook-s15.deepSleep.adspSleepstate = false;
+    hardware.vivobook-s15.panelPowerOff = true;
+    hardware.vivobook-s15.disableAdsp = true;
   };
 
   kyaru.enable = true;

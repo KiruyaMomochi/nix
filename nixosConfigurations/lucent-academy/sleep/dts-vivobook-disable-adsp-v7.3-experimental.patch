@@ -1,0 +1,25 @@
+Subject: [EXPERIMENTAL] arm64: dts: qcom: Vivobook S15: disable Linux ADSP
+
+Diagnostic analogue of Johan's CRD CXSD WIP tip:
+a62d82531b37804f4b4f8041271f6478adedad0a.
+https://github.com/jhovold/linux/commit/a62d82531b37804f4b4f8041271f6478adedad0a
+
+Not a daily-use fix. Disables Linux ADSP startup, audio, battmgr and other
+ADSP GLINK services. It does NOT guarantee that boot firmware's lite ADSP
+has been shut down: a disabled PAS driver cannot perform the lite PAS
+shutdown done during a normal load. A null result is therefore ambiguous.
+Use AOP MMIO residency counters rather than ADSP battery/APSS data for
+this diagnostic boot. Keep a known-good boot entry and arrange manual wake.
+Unreviewed, not compiled or hardware tested. CDSP remains unchanged.
+
+--- a/arch/arm64/boot/dts/qcom/x1e80100-asus-vivobook-s15.dts
++++ b/arch/arm64/boot/dts/qcom/x1e80100-asus-vivobook-s15.dts
+@@ -29,7 +29,7 @@
+ 	firmware-name = "qcom/x1e80100/ASUSTeK/vivobook-s15/qcadsp8380.mbn",
+ 			"qcom/x1e80100/ASUSTeK/vivobook-s15/adsp_dtbs.elf";
+ 
+-	status = "okay";
++	status = "disabled";
+ };
+ 
+ &remoteproc_cdsp {
