@@ -136,9 +136,17 @@
       user.email = "65301509+KiruyaMomochi@users.noreply.github.com";
       init.defaultBranch = "main";
     };
+    # Each machine signs with its own ~/.ssh/id_ed25519; add the pubkey to
+    # GitHub as a *Signing* key. Old commits stay verified via the GPG key
+    # 0xE3F508DE86FF810F as long as it remains on GitHub.
     signing = {
-      key = "0xE3F508DE86FF810F";
+      format = "ssh";
+      key = "${config.home.homeDirectory}/.ssh/id_ed25519.pub";
       signByDefault = true;
+      allowedSigners = ''
+        65301509+KiruyaMomochi@users.noreply.github.com namespaces="git" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHt7EEGFGu0Yg/XlowRZugaAWaHtdwOwx52VH6/5Yzn9 kyaru@caon
+        65301509+KiruyaMomochi@users.noreply.github.com namespaces="git" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPUwCNvrK5agVa8IkhffJCJYptMC7XrDul7XSjSM5tpG kyaru@sarendia-orphanage
+      '';
     };
     includes = [
       {
