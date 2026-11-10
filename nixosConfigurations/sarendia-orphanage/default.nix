@@ -16,10 +16,18 @@
   fileSystems = {
     "/".options = [ "compress=zstd" ];
     "/home".options = [ "compress=zstd" ];
-    "/nix".options = [ "compress=zstd" "noatime" ];
+    "/nix".options = [
+      "compress=zstd"
+      "noatime"
+    ];
     "/swap".options = [ "noatime" ];
   };
-  swapDevices = [{ device = "/swap/swapfile"; size = 16 * 1024; }];
+  swapDevices = [
+    {
+      device = "/swap/swapfile";
+      size = 16 * 1024;
+    }
+  ];
 
   # Plain systemd-boot for now; switch to lanzaboote once Secure Boot is set up.
   boot.loader.systemd-boot.enable = true;
@@ -39,6 +47,10 @@
   time.timeZone = "Asia/Taipei";
   environment.systemPackages = with pkgs; [ nushell ];
   programs.kdeconnect.enable = true;
+
+  programs.steam = {
+    enable = true;
+  };
 
   system.stateVersion = "26.11";
 }
