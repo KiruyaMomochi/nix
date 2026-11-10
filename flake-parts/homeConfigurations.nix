@@ -1,7 +1,7 @@
-{ self, super, root, flake, ... }: { inputs, withSystem, ... }: 
+{ self, inputs, withSystem, ... }:
 let
-  inherit (flake.lib.home) makeOverridableHomeManagerConfig mkHome loadHomes;
-  inherit (flake.lib.packages) mkPkgs;
+  inherit (self.lib.home) makeOverridableHomeManagerConfig mkHome loadHomes;
+  inherit (self.lib.packages) mkPkgs;
   pkgsOf = system: withSystem system ({ pkgs, ... }: pkgs);
 
   baseProfiles = rec {

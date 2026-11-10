@@ -1,13 +1,12 @@
-{ self, super, root, flake, ... }: { inputs, ... }:
-# TODO: support patching package with only .patch files?
+{ self, inputs, ... }:
 let
-  inherit (flake.lib.packages) mkPackages;
+  inherit (self.lib.packages) mkPackages;
 in
 {
   perSystem = { system, pkgs, ... }: {
     _module.args.pkgs = import inputs.nixpkgs {
       inherit system;
-      overlays = flake.lib.packages.defaultOverlays;
+      overlays = self.lib.packages.defaultOverlays;
       config = import ../nixpkgs-config.nix;
     };
     packages = (mkPackages pkgs) // {

@@ -1,5 +1,4 @@
-{ self, super, root, ... }: { inputs, ... }:
-# TODO: support patching package with only .patch files?
+{ self, inputs, ... }:
 {
   perSystem = { system, pkgs, ... }: {
     devShells.default = pkgs.mkShell {
@@ -11,7 +10,6 @@
         jq
         yq
         act
-        (inputs.colmena.packages.${system}.colmena)
         yaml-language-server
         nix
         nix-fast-build

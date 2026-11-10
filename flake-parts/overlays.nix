@@ -1,14 +1,7 @@
-{
-  self,
-  super,
-  root,
-  flake,
-  ...
-}:
-{ inputs, ... }:
+{ self, inputs, ... }:
 # TODO: support patching package with only .patch files?
 let
-  inherit (flake.lib.packages) mkPackages;
+  inherit (self.lib.packages) mkPackages;
 in
 {
   flake = rec {

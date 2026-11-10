@@ -1,6 +1,6 @@
-{ self, super, root, flake, ... }: { inputs, ... }:
+{ self, inputs, ... }:
 let
-  inherit (flake.lib.nixos) mkHost loadHosts systemOverride;
+  inherit (self.lib.nixos) mkHost loadHosts systemOverride;
 
   # hosts.xxx -> nixosConfigurations/xxx/default.nix
   hosts = loadHosts ../nixosConfigurations;

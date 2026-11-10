@@ -73,21 +73,13 @@ in
 
   # Common logic for loading hosts from nixosConfigurations directory
   loadHosts = src:
-    let
-      loader = inputs.haumea.lib.loaders.verbatim;
-      matcher = { inherit loader; matches = filename: filename == "default.nix"; };
-      transformer = cursor: module:
-        let
-          depth = builtins.length cursor;
-        in
-        if depth == 0 then module
-        else if depth == 1 then (module.default or null)
-        else null;
-    in
-    inputs.haumea.lib.load {
+    (import ../load-tree.nix { inherit lib; }) {
       inherit src;
-      loader = [ matcher ];
-      transformer = [ transformer ];
+      defaultOnly = true;
+      transform = cursor: module:
+        if cursor == [ ] then module
+        else if builtins.length cursor == 1 then module.default or null
+        else null;
     };
 
   systemOverride = hostname: {

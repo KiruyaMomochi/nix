@@ -24,11 +24,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    haumea = {
-      url = "github:nix-community/haumea";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -61,13 +56,6 @@
       flake = false;
     };
 
-    colmena = {
-      url = "github:zhaofengli/colmena";
-      inputs.nixpkgs.follows = "nixpkgs";
-      # Only colmena's own integration tests use it.
-      inputs.stable.follows = "nixpkgs";
-    };
-
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -79,65 +67,29 @@
     };
   };
 
-  outputs = inputs@{ self, flake-parts, systems, haumea, ... }:
-    let
-      inherit (inputs.nixpkgs.lib.attrsets) unionOfDisjoint;
-    in
-    # top-level module definitiom
-      # flake-parts docs: https://flake.parts/options/flake-parts.html
-    flake-parts.lib.mkFlake
-      {
-        inherit inputs;
-      }
-      # module options
-      ({ withSystem, flake-parts-lib, ... }: {
-        systems = import systems;
-        debug = true;
-
-        imports =
-          let
-            # haumea docs: https://nix-community.github.io/haumea/intro/getting-started.html
-            modules = inputs.haumea.lib.load {
-              # each imported files have two arguments
-              # refer to ./flake-parts/default.nix for example
-              # first one is the `args` referenced int the `loader` line 
-              # second one is the module argument, which is "all module options" and "special args"
-              src = ./flake-parts;
-              # importApply docs: https://flake.parts/define-module-in-separate-file.html#importapply
-              # args are: { self, super, root, flake, withSystem }
-              loader = args: path: flake-parts-lib.importApply path args;
-              # additional args are defined here
-              inputs = {
-                inherit withSystem;
-                flake = self;
-              };
-            };
-            # lift flake-parts/per-system/*.nix to the root
-            # this *only lift the directory layout*, does not touch the directory layout
-            liftedModules =
-              # perSystem is a flake-parts attribute
-              # we want to bring them up
-              if modules ? "perSystem" then
-                (
-                  unionOfDisjoint
-                    (builtins.removeAttrs modules [ "perSystem" ])
-                    (modules.perSystem)
-                ) else modules;
-          in
-          builtins.attrValues liftedModules;
-      });
+  outputs = inputs@{ flake-parts, systems, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems = import systems;
+      debug = true;
+      imports = [
+        ./flake-parts/default.nix
+        ./flake-parts/devShells.nix
+        ./flake-parts/homeConfigurations.nix
+        ./flake-parts/nixosConfigurations.nix
+        ./flake-parts/overlays.nix
+        ./flake-parts/packages.nix
+      ];
+    };
   nixConfig = {
     extra-substituters = [
       "https://nix-community.cachix.org"
       "https://cache.nixos-cuda.org"
-      "https://colmena.cachix.org"
       "https://nix-cache.kyaru.bond/public"
     ];
     extra-trusted-public-keys = [
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       "kyaru-nix-cache-1:Zu6gS5WZt4Kyvi95kCmlKlSyk+fbIwvuuEjBmC929KM="
       "cache.nixos-cuda.org:74DUi4Ye579gUqzH4ziL9IyiJBlDpMRn9MBN8oNan9M="
-      "colmena.cachix.org-1:7BzpDnjjH8ki2CT3f6GdOk7QAzPOl+1t3LvTLXqYcSg="
       "nix-cache.kyaru.bond:J0etzH0FG42erzDPaPzET4x0R8VAzeB8N/Swn4iPXXA="
     ];
   };

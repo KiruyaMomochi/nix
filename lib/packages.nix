@@ -36,12 +36,6 @@ in
         qt5 = pkgs.libsForQt5.callPackage;
       }."${set}";
 
-      # loader = attrs: path: (builtins.trace "path = ${path}" (haumea.lib.loaders.verbatim attrs path));
-      # loader = attrs: path: (path);
-
-      loader = attrs: path: (inputs.haumea.lib.loaders.verbatim attrs path);
-      matcher = { inherit loader; matches = filename: filename == "default.nix"; };
-
       # find how to callPackage
       cursorToPackage = pkgs: cursor: package:
         let
@@ -60,9 +54,10 @@ in
       callEachPackage = cursor: module:
         if module ? package then (module.callPackage module.package { }) else module;
     in
-    pkgs: inputs.haumea.lib.load {
+    pkgs: (import ../load-tree.nix { inherit lib; }) {
       src = ../packages;
-      loader = [ matcher ];
-      transformer = [ (moduleToPackageSpec pkgs) callEachPackage ];
+      defaultOnly = true;
+      transform = cursor: module:
+        callEachPackage cursor (moduleToPackageSpec pkgs cursor module);
     };
 }
