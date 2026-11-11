@@ -91,6 +91,38 @@ in
       default = 1.5;
       description = "Seconds to wait when probing each upstream.";
     };
+
+    localFallback = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Fall back to the local headless browser when no upstream answers, and start it with the
+        session. When false, headless-browser is only defined (start it by hand) and the proxy
+        answers 502 instead.
+      '';
+    };
+
+    wakeCommand = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      description = "Command run when no upstream answers, before giving up or falling back; the proxy then waits for an upstream to come up.";
+      example = "systemctl --user start my-chrome.service";
+    };
+
+    janitor = {
+      upstream = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Upstream whose pages get closed once nobody has used them for idleSeconds. Only this browser is touched.";
+        example = "http://127.0.0.1:9223";
+      };
+
+      idleSeconds = mkOption {
+        type = types.int;
+        default = 1800;
+        description = "How long a page may sit unused before the janitor closes it. The last page is always kept.";
+      };
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -107,7 +139,7 @@ in
       };
 
       Install = {
-        WantedBy = [ "default.target" ];
+        WantedBy = lib.optional cfg.localFallback "default.target";
       };
 
       Service = {
@@ -127,8 +159,8 @@ in
     systemd.user.services.cdp-proxy = {
       Unit = {
         Description = "CDP Fallback Proxy (ordered upstreams)";
-        After = [ "headless-browser.service" "network-online.target" ];
-        Wants = [ "headless-browser.service" "network-online.target" ];
+        After = lib.optional cfg.localFallback "headless-browser.service" ++ [ "network-online.target" ];
+        Wants = lib.optional cfg.localFallback "headless-browser.service" ++ [ "network-online.target" ];
       };
 
       Install = {
@@ -141,8 +173,13 @@ in
           "${cdpProxyScript}/bin/cdp-proxy"
           "--port" (toString cfg.listenPort)
         ] ++ lib.concatMap (u: [ "--upstream" u ]) cfg.upstreams ++ [
-          "--local" "http://${cfg.localCdpHost}:${toString cfg.localCdpPort}"
+          "--local" (if cfg.localFallback then "http://${cfg.localCdpHost}:${toString cfg.localCdpPort}" else "''")
           "--probe-timeout" (toString cfg.probeTimeout)
+        ] ++ lib.optionals (cfg.wakeCommand != null) [
+          "--wake-command" (lib.escapeShellArg cfg.wakeCommand)
+        ] ++ lib.optionals (cfg.janitor.upstream != null) [
+          "--janitor-upstream" cfg.janitor.upstream
+          "--janitor-idle" (toString cfg.janitor.idleSeconds)
         ]);
         Restart = "on-failure";
         RestartSec = 3;
