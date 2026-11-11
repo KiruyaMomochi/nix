@@ -157,11 +157,11 @@
         "uv2nix": "uv2nix"
       },
       "locked": {
-        "lastModified": 1794162838,
-        "narHash": "sha256-Evc7i8tO8MtI5CsY9XK3/gTkjxQnNH5+Kv2hpklZs5M=",
+        "lastModified": 1794416217,
+        "narHash": "sha256-prwtp3V5UDDxIlQujNAmla+h+GJaGwS2jax6SFJM2FI=",
         "owner": "KiruyaMomochi",
         "repo": "hermes-agent",
-        "rev": "873a1faba4b81c8c3af133bb518977b9c2cd1bd1",
+        "rev": "b806dbfb89d84024e04fe96aeac08dccaa9e0c7b",
         "type": "github"
       },
       "original": {
@@ -428,7 +428,7 @@
         "nixos-wsl": "nixos-wsl",
         "nixpkgs": "nixpkgs",
         "sops-nix": "sops-nix",
-        "systems": "systems_2",
+        "systems": "systems",
         "vivobook-s15-fedora": "vivobook-s15-fedora",
         "vscode-server": "vscode-server",
         "zen-browser": "zen-browser"
@@ -492,7 +492,7 @@
         "type": "github"
       }
     },
-    "systems_2": {
+    "systems": {
       "locked": {
         "lastModified": 1791244623,
         "narHash": "sha256-uuanbkFk8a313Zfrxdcz8Us/yQtaxNnKJtX8v0ZPpd8=",
