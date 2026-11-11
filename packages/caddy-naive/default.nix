@@ -4,7 +4,7 @@ let
 
   caddy-naive = (caddy.withPlugins {
     plugins = [ forwardproxy ];
-    hash = "sha256-IbcMwA7ignwcgbYealJWERRvGuC3vnbhNjMmcq9s79A=";
+    hash = "sha256-Pc3wybxZwPFQMNi8omwa43udVn/ZEjRKbDT5xR67MwM=";
   }).overrideAttrs (oldAttrs: {
     pname = "caddy-naive";
 
