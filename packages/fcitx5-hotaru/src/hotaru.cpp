@@ -488,6 +488,8 @@ void Connection::global(wl_registry *registry, uint32_t name,
                 [](void *data, wl_output *, int32_t, int32_t, int32_t, int32_t,
                    int32_t, const char *, const char *, int32_t transform) {
                     static_cast<Connection *>(data)->transform_ = transform;
+                    FCITX_LOGC(::hotaru::log, Info)
+                        << "output transform " << transform;
                 },
             .mode = [](void *, wl_output *, uint32_t, int32_t, int32_t,
                        int32_t) {},
@@ -523,6 +525,8 @@ void Connection::global(wl_registry *registry, uint32_t name,
                     auto *self = static_cast<Connection *>(data);
                     self->logicalWidth_ = w;
                     self->logicalHeight_ = h;
+                    FCITX_LOGC(::hotaru::log, Info)
+                        << "output logical size " << w << "x" << h;
                 },
             .done = [](void *, zxdg_output_v1 *) {},
             .name = [](void *, zxdg_output_v1 *, const char *) {},
@@ -762,6 +766,7 @@ void Connection::drawFrame() {
         width_ = w;
         height_ = h;
         keyboard_.resize(w, h);
+        FCITX_LOGC(::hotaru::log, Info) << "panel " << w << "x" << h;
     }
 
     auto *buffer = acquireBuffer(w * scale_, h * scale_);
