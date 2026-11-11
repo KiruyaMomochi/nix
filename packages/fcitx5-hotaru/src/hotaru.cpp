@@ -263,6 +263,7 @@ public:
     void setState(const State &state);
 
 private:
+    void globalRemove(uint32_t name);
     void global(wl_registry *registry, uint32_t name, const char *interface,
                 uint32_t version);
     void seatCapabilities(uint32_t caps);
@@ -301,6 +302,7 @@ private:
     zwp_input_panel_surface_v1 *panelSurface_ = nullptr;
 
     int32_t scale_ = 1;
+    uint32_t outputName_ = 0;
     int32_t logicalWidth_ = 0, logicalHeight_ = 0;
     int32_t transform_ = WL_OUTPUT_TRANSFORM_NORMAL;
     int32_t width_ = 0, height_ = 0;
@@ -433,7 +435,10 @@ Connection::Connection(Addon *addon, wl_display *display)
                 static_cast<Connection *>(data)->global(registry, name,
                                                          interface, version);
             },
-        .global_remove = [](void *, wl_registry *, uint32_t) {},
+        .global_remove =
+            [](void *data, wl_registry *, uint32_t name) {
+                static_cast<Connection *>(data)->globalRemove(name);
+            },
     };
     registry_ = wl_display_get_registry(display_);
     wl_registry_add_listener(registry_, &listener, this);
@@ -459,6 +464,28 @@ Connection::~Connection() {
     wl_registry_destroy(registry_);
 }
 
+void Connection::globalRemove(uint32_t name) {
+    if (!output_ || name != outputName_) {
+        return;
+    }
+    FCITX_LOGC(::hotaru::log, Info) << "output " << name << " gone";
+    // The panel is placed on this output; a new one comes with a new
+    // size, and global() puts the keyboard back on it.
+    hide();
+    if (xdgOutput_) {
+        zxdg_output_v1_destroy(xdgOutput_);
+        xdgOutput_ = nullptr;
+    }
+    if (wl_proxy_get_version(reinterpret_cast<wl_proxy *>(output_)) >= 3) {
+        wl_output_release(output_);
+    } else {
+        wl_output_destroy(output_);
+    }
+    output_ = nullptr;
+    outputName_ = 0;
+    logicalWidth_ = logicalHeight_ = 0;
+}
+
 void Connection::global(wl_registry *registry, uint32_t name,
                         const char *interface, uint32_t version) {
     const std::string_view iface(interface);
@@ -481,6 +508,10 @@ void Connection::global(wl_registry *registry, uint32_t name,
         wl_seat_add_listener(seat_, &listener, this);
     } else if (iface == wl_output_interface.name && !output_) {
         // saren has one screen; the keyboard goes on the first output.
+        // KWin takes the screen away and gives a new one across suspend,
+        // so this runs again after globalRemove.
+        outputName_ = name;
+        FCITX_LOGC(::hotaru::log, Info) << "output " << name << " bound";
         output_ = static_cast<wl_output *>(wl_registry_bind(
             registry, name, &wl_output_interface, std::min(version, 2u)));
         static const wl_output_listener listener = {
@@ -1151,7 +1182,7 @@ Addon::Addon(fcitx::Instance *instance) : instance_(instance) {
                            .inputContext();
             FCITX_LOGC(::hotaru::log, Info)
                 << "field " << ic->program() << " caps 0x" << std::hex
-                << ic->capabilityFlags().toInteger();
+                << ic->capabilityFlags().toInteger() << std::dec;
         }));
     events_.push_back(instance_->watchEvent(
         fcitx::EventType::InputContextFocusOut,
