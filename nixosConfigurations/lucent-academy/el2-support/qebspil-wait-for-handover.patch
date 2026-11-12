@@ -1,0 +1,21 @@
+diff --git a/src/main.c b/src/main.c
+index 8262564..1453762 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -18,14 +18,14 @@ static EFI_STATUS efi_late_ebs(void)
+ 	status = pil_finish_all();
+ 	if (status == EFI_NOT_FOUND)
+ 		return EFI_SUCCESS; /* No rempteprocs found */
+-	if (!EFI_ERROR(status))
++	if (EFI_ERROR(status))
+ 		return status;
+ 
+ 	/*
+ 	 * Wait a bit to let remoteprocs finish handover.
+ 	 * FIXME: Wait for the SMP2P signals instead
+ 	 */
+-	return BS->Stall(500 * 1000 * 1000);
++	return BS->Stall(1500 * 1000);
+ }
+ 
+ static EFI_STATUS efi_dtb_changed(void)

@@ -33,7 +33,12 @@ stdenv.mkDerivation {
     cp -r ${dtc}/. "$sourceRoot/external/dtc/"
     chmod -R u+w "$sourceRoot/external"
   '';
-  patches = [ ./qebspil-qmp.patch ];
+  # Upstream's late-EBS wait only ran on error (and for 500 s). Wait 1.5 s after
+  # a successful start so ADSP finishes booting before slbounce removes Gunyah.
+  patches = [
+    ./qebspil-qmp.patch
+    ./qebspil-wait-for-handover.patch
+  ];
   strictDeps = true;
   hardeningDisable = [ "all" ];
   dontConfigure = true;
