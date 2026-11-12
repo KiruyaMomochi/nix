@@ -37,6 +37,7 @@ mapfile -t gens < <(find /nix/var/nix/profiles -maxdepth 1 -name 'system-*-link'
 # volume). The launcher has the UKI path compiled in, so the newest el2 UKI is copied to
 # that one name; generations are walked oldest first, so the last call wins.
 el2_installed=""
+planning=""
 install_el2() {
   local g=$1 top=$2 uki=$3 fw f src
   if [ ! -e "$esp/tcblaunch.exe" ]; then
@@ -84,6 +85,7 @@ install_one() {
     title="NixOS"
   fi
   wanted+=("$uki" "$entry")
+  if [ -n "$planning" ]; then return; fi
   out="$xbl/EFI/nixos/$uki"
 
   # Already there, and signed if we sign: keep it.
@@ -120,18 +122,25 @@ install_one() {
   mv "$xbl/loader/entries/$entry.tmp" "$xbl/loader/entries/$entry"
 }
 
-for g in "${gens[@]}"; do
-  top=$(readlink -f "$profile-$g-link")
-  if [ "$top" = "$current" ]; then default="nixos-generation-$g.conf"; fi
-  install_one "$g" "$top"
-  # Specialisations get their own UKI: with Secure Boot the stub won't take a
-  # cmdline from the entry, so a different kernel-params needs a different image.
-  for s in "$top"/specialisation/*; do
-    [ -e "$s" ] || continue
-    install_one "$g" "$(readlink -f "$s")" "$(basename "$s")"
+install_all() {
+  local g top s
+  for g in "${gens[@]}"; do
+    top=$(readlink -f "$profile-$g-link")
+    if [ "$top" = "$current" ]; then default="nixos-generation-$g.conf"; fi
+    install_one "$g" "$top"
+    # Specialisations get their own UKI: with Secure Boot the stub won't take a
+    # cmdline from the entry, so a different kernel-params needs a different image.
+    for s in "$top"/specialisation/*; do
+      [ -e "$s" ] || continue
+      install_one "$g" "$(readlink -f "$s")" "$(basename "$s")"
+    done
   done
-done
+}
 
+# Collect the wanted names and delete everything else first: /boot only has room
+# for KEEP generations, so old UKIs have to go before new ones are written.
+planning=1
+install_all
 for f in "$xbl"/EFI/nixos/nixos-generation-*.efi "$xbl"/loader/entries/nixos-generation-*.conf; do
   [ -e "$f" ] || continue
   found=0
@@ -140,6 +149,8 @@ for f in "$xbl"/EFI/nixos/nixos-generation-*.efi "$xbl"/loader/entries/nixos-gen
   done
   if [ $found = 0 ]; then rm -f "$f"; echo "removed $(basename "$f")"; fi
 done
+planning=""
+install_all
 
 if [ -z "$el2_installed" ]; then
   rm -f "$esp/loader/entries/lucent-el2.conf" "$xbl/EFI/nixos/lucent-el2.efi"

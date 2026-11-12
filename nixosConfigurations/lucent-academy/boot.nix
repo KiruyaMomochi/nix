@@ -29,7 +29,7 @@ let
       DTB_NAME = config.hardware.deviceTree.name;
       # /boot is 3G, the installer entry takes 1.5G, one UKI is ~100M and each
       # generation has a UKI per specialisation (5 now).
-      KEEP = "3";
+      KEEP = "2";
       KEYS = "/var/lib/sbctl/keys/db";
     };
     text = builtins.readFile ./install-bootloader.sh;
