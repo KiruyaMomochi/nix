@@ -46,24 +46,46 @@ in
 
     hardware.deviceTree = {
       enable = true;
-      dtbSource = lib.mkIf (cfg.panelPowerOff || cfg.disableAdsp) (
-        pkgs.runCommand "vivobook-s15-dtbs-edited"
-          { nativeBuildInputs = [ pkgs.dtc ]; }
-          (
-            ''
-              cp -r ${config.boot.kernelPackages.kernel}/dtbs $out
-              chmod -R u+w $out
-              f=$out/${config.hardware.deviceTree.name}
-            ''
-            + lib.optionalString cfg.panelPowerOff ''
-              fdtget $f /regulator-edp-3p3 regulator-name
-              fdtput -d $f /regulator-edp-3p3 regulator-always-on
-            ''
-            + lib.optionalString cfg.disableAdsp ''
-              fdtget $f /soc@0/remoteproc@6800000 compatible
-              fdtput -t s $f /soc@0/remoteproc@6800000 status disabled
-            ''
-          )
+      dtbSource = lib.mkIf (cfg.panelPowerOff || cfg.disableAdsp || cfg.el2.enable) (
+        pkgs.runCommand "vivobook-s15-dtbs-edited" { nativeBuildInputs = [ pkgs.dtc ]; } (
+          ''
+            cp -r ${config.boot.kernelPackages.kernel}/dtbs $out
+            chmod -R u+w $out
+            f=$out/${config.hardware.deviceTree.name}
+          ''
+          + lib.optionalString cfg.panelPowerOff ''
+            fdtget $f /regulator-edp-3p3 regulator-name
+            fdtput -d $f /regulator-edp-3p3 regulator-always-on
+          ''
+          # Upstream -el2.dtb supplies PCIe/GPU/watchdog changes, but its DSP
+          # IOMMU mappings are incompatible with the qebspil no-reset contract.
+          + lib.optionalString cfg.el2.enable ''
+            for label in remoteproc_adsp remoteproc_cdsp; do
+              node=$(fdtget -t s $f /__symbols__ $label)
+              fdtget $f $node iommus
+              fdtput -d $f $node iommus
+              fdtput $f $node qcom,broken-reset
+            done
+            scm=$(fdtget -t s $f /__symbols__ scm)
+            # QCOM_SCM_VMID_SELF_OWNER (added by qcom-tzmem-self-owner-v7.3).
+            fdtput -t x $f $scm qcom,shm-bridge-vmid ffffffff
+            for label in remoteproc_adsp remoteproc_cdsp; do
+              node=$(fdtget -t s $f /__symbols__ $label)
+              fdtget $f $node qcom,broken-reset
+              if fdtget $f $node iommus; then
+                echo "Unexpected Linux-managed DSP IOMMU" >&2
+                exit 1
+              fi
+            done
+            test "$(fdtget -t s $f $(fdtget -t s $f /__symbols__ gpu_zap_shader) status)" = disabled
+            test "$(fdtget -t s $f $(fdtget -t s $f /__symbols__ pcie_smmu) status)" = okay
+            test "$(fdtget -t s $f $(fdtget -t s $f /__symbols__ sbsa_watchdog) status)" = disabled
+          ''
+          + lib.optionalString cfg.disableAdsp ''
+            fdtget $f /soc@0/remoteproc@6800000 compatible
+            fdtput -t s $f /soc@0/remoteproc@6800000 status disabled
+          ''
+        )
       );
       name = "qcom/x1e80100-asus-vivobook-s15.dtb";
       overlays = [
@@ -116,13 +138,15 @@ in
     boot.extraModprobeConfig = lib.mkIf cfg.experimentalEC "options qcom_hamoa_ec allow_suspend=1";
     systemd.sleep.settings.Sleep.MemorySleepMode = lib.mkIf cfg.experimentalEC "s2idle";
 
-    boot.kernelParams = lib.optionals cfg.ignoreUnused [
-      "pd_ignore_unused"
-      "clk_ignore_unused"
-    ] ++ [
-      # Firmware advertises the Qualcomm fTPM but Linux has no driver for it yet, so
-      # systemd-tpm2-generator would wait 2x45s for /dev/tpmrm0. Drop once a driver lands.
-      "systemd.tpm2_wait=0"
-    ];
+    boot.kernelParams =
+      lib.optionals cfg.ignoreUnused [
+        "pd_ignore_unused"
+        "clk_ignore_unused"
+      ]
+      ++ [
+        # Firmware advertises the Qualcomm fTPM but Linux has no driver for it yet, so
+        # systemd-tpm2-generator would wait 2x45s for /dev/tpmrm0. Drop once a driver lands.
+        "systemd.tpm2_wait=0"
+      ];
   };
 }

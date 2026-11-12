@@ -1,0 +1,122 @@
+From: Yozakura <yozakura@localhost>
+Subject: [PATCH] remoteproc: qcom_q6v5_pas: attach-only qebspil DSPs on v7.3
+
+Based on Stephan Gerhold's a05245a0d9c218f72dcbb28448c426cdc455bce3
+(no-reset ops) and 5e9f7759aa2295ece046a03d48cee341affde404 (SMP2P
+running detection), as carried by jglathe/linux_ms_dev_kit at 0aaff8f.
+
+v7.3 already implements PAS attach and detached auto-boot. Keep its bool
+API and do not import e6ed7f1114c8's restart-if-firmware-available changes:
+qebspil loaded the full firmware and broken-reset must NEVER restart it.
+Scope state detection to broken-reset DSPs; retain the ready+handover and
+!fatal+!stop predicate, but handle irqchip read errors and defer until
+SMP2P has discovered the incoming entry.
+
+Stricter than the WIP original: stop returns EOPNOTSUPP (no PAS shutdown,
+no unprepare of unacquired boot resources) and crash recovery is disabled.
+A DSP crash or requested stop requires a full machine reboot. There is no
+fallback start/load callback. Ordinary EL1 remoteprocs are unchanged.
+
+--- a/drivers/remoteproc/qcom_q6v5_pas.c
++++ b/drivers/remoteproc/qcom_q6v5_pas.c
+@@ -21,6 +21,7 @@
+ #include <linux/platform_device.h>
+ #include <linux/pm_domain.h>
+ #include <linux/pm_runtime.h>
++#include <linux/property.h>
+ #include <linux/firmware/qcom/qcom_pas.h>
+ #include <linux/firmware/qcom/qcom_scm.h>
+ #include <linux/regulator/consumer.h>
+@@ -615,6 +616,46 @@
+ 	.attach = qcom_pas_attach,
+ };
+ 
++/* qebspil started this DSP before the EL2 transition. PAS cannot reset it. */
++static int qcom_pas_no_reset_stop(struct rproc *rproc)
++{
++	return -EOPNOTSUPP;
++}
++
++static const struct rproc_ops qcom_pas_ops_no_reset = {
++	.attach = qcom_pas_attach,
++	.da_to_va = qcom_pas_da_to_va,
++	.stop = qcom_pas_no_reset_stop,
++	.panic = qcom_pas_panic,
++};
++
++/* Same SMP2P running predicate as Stephan Gerhold's qcom_q6v5 helper. */
++static int qcom_pas_no_reset_state(struct qcom_pas *pas)
++{
++	struct qcom_q6v5 *q6v5 = &pas->q6v5;
++	bool handover, ready, fatal, stop;
++	int ret;
++
++	ret = irq_get_irqchip_state(q6v5->handover_irq, IRQCHIP_STATE_LINE_LEVEL, &handover);
++	if (ret)
++		return ret;
++	ret = irq_get_irqchip_state(q6v5->ready_irq, IRQCHIP_STATE_LINE_LEVEL, &ready);
++	if (ret)
++		return ret;
++	ret = irq_get_irqchip_state(q6v5->fatal_irq, IRQCHIP_STATE_LINE_LEVEL, &fatal);
++	if (ret)
++		return ret;
++	ret = irq_get_irqchip_state(q6v5->stop_irq, IRQCHIP_STATE_LINE_LEVEL, &stop);
++	if (ret)
++		return ret;
++
++	if (!ready || !handover || stop || fatal)
++		return -ENXIO;
++
++	pas->rproc->state = RPROC_DETACHED;
++	return 0;
++}
++
+ static int qcom_pas_init_clock(struct qcom_pas *pas)
+ {
+ 	pas->xo = devm_clk_get(pas->dev, "xo");
+@@ -852,6 +893,9 @@
+ 	if (desc->minidump_id)
+ 		ops = &qcom_pas_minidump_ops;
+ 
++	if (device_property_read_bool(&pdev->dev, "qcom,broken-reset"))
++		ops = &qcom_pas_ops_no_reset;
++
+ 	rproc = devm_rproc_alloc(&pdev->dev, desc->sysmon_name, ops, fw_name, sizeof(*pas));
+ 
+ 	if (!rproc) {
+@@ -861,6 +905,8 @@
+ 
+ 	rproc->has_iommu = of_property_present(pdev->dev.of_node, "iommus");
+ 	rproc->auto_boot = desc->auto_boot;
++	if (ops == &qcom_pas_ops_no_reset)
++		rproc->recovery_disabled = true;
+ 	rproc_coredump_set_elf_info(rproc, ELFCLASS32, EM_NONE);
+ 
+ 	pas = rproc->priv;
+@@ -913,6 +959,18 @@
+ 	if (ret)
+ 		goto detach_proxy_pds;
+ 
++	if (ops == &qcom_pas_ops_no_reset) {
++		ret = qcom_pas_no_reset_state(pas);
++		/* SMP2P discovers the remote entries asynchronously. */
++		if (ret == -ENODEV)
++			ret = -EPROBE_DEFER;
++		if (ret) {
++			dev_err_probe(&pdev->dev, ret,
++				      "qebspil DSP not ready for attach; reset unavailable\n");
++			goto deinit_q6v5;
++		}
++	}
++
+ 	qcom_add_glink_subdev(rproc, &pas->glink_subdev, desc->ssr_name);
+ 	qcom_add_smd_subdev(rproc, &pas->smd_subdev);
+ 	qcom_add_pdm_subdev(rproc, &pas->pdm_subdev);
+@@ -948,6 +1006,7 @@
+ 	qcom_remove_pdm_subdev(rproc, &pas->pdm_subdev);
+ 	qcom_remove_smd_subdev(rproc, &pas->smd_subdev);
+ 	qcom_remove_glink_subdev(rproc, &pas->glink_subdev);
++deinit_q6v5:
+ 	qcom_q6v5_deinit(&pas->q6v5);
+ detach_proxy_pds:
+ 	qcom_pas_pds_detach(pas, pas->proxy_pds, pas->proxy_pd_count);

@@ -1,0 +1,58 @@
+From e0185ab059d0e012f6696cc47eebcb194b2a3f82 Mon Sep 17 00:00:00 2001
+From: Anthony Ruhier <aruhier@mailbox.org>
+Date: Wed, 14 Oct 2026 12:22:53 +0200
+Subject: [PATCH 1/3] clocksource/arm_arch_timer: park stopped timers
+
+When a clockevent is shut down, the timer is disabled and its CVAL is
+left at the last programmed deadline, which is in the past.
+
+On Qualcomm X1E the secure firmware derives the APSS wake-up deadline for
+cluster/system power collapse from the timer the kernel ticks on, and
+reads its CVAL even when the timer is disabled. With the tick frozen in
+s2idle, PSCI CPU_SUSPEND for the system state (DRIPS) then returns
+success within 5 us, thousands of times per second, and the SoC never
+sleeps: no DDR LPM, no CX collapse. This shows up when Linux owns EL2
+(booted at EL2 via slbounce) and ticks on the physical timer itself:
+CNTP under nVHE, CNTHP under VHE.
+
+Instead of disabling the timer on shutdown, leave it enabled but masked,
+with CVAL set to the largest positive value of the minimum counter width
+(2^55 - 1 for 56 bits, ~59 years at 19.2 MHz). set_next_event() already
+clears IT_MASK and reprograms CVAL, so re-arming is unchanged.
+
+The firmware rejects a CVAL with bit 55 set: parking at 2^N - 1 works for
+N = 50, 53 and 55, but N = 56 (the full counter width) gets no
+DRIPS/CXSD/AOSD at all, as if the value were sign-extended and already
+expired. Hence BIT(width - 1) - 1 rather than BIT(width) - 1.
+
+Tested on a Lenovo Yoga Slim 7x (X1E80100), VHE: s2idle with DDR LPM,
+CXSD and AOSD at 99.9% of the suspend.
+
+Link: https://github.com/justririll/x1e-sleep/blob/main/modules/el1tmr/el1tmr.c
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/clocksource/arm_arch_timer.c | 9 ++++-----
+ 1 file changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/clocksource/arm_arch_timer.c b/drivers/clocksource/arm_arch_timer.c
+index 7b4a98df6962..0fea3c5960cb 100644
+--- a/drivers/clocksource/arm_arch_timer.c
++++ b/drivers/clocksource/arm_arch_timer.c
+@@ -594,11 +594,10 @@ static irqreturn_t arch_timer_handler_phys(int irq, void *dev_id)
+ static __always_inline int arch_timer_shutdown(const int access,
+ 					       struct clock_event_device *clk)
+ {
+-	unsigned long ctrl;
+-
+-	ctrl = arch_timer_reg_read_cp15(access, ARCH_TIMER_REG_CTRL);
+-	ctrl &= ~ARCH_TIMER_CTRL_ENABLE;
+-	arch_timer_reg_write_cp15(access, ARCH_TIMER_REG_CTRL, ctrl);
++	arch_timer_reg_write_cp15(access, ARCH_TIMER_REG_CTRL,
++				  ARCH_TIMER_CTRL_ENABLE | ARCH_TIMER_CTRL_IT_MASK);
++	arch_timer_reg_write_cp15(access, ARCH_TIMER_REG_CVAL,
++				  BIT(arch_counter_get_width() - 1) - 1);
+ 
+ 	return 0;
+ }
+-- 
+2.56.0

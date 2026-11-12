@@ -6,6 +6,7 @@
     ./boot.nix
     ./face-unlock.nix
     ./sleep.nix
+    ./el2.nix
   ];
 
   # Fan control via the EC. Read vivobook-s15-fedora docs/ec-fan-control.md first.
@@ -20,6 +21,14 @@
   # Vote-leak fixes from justririll/x1e-sleep, see sleep/README.md. Own kernel build.
   specialisation.cxsd.configuration = {
     system.nixos.tags = [ "cxsd" ];
+    hardware.vivobook-s15.deepSleep.enable = true;
+    hardware.vivobook-s15.deepSleep.pcieDiagnostics = true;
+    hardware.vivobook-s15.panelPowerOff = true;
+  };
+  # Entry-scoped qebspil + slbounce are supplied by the separate EFI launcher.
+  specialisation.el2-cxsd.configuration = {
+    system.nixos.tags = [ "el2-cxsd" ];
+    hardware.vivobook-s15.el2.enable = true;
     hardware.vivobook-s15.deepSleep.enable = true;
     hardware.vivobook-s15.deepSleep.pcieDiagnostics = true;
     hardware.vivobook-s15.panelPowerOff = true;
@@ -56,7 +65,10 @@
   hardware.bluetooth.enable = true;
 
   users.users.kyaru.uid = 1000;
-  users.users.kyaru.extraGroups = [ "video" "audio" ];
+  users.users.kyaru.extraGroups = [
+    "video"
+    "audio"
+  ];
   users.users.kyaru.openssh.authorizedKeys.keys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHt7EEGFGu0Yg/XlowRZugaAWaHtdwOwx52VH6/5Yzn9 kyaru@caon"
   ];
