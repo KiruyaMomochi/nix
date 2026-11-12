@@ -27,7 +27,7 @@ fallback start/load callback. Ordinary EL1 remoteprocs are unchanged.
  #include <linux/firmware/qcom/qcom_pas.h>
  #include <linux/firmware/qcom/qcom_scm.h>
  #include <linux/regulator/consumer.h>
-@@ -615,6 +616,46 @@
+@@ -615,6 +616,54 @@
  	.attach = qcom_pas_attach,
  };
  
@@ -64,8 +64,16 @@ fallback start/load callback. Ordinary EL1 remoteprocs are unchanged.
 +	if (ret)
 +		return ret;
 +
-+	if (!ready || !handover || stop || fatal)
++	if (!ready || !handover || stop || fatal) {
++		size_t len = 0;
++		const char *msg = qcom_smem_get(QCOM_SMEM_HOST_ANY, q6v5->crash_reason, &len);
++
++		if (IS_ERR_OR_NULL(msg))
++			len = 0;
++		dev_err(pas->dev, "qebspil state: ready=%d handover=%d stop=%d fatal=%d crash=%.*s\n",
++			ready, handover, stop, fatal, (int)len, len ? msg : "");
 +		return -ENXIO;
++	}
 +
 +	pas->rproc->state = RPROC_DETACHED;
 +	return 0;
@@ -74,7 +82,7 @@ fallback start/load callback. Ordinary EL1 remoteprocs are unchanged.
  static int qcom_pas_init_clock(struct qcom_pas *pas)
  {
  	pas->xo = devm_clk_get(pas->dev, "xo");
-@@ -852,6 +893,9 @@
+@@ -852,6 +901,9 @@
  	if (desc->minidump_id)
  		ops = &qcom_pas_minidump_ops;
  
@@ -84,7 +92,7 @@ fallback start/load callback. Ordinary EL1 remoteprocs are unchanged.
  	rproc = devm_rproc_alloc(&pdev->dev, desc->sysmon_name, ops, fw_name, sizeof(*pas));
  
  	if (!rproc) {
-@@ -861,6 +905,8 @@
+@@ -861,6 +913,8 @@
  
  	rproc->has_iommu = of_property_present(pdev->dev.of_node, "iommus");
  	rproc->auto_boot = desc->auto_boot;
@@ -93,7 +101,7 @@ fallback start/load callback. Ordinary EL1 remoteprocs are unchanged.
  	rproc_coredump_set_elf_info(rproc, ELFCLASS32, EM_NONE);
  
  	pas = rproc->priv;
-@@ -913,6 +959,18 @@
+@@ -913,6 +967,18 @@
  	if (ret)
  		goto detach_proxy_pds;
  
@@ -112,7 +120,7 @@ fallback start/load callback. Ordinary EL1 remoteprocs are unchanged.
  	qcom_add_glink_subdev(rproc, &pas->glink_subdev, desc->ssr_name);
  	qcom_add_smd_subdev(rproc, &pas->smd_subdev);
  	qcom_add_pdm_subdev(rproc, &pas->pdm_subdev);
-@@ -948,6 +1006,7 @@
+@@ -948,6 +1014,7 @@
  	qcom_remove_pdm_subdev(rproc, &pas->pdm_subdev);
  	qcom_remove_smd_subdev(rproc, &pas->smd_subdev);
  	qcom_remove_glink_subdev(rproc, &pas->glink_subdev);

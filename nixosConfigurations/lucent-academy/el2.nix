@@ -36,6 +36,9 @@ in
       # Follow the known-good bring-up configuration. EFI variables unavailable
       # in this entry: select the next entry from EL1, not from EL2.
       "efi=noruntime"
+      # Experiment 11-13: ADSP started by qebspil is dead by the time PAS probes.
+      # Let unmatched streams (ADSP 0x1000 has no iommus here) bypass the apps SMMU.
+      "arm_smmu.disable_bypass=0"
     ];
     # Outputs only, never installs on the ESP. The boot-chain integrator signs
     # these drivers and supplies tcblaunch + the private DSP firmware separately.
