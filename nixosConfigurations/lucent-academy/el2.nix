@@ -41,9 +41,18 @@ in
     # these drivers and supplies tcblaunch + the private DSP firmware separately.
     system.build.el2-qebspil = pkgs.callPackage ./el2-support/qebspil.nix { };
     system.build.el2-slbounce = pkgs.callPackage ./el2-support/slbounce.nix { };
-    system.extraDependencies = [
-      config.system.build.el2-qebspil
-      config.system.build.el2-slbounce
-    ];
+    system.build.el2-launcher = pkgs.callPackage ./el2/launcher.nix {
+      # GPT PARTUUID of /boot (XBOOTLDR, nvme0n1p15).
+      bootPartuuid = "5315940d-97e9-459d-a1fc-65f01540c47a";
+      # install-bootloader.sh copies the newest el2 UKI here.
+      ukiPath = "/EFI/nixos/lucent-el2.efi";
+    };
+    # install-bootloader.sh sees this directory and installs the EL2 entry on the ESP.
+    system.systemBuilderCommands = ''
+      mkdir $out/lucent-el2
+      ln -s ${config.system.build.el2-launcher}/lib/efi/lucent-el2-launcher.efi $out/lucent-el2/launcher.efi
+      ln -s ${config.system.build.el2-qebspil}/share/efi/qebspilaa64.efi $out/lucent-el2/qebspilaa64.efi
+      ln -s ${config.system.build.el2-slbounce}/share/efi/slbounceaa64.efi $out/lucent-el2/slbounceaa64.efi
+    '';
   };
 }
