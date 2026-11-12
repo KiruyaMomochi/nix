@@ -1,5 +1,5 @@
 # Called by NixOS with the toplevel being installed. Environment from boot.nix:
-# SDBOOT, DTB_NAME, KEEP, KEYS.
+# SDBOOT, DTB_NAME (fallback for generations without lucent-dtb-name), KEEP, KEYS.
 esp=/efi
 xbl=/boot
 profile=/nix/var/nix/profiles/system
@@ -34,7 +34,8 @@ mapfile -t gens < <(find /nix/var/nix/profiles -maxdepth 1 -name 'system-*-link'
 
 # install_one GEN TOPLEVEL [SPECIALISATION]
 install_one() {
-  local g=$1 top=$2 spec=${3:-} uki entry out label built title
+  local g=$1 top=$2 spec=${3:-} uki entry out label built title dtb=$DTB_NAME
+  if [ -e "$top/lucent-dtb-name" ]; then dtb=$(cat "$top/lucent-dtb-name"); fi
   if [ -n "$spec" ]; then
     uki="nixos-generation-$g-$spec-$(basename "$top" | cut -c1-8).efi"
     entry="nixos-generation-$g-specialisation-$spec.conf"
@@ -52,7 +53,7 @@ install_one() {
     ukify build \
       --linux="$top/kernel" \
       --initrd="$top/initrd" \
-      --devicetree="$top/dtbs/$DTB_NAME" \
+      --devicetree="$top/dtbs/$dtb" \
       --cmdline="init=$top/init $(cat "$top/kernel-params")" \
       --os-release="@$top/etc/os-release" \
       "${sign[@]}" \

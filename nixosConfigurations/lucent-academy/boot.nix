@@ -40,5 +40,11 @@ in
   };
   boot.loader.efi.efiSysMountPoint = "/efi";
 
+  # Each toplevel (specialisations included) records its own DT, so a specialisation
+  # with a different hardware.deviceTree.name gets that DT in its UKI.
+  system.extraSystemBuilderCmds = ''
+    echo -n ${config.hardware.deviceTree.name} > $out/lucent-dtb-name
+  '';
+
   environment.systemPackages = [ pkgs.sbctl ];
 }
