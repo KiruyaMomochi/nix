@@ -39,6 +39,10 @@ in
       # Experiment 11-13: ADSP started by qebspil is dead by the time PAS probes.
       # Let unmatched streams (ADSP 0x1000 has no iommus here) bypass the apps SMMU.
       "arm_smmu.disable_bypass=0"
+      # Experiment 11-13: ADSP never reaches ready (no crash). Keep UEFI-enabled
+      # clocks/PDs alive until the PAS driver probes.
+      "clk_ignore_unused"
+      "pd_ignore_unused"
     ];
     # Outputs only, never installs on the ESP. The boot-chain integrator signs
     # these drivers and supplies tcblaunch + the private DSP firmware separately.
