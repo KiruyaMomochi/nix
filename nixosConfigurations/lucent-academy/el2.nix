@@ -27,6 +27,8 @@ in
     # sleep.nix passes boot.kernelPatches through kernel.nix's argsOverride.
     boot.kernelPatches = map patch [
       "remoteproc-qebspil-attach-v7.3"
+      "remoteproc-qebspil-state-window-v7.3"
+      "smp2p-qebspil-handover-v7.3"
       "qcom-tzmem-self-owner-v7.3"
       "arm-arch-timer-park-stopped"
     ];

@@ -1,0 +1,55 @@
+From: Yozakura <yozakura@localhost>
+Subject: [PATCH] remoteproc: sample failed qebspil attach state read-only
+
+After ENXIO, observe again at nominal 100/500/1500 ms. Preserve the initial
+failure and never attach/start/stop in the observation window. A zero result
+means ready+handover and !fatal+!stop at that sample, not an attach attempt.
+
+--- a/drivers/remoteproc/qcom_q6v5_pas.c
++++ b/drivers/remoteproc/qcom_q6v5_pas.c
+@@ -19,6 +19,7 @@
+ #include <linux/of_platform.h>
+ #include <linux/of_reserved_mem.h>
+ #include <linux/platform_device.h>
++#include <linux/delay.h>
+ #include <linux/pm_domain.h>
+ #include <linux/pm_runtime.h>
+ #include <linux/property.h>
+@@ -660,7 +661,6 @@
+ 		return -ENXIO;
+ 	}
+ 
+-	pas->rproc->state = RPROC_DETACHED;
+ 	return 0;
+ }
+ 
+@@ -969,6 +969,21 @@
+ 
+ 	if (ops == &qcom_pas_ops_no_reset) {
+ 		ret = qcom_pas_no_reset_state(pas);
++		if (ret == -ENXIO) {
++			static const unsigned int delays[] = { 100, 400, 1000 };
++			unsigned int elapsed = 0, i;
++			int observed;
++
++			dev_info(pas->dev, "EL2 PAS sample=0ms result=%d\n", ret);
++			for (i = 0; i < ARRAY_SIZE(delays); i++) {
++				msleep(delays[i]);
++				elapsed += delays[i];
++				observed = qcom_pas_no_reset_state(pas);
++				dev_info(pas->dev, "EL2 PAS sample=%ums result=%d\n",
++					 elapsed, observed);
++			}
++			/* Keep the original failure; observations must not attach. */
++		}
+ 		/* SMP2P discovers the remote entries asynchronously. */
+ 		if (ret == -ENODEV)
+ 			ret = -EPROBE_DEFER;
+@@ -977,6 +992,7 @@
+ 				      "qebspil DSP not ready for attach; reset unavailable\n");
+ 			goto deinit_q6v5;
+ 		}
++		rproc->state = RPROC_DETACHED;
+ 	}
+ 
+ 	qcom_add_glink_subdev(rproc, &pas->glink_subdev, desc->ssr_name);

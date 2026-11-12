@@ -1,0 +1,405 @@
+From: Yozakura <yozakura@localhost>
+Subject: [PATCH] soc: qcom: smp2p: preserve firmware handover and log EL2 state
+
+Port Stephan Gerhold's series from jglathe 0aaff8f:
+  1258673dc557 Kick after requesting interrupt
+  4bcfe94c1021 Ensure there is enough space for outbound entries
+  a73d6810cfce Use length limited strncmp() for comparing entry names
+  a2b73be50f9a Drop redundant stack copies of entry names
+  80eb666aab11 Take over outgoing SMEM items from boot firmware
+
+Keep v7.3's irqchip LINE_LEVEL reader and ENODEV, not 9944b07f917c.
+Upstream 42c4cf5d4828 introduces v2 without changing the SMEM layout;
+retain v1/v2 version negotiation and reuse either supported wire version,
+validated by size, magic, PID pair, fixed capacity and bounded valid count.
+Print the actual firmware versions before deciding reuse/reset. Keep firmware
+entry slot positions, values, flags and cached SSR ACK. Do not clear valid
+entries on error/unbind. Bound incoming scans and all diagnostic reads.
+
+Also remove the alloc-time kick and defer version-downgrade kicks to the
+scan caller: neither may signal a running DSP before the IRQ is installed.
+Diagnostics are intentionally limited to the EL2 specialisation's kernel.
+
+Only clear incoming last_value for an actual SSR, not every scan; otherwise
+the new initial scan discards the just-captured firmware state.
+
+--- a/drivers/soc/qcom/smp2p.c
++++ b/drivers/soc/qcom/smp2p.c
+@@ -78,7 +78,7 @@
+ 	u32 flags;
+ 
+ 	struct {
+-		u8 name[SMP2P_MAX_ENTRY_NAME];
++		char name[SMP2P_MAX_ENTRY_NAME];
+ 		u32 value;
+ 	} entries[SMP2P_MAX_ENTRY];
+ } __packed;
+@@ -169,6 +169,41 @@
+ #define CREATE_TRACE_POINTS
+ #include "trace-smp2p.h"
+ 
++/* EL2 experiment: read-only snapshots, before touching firmware's outgoing item. */
++static void qcom_smp2p_dump(struct qcom_smp2p *smp2p, const char *phase,
++			  unsigned int direction)
++{
++	struct smp2p_smem_item *item;
++	unsigned int count, capacity, i;
++	size_t size;
++
++	item = qcom_smem_get(smp2p->remote_pid, smp2p->smem_items[direction], &size);
++	if (IS_ERR(item)) {
++		dev_info(smp2p->dev, "EL2 SMP2P %s %s item=%u unavailable=%ld\n",
++			 phase, direction ? "out" : "in", smp2p->smem_items[direction],
++			 PTR_ERR(item));
++		return;
++	}
++	if (size < offsetof(struct smp2p_smem_item, entries)) {
++		dev_warn(smp2p->dev, "EL2 SMP2P %s item=%u short header size=%zu\n",
++			 phase, smp2p->smem_items[direction], size);
++		return;
++	}
++	capacity = min_t(size_t, SMP2P_MAX_ENTRY,
++		(size - offsetof(struct smp2p_smem_item, entries)) / sizeof(item->entries[0]));
++	count = min_t(unsigned int, READ_ONCE(item->valid_entries), capacity);
++	dev_info(smp2p->dev,
++		 "EL2 SMP2P %s %s item=%u size=%zu magic=%#x version=%u features=%#x flags=%#x local=%u remote=%u total=%u valid=%u dump=%u\n",
++		 phase, direction ? "out" : "in", smp2p->smem_items[direction], size,
++		 item->magic, item->version, item->features, item->flags,
++		 item->local_pid, item->remote_pid, item->total_entries,
++		 item->valid_entries, count);
++	for (i = 0; i < count; i++)
++		dev_info(smp2p->dev, "EL2 SMP2P %s %s slot=%u name=%.*s value=%#x\n",
++			 phase, direction ? "out" : "in", i, SMP2P_MAX_ENTRY_NAME,
++			 item->entries[i].name, readl(&item->entries[i].value));
++}
++
+ static void qcom_smp2p_kick(struct qcom_smp2p *smp2p)
+ {
+ 	/* Make sure any updated data is written before the kick */
+@@ -194,6 +229,8 @@
+ 
+ 	restart_done = in->flags & BIT(SMP2P_FLAGS_RESTART_DONE_BIT);
+ 	restart = restart_done != smp2p->ssr_ack;
++	if (!restart)
++		return false;
+ 	list_for_each_entry(entry, &smp2p->inbound, node) {
+ 		if (!entry->value)
+ 			continue;
+@@ -215,8 +252,6 @@
+ 	if (smp2p->ssr_ack)
+ 		val |= BIT(SMP2P_FLAGS_RESTART_ACK_BIT);
+ 	out->flags = val;
+-
+-	qcom_smp2p_kick(smp2p);
+ }
+ 
+ static void qcom_smp2p_negotiate(struct qcom_smp2p *smp2p)
+@@ -227,14 +262,15 @@
+ 	if (in->version == out->version) {
+ 		out->features &= in->features;
+ 
+-		if (out->features & SMP2P_FEATURE_SSR_ACK)
++		if (out->features & SMP2P_FEATURE_SSR_ACK) {
+ 			smp2p->ssr_ack_enabled = true;
++			smp2p->ssr_ack = !!(out->flags & BIT(SMP2P_FLAGS_RESTART_ACK_BIT));
++		}
+ 
+ 		smp2p->negotiation_done = true;
+ 		trace_smp2p_negotiate(smp2p->dev, out->features);
+ 	} else if (in->version && in->version < out->version) {
+ 		out->version = in->version;
+-		qcom_smp2p_kick(smp2p);
+ 	}
+ }
+ 
+@@ -246,7 +282,7 @@
+ 	size_t size;
+ 
+ 	in = qcom_smem_get(pid, smem_id, &size);
+-	if (IS_ERR(in))
++	if (IS_ERR(in) || size < sizeof(*in))
+ 		return 0;
+ 
+ 	return in->version;
+@@ -256,14 +292,13 @@
+ {
+ 	unsigned int smem_id = smp2p->smem_items[SMP2P_INBOUND];
+ 	unsigned int pid = smp2p->remote_pid;
+-	char buf[SMP2P_MAX_ENTRY_NAME];
+ 	struct smp2p_smem_item *in;
+ 	struct smp2p_entry *entry;
+ 	size_t size;
+ 	int i;
+ 
+ 	in = qcom_smem_get(pid, smem_id, &size);
+-	if (IS_ERR(in))
++	if (IS_ERR(in) || size < sizeof(*in))
+ 		return;
+ 
+ 	smp2p->in = in;
+@@ -272,10 +307,9 @@
+ 	if (in->version == 0)
+ 		return;
+ 
+-	for (i = smp2p->valid_entries; i < in->valid_entries; i++) {
++	for (i = smp2p->valid_entries; i < min_t(unsigned int, READ_ONCE(in->valid_entries), SMP2P_MAX_ENTRY); i++) {
+ 		list_for_each_entry(entry, &smp2p->inbound, node) {
+-			memcpy(buf, in->entries[i].name, sizeof(buf));
+-			if (!strcmp(buf, entry->name)) {
++			if (!strncmp(in->entries[i].name, entry->name, SMP2P_MAX_ENTRY_NAME)) {
+ 				entry->value = &in->entries[i].value;
+ 				entry->last_value = readl(entry->value);
+ 				break;
+@@ -291,17 +325,15 @@
+ 	struct smp2p_entry *entry;
+ 	int irq_pin;
+ 	u32 status;
+-	char buf[SMP2P_MAX_ENTRY_NAME];
+ 	u32 val;
+ 	int i;
+ 
+ 	in = smp2p->in;
+ 
+ 	/* Match newly created entries */
+-	for (i = smp2p->valid_entries; i < in->valid_entries; i++) {
++	for (i = smp2p->valid_entries; i < min_t(unsigned int, READ_ONCE(in->valid_entries), SMP2P_MAX_ENTRY); i++) {
+ 		list_for_each_entry(entry, &smp2p->inbound, node) {
+-			memcpy(buf, in->entries[i].name, sizeof(buf));
+-			if (!strcmp(buf, entry->name)) {
++			if (!strncmp(in->entries[i].name, entry->name, SMP2P_MAX_ENTRY_NAME)) {
+ 				entry->value = &in->entries[i].value;
+ 				break;
+ 			}
+@@ -337,6 +369,28 @@
+ 			}
+ 		}
+ 	}
++}
++
++static bool qcom_smp2p_scan(struct qcom_smp2p *smp2p)
++{
++	bool ack_restart = false;
++	u8 version = smp2p->out->version;
++
++	if (!smp2p->in->version || smp2p->in->version > MAX_VERSION)
++		return false;
++
++	if (!smp2p->negotiation_done)
++		qcom_smp2p_negotiate(smp2p);
++
++	if (smp2p->negotiation_done) {
++		ack_restart = qcom_smp2p_check_ssr(smp2p);
++		qcom_smp2p_notify_in(smp2p);
++
++		if (ack_restart)
++			qcom_smp2p_do_ssr_ack(smp2p);
++	}
++
++	return ack_restart || version != smp2p->out->version;
+ }
+ 
+ /**
+@@ -355,7 +409,6 @@
+ 	struct qcom_smp2p *smp2p = data;
+ 	unsigned int smem_id = smp2p->smem_items[SMP2P_INBOUND];
+ 	unsigned int pid = smp2p->remote_pid;
+-	bool ack_restart;
+ 	size_t size;
+ 
+ 	in = smp2p->in;
+@@ -363,7 +416,7 @@
+ 	/* Acquire smem item, if not already found */
+ 	if (!in) {
+ 		in = qcom_smem_get(pid, smem_id, &size);
+-		if (IS_ERR(in)) {
++		if (IS_ERR(in) || size < sizeof(*in)) {
+ 			dev_err(smp2p->dev,
+ 				"Unable to acquire remote smp2p item\n");
+ 			goto out;
+@@ -372,16 +425,8 @@
+ 		smp2p->in = in;
+ 	}
+ 
+-	if (!smp2p->negotiation_done)
+-		qcom_smp2p_negotiate(smp2p);
+-
+-	if (smp2p->negotiation_done) {
+-		ack_restart = qcom_smp2p_check_ssr(smp2p);
+-		qcom_smp2p_notify_in(smp2p);
+-
+-		if (ack_restart)
+-			qcom_smp2p_do_ssr_ack(smp2p);
+-	}
++	if (qcom_smp2p_scan(smp2p))
++		qcom_smp2p_kick(smp2p);
+ 
+ out:
+ 	return IRQ_HANDLED;
+@@ -521,16 +566,24 @@
+ 				     struct device_node *node)
+ {
+ 	struct smp2p_smem_item *out = smp2p->out;
+-	char buf[SMP2P_MAX_ENTRY_NAME] = {};
+-
+-	/* Allocate an entry from the smem item */
+-	strscpy(buf, entry->name, SMP2P_MAX_ENTRY_NAME);
+-	memcpy(out->entries[out->valid_entries].name, buf, SMP2P_MAX_ENTRY_NAME);
++	int i;
++
++	/* Check if we have an entry already (e.g. allocated by boot firmware) */
++	for (i = 0; i < out->valid_entries; i++)
++		if (!strncmp(out->entries[i].name, entry->name, SMP2P_MAX_ENTRY_NAME))
++			break;
++
++	if (i == out->valid_entries) {
++		/* Allocate an entry from the smem item */
++		if (i == out->total_entries)
++			return -ENOMEM;
++
++		strscpy(out->entries[i].name, entry->name, SMP2P_MAX_ENTRY_NAME);
++		out->valid_entries++;
++	}
+ 
+ 	/* Make the logical entry reference the physical value */
+-	entry->value = &out->entries[out->valid_entries].value;
+-
+-	out->valid_entries++;
++	entry->value = &out->entries[i].value;
+ 
+ 	entry->state = qcom_smem_state_register(node, &smp2p_state_ops, entry);
+ 	if (IS_ERR(entry->state)) {
+@@ -547,6 +600,7 @@
+ 	unsigned smem_id = smp2p->smem_items[SMP2P_OUTBOUND];
+ 	unsigned pid = smp2p->remote_pid;
+ 	u8 in_version;
++	size_t size;
+ 	int ret;
+ 
+ 	ret = qcom_smem_alloc(pid, smem_id, sizeof(*out));
+@@ -554,12 +608,49 @@
+ 		return dev_err_probe(smp2p->dev, ret,
+ 				     "unable to allocate local smp2p item\n");
+ 
+-	out = qcom_smem_get(pid, smem_id, NULL);
++	out = qcom_smem_get(pid, smem_id, &size);
+ 	if (IS_ERR(out)) {
+ 		dev_err(smp2p->dev, "Unable to acquire local smp2p item\n");
+ 		return PTR_ERR(out);
+ 	}
+ 
++	qcom_smp2p_dump(smp2p, "pre-write", SMP2P_INBOUND);
++	qcom_smp2p_dump(smp2p, "pre-write", SMP2P_OUTBOUND);
++	if (size < sizeof(*out))
++		return dev_err_probe(smp2p->dev, -EINVAL, "short outgoing SMP2P item\n");
++
++	smp2p->out = out;
++
++	/* Reject unsupported peers before modifying the outgoing item. */
++	in_version = qcom_smp2p_in_version(smp2p);
++	if (in_version > MAX_VERSION)
++		return dev_err_probe(smp2p->dev, -EPROTONOSUPPORT,
++				     "unsupported incoming SMP2P version %u\n", in_version);
++
++	if (ret == -EEXIST && smp2p->in) {
++		if (out->magic == SMP2P_MAGIC &&
++		    out->version >= 1 && out->version <= MAX_VERSION &&
++		    out->local_pid == smp2p->local_pid &&
++		    out->remote_pid == smp2p->remote_pid &&
++		    out->total_entries == SMP2P_MAX_ENTRY &&
++		    out->valid_entries <= out->total_entries) {
++			/*
++			 * Reuse existing smem item, but adjust features to
++			 * what we support. This will be updated later when we
++			 * negotiate with the features of the remote side.
++			 */
++			dev_info(smp2p->dev, "EL2 SMP2P reuse version=%u incoming=%u\n",
++				 out->version, in_version);
++			out->features = SMP2P_ALL_FEATURES;
++			return 0;
++		} else {
++			dev_warn(smp2p->dev, "Unexpected local smp2p item allocated by firmware, resetting. "
++				 "(magic: %#x, version: %d, local_pid: %d, remote_pid: %d, total_entries: %d, valid_entries: %d)\n",
++				 out->magic, out->version, out->local_pid, out->remote_pid, out->total_entries, out->valid_entries);
++		}
++	}
++
++	dev_info(smp2p->dev, "EL2 SMP2P reset alloc_ret=%d incoming=%u\n", ret, in_version);
+ 	memset(out, 0, sizeof(*out));
+ 	out->magic = SMP2P_MAGIC;
+ 	out->local_pid = smp2p->local_pid;
+@@ -584,10 +675,6 @@
+ 	else
+ 		out->version = 2;
+ 
+-	qcom_smp2p_kick(smp2p);
+-
+-	smp2p->out = out;
+-
+ 	return 0;
+ }
+ 
+@@ -627,8 +714,10 @@
+ 
+ static int qcom_smp2p_probe(struct platform_device *pdev)
+ {
++	struct smp2p_smem_item *in;
+ 	struct smp2p_entry *entry;
+ 	struct qcom_smp2p *smp2p;
++	size_t size;
+ 	const char *key;
+ 	int irq;
+ 	int ret;
+@@ -677,6 +766,10 @@
+ 			return ret;
+ 	}
+ 
++	in = qcom_smem_get(smp2p->remote_pid, smp2p->smem_items[SMP2P_INBOUND], &size);
++	if (!IS_ERR(in) && size >= sizeof(*in))
++		smp2p->in = in;
++
+ 	ret = qcom_smp2p_alloc_outbound_item(smp2p);
+ 	if (ret < 0)
+ 		goto release_mbox;
+@@ -713,8 +806,9 @@
+ 	/* Check inbound entries in the case of early boot processor */
+ 	qcom_smp2p_start_in(smp2p);
+ 
+-	/* Kick the outgoing edge after allocating entries */
+-	qcom_smp2p_kick(smp2p);
++	if (smp2p->in)
++		/* Ignore return status since we kick unconditionally below */
++		qcom_smp2p_scan(smp2p);
+ 
+ 	ret = devm_request_threaded_irq(&pdev->dev, irq,
+ 					NULL, qcom_smp2p_intr,
+@@ -724,6 +818,12 @@
+ 		dev_err(&pdev->dev, "failed to request interrupt\n");
+ 		goto unwind_interfaces;
+ 	}
++
++	qcom_smp2p_dump(smp2p, "post-probe", SMP2P_INBOUND);
++	qcom_smp2p_dump(smp2p, "post-probe", SMP2P_OUTBOUND);
++
++	/* Kick the outgoing edge after allocating entries and requesting IRQ */
++	qcom_smp2p_kick(smp2p);
+ 
+ 	/*
+ 	 * Treat smp2p interrupt as wakeup source, but keep it disabled
+@@ -752,8 +852,6 @@
+ 	list_for_each_entry(entry, &smp2p->outbound, node)
+ 		qcom_smem_state_unregister(entry->state);
+ 
+-	smp2p->out->valid_entries = 0;
+-
+ release_mbox:
+ 	mbox_free_channel(smp2p->mbox_chan);
+ 
+@@ -778,8 +876,6 @@
+ 		qcom_smem_state_unregister(entry->state);
+ 
+ 	mbox_free_channel(smp2p->mbox_chan);
+-
+-	smp2p->out->valid_entries = 0;
+ }
+ 
+ static const struct of_device_id qcom_smp2p_of_match[] = {
