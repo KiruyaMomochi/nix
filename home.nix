@@ -253,17 +253,16 @@
     configFile.source = ./homeModules/nushell/config.nu;
     # # https://github.com/nushell/nushell/blob/main/crates/nu-utils/src/default_files/default_env.nu
     envFile.source = ./homeModules/nushell/env.nu;
-    environmentVariables =
-      (builtins.mapAttrs (name: value: "${builtins.toString value}") config.home.sessionVariables)
-      // {
-        CARAPACE_BRIDGES = (
-          lib.strings.concatStringsSep "," [
-            "fish"
-            "bash"
-            "inshellisense"
-          ]
-        );
-      };
+    loadSessionVariables = true;
+    environmentVariables = {
+      CARAPACE_BRIDGES = (
+        lib.strings.concatStringsSep "," [
+          "fish"
+          "bash"
+          "inshellisense"
+        ]
+      );
+    };
 
     extraConfig = lib.strings.concatStringsSep "\n" [
       # Make home.sessionVariables work with nushell
