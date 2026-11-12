@@ -100,7 +100,12 @@ install_one() {
     echo "installed $uki${sign:+ (signed)}"
   fi
 
-  if [ -d "$top/lucent-el2" ]; then install_el2 "$g" "$top" "$out"; fi
+  # The EL2 UKI must only be started through the launcher, never straight from the menu.
+  if [ -d "$top/lucent-el2" ]; then
+    install_el2 "$g" "$top" "$out"
+    rm -f "$xbl/loader/entries/$entry"
+    return
+  fi
 
   # Same title/version/sort-key as nixpkgs' systemd-boot builder writes, but the
   # entry points at the UKI instead of linux/initrd/devicetree.

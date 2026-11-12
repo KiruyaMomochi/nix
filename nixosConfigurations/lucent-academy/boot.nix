@@ -27,8 +27,9 @@ let
       # Patched for this firmware, see ./sdboot.nix.
       SDBOOT = "${pkgs.callPackage ./sdboot.nix { }}/systemd-bootaa64.efi";
       DTB_NAME = config.hardware.deviceTree.name;
-      # /boot is 3G, the installer entry takes 1.5G, one UKI is ~100M.
-      KEEP = "5";
+      # /boot is 3G, the installer entry takes 1.5G, one UKI is ~100M and each
+      # generation has a UKI per specialisation (5 now).
+      KEEP = "3";
       KEYS = "/var/lib/sbctl/keys/db";
     };
     text = builtins.readFile ./install-bootloader.sh;
